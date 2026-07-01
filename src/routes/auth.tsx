@@ -55,7 +55,7 @@ function AuthPage() {
 
       <div className="relative grid min-h-screen place-items-center px-4 py-8">
         <div className="w-full max-w-md">
-          <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/95 text-foreground shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+          <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/95 text-foreground shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)]">
             <div className="flex flex-col items-center px-6 pt-8 pb-4">
               <Logo variant="stacked" size="xl" />
             </div>
