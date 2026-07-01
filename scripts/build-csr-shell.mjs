@@ -143,8 +143,6 @@ ${cssLinks}
   </style>
 </head>
 <body>
-  <!-- Loading overlay: blocks input until React has fully mounted.
-       Removed by RootComponent's useEffect in __root.tsx. -->
   <div id="app-loading">
     <div id="app-loading-spinner"></div>
     <div id="app-loading-text">Carregando…</div>
