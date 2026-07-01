@@ -96,6 +96,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: ReactNode }) {
+  // If we are mounting client-side into a sub-container like #app (e.g. offline CSR shell),
+  // we must not render <html>/<body> tags again or it will corrupt the DOM
+  // and trigger infinite React DOM reconciliation loops on event propagation (e.g. selectionchange).
+  const isCsrShell = typeof window !== "undefined" && !!document.getElementById("app");
+
+  if (isCsrShell) {
+    return <>{children}</>;
+  }
+
   return (
     <html lang="pt-BR">
       <head><HeadContent /></head>
