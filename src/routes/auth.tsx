@@ -64,11 +64,11 @@ function AuthPage() {
               <form onSubmit={signIn} action="#" method="post" className="space-y-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="li-email">Email</Label>
-                  <Input id="li-email" name="email" type="email" required autoComplete="email" placeholder="voce@empresa.com" />
+                  <Input id="li-email" name="email" type="email" required autoComplete="email" placeholder="voce@empresa.com" className="text-slate-900 bg-white rounded-xl" />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="li-pwd">Senha</Label>
-                  <Input id="li-pwd" name="password" type="password" required autoComplete="current-password" placeholder="••••••••" />
+                  <Input id="li-pwd" name="password" type="password" required autoComplete="current-password" placeholder="••••••••" className="text-slate-900 bg-white rounded-xl" />
                 </div>
                 <Button type="submit" variant="action" size="lg" className="w-full" disabled={loading}>
                   {loading ? "Entrando..." : "Entrar"}
