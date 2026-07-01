@@ -1,0 +1,16 @@
+project_id = "qejzxnjfcioauneyjxtl"
+
+[functions.criar-motorista]
+verify_jwt = true
+
+[functions.ocr-abastecimento]
+verify_jwt = true
+
+[functions.criar-empresa]
+verify_jwt = true
+
+[functions.sync-entrega]
+verify_jwt = true
+
+[functions.admin-reset]
+verify_jwt = true

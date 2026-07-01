@@ -1,0 +1,214 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Identidade CR Materiais
+ * - Primária (azul-marinho): #1B2A4A
+ * - Destaque/ação (laranja):  #F57C00
+ * - Fundo cinza claro:        #F5F6F8
+ * - Card branco:              #FFFFFF
+ * - Texto:                    #1F2933 / #6B7280
+ * - Semânticas: verde, âmbar, vermelho
+ *
+ * Todos os tokens ficam aqui — telas e componentes herdam automaticamente.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Barlow Condensed", "Inter", ui-sans-serif, sans-serif;
+
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 12px rgb(15 23 42 / 0.04);
+  --shadow-action: 0 6px 16px rgb(245 124 0 / 0.25);
+}
+
+:root {
+  --radius: 0.875rem;
+
+  --background: #F5F6F8;
+  --foreground: #1F2933;
+
+  --card: #FFFFFF;
+  --card-foreground: #1F2933;
+
+  --popover: #FFFFFF;
+  --popover-foreground: #1F2933;
+
+  /* Marca */
+  --primary: #1B2A4A;
+  --primary-foreground: #FFFFFF;
+
+  --secondary: #EEF1F6;
+  --secondary-foreground: #1B2A4A;
+
+  --muted: #EEF1F6;
+  --muted-foreground: #6B7280;
+
+  /* Acento = laranja de ação */
+  --accent: #F57C00;
+  --accent-foreground: #FFFFFF;
+
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
+
+  --success: #16A34A;
+  --success-foreground: #FFFFFF;
+
+  --warning: #D97706;
+  --warning-foreground: #FFFFFF;
+
+  --border: #E5E7EB;
+  --input: #E5E7EB;
+  --ring: #1B2A4A;
+
+  --chart-1: #1B2A4A;
+  --chart-2: #F57C00;
+  --chart-3: #16A34A;
+  --chart-4: #D97706;
+  --chart-5: #6B7280;
+
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #1F2933;
+  --sidebar-primary: #1B2A4A;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #EEF1F6;
+  --sidebar-accent-foreground: #1B2A4A;
+  --sidebar-border: #E5E7EB;
+  --sidebar-ring: #1B2A4A;
+}
+
+.dark {
+  --background: #0F172A;
+  --foreground: #F8FAFC;
+  --card: #1E293B;
+  --card-foreground: #F8FAFC;
+  --popover: #1E293B;
+  --popover-foreground: #F8FAFC;
+  --primary: #F57C00;
+  --primary-foreground: #0F172A;
+  --secondary: #1E293B;
+  --secondary-foreground: #F8FAFC;
+  --muted: #1E293B;
+  --muted-foreground: #94A3B8;
+  --accent: #F57C00;
+  --accent-foreground: #0F172A;
+  --destructive: #F87171;
+  --destructive-foreground: #0F172A;
+  --success: #4ADE80;
+  --success-foreground: #0F172A;
+  --warning: #FBBF24;
+  --warning-foreground: #0F172A;
+  --border: rgb(255 255 255 / 0.10);
+  --input: rgb(255 255 255 / 0.15);
+  --ring: #F57C00;
+  --sidebar: #1E293B;
+  --sidebar-foreground: #F8FAFC;
+  --sidebar-primary: #F57C00;
+  --sidebar-primary-foreground: #0F172A;
+  --sidebar-accent: #1E293B;
+  --sidebar-accent-foreground: #F8FAFC;
+  --sidebar-border: rgb(255 255 255 / 0.10);
+  --sidebar-ring: #F57C00;
+}
+
+@utility font-heading {
+  font-family: var(--font-heading);
+  letter-spacing: 0.01em;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html, body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-heading);
+    letter-spacing: 0.005em;
+  }
+
+  /* Áreas de toque confortáveis em mobile */
+  button, a[role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Utilitários de Safe Area para empacotamento móvel (Capacitor / APK) */
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+@utility mb-safe {
+  margin-bottom: env(safe-area-inset-bottom);
+}
+
+@utility mt-safe {
+  margin-top: env(safe-area-inset-top);
+}
+
+/* Micro-interação de escala para botões táteis no APK */
+@utility active-scale {
+  &:active {
+    transform: scale(0.96);
+  }
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+

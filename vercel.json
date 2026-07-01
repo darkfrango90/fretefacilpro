@@ -1,0 +1,8 @@
+{
+  "buildCommand": "vite build && node scripts/build-csr-shell.mjs",
+  "outputDirectory": "dist/client",
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
