@@ -135,8 +135,20 @@ const html = `<!doctype html>
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="icon" href="/favicon.ico">
 ${cssLinks}
+  <style>
+    #app-loading{position:fixed;inset:0;z-index:9999;background:#0b1530;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;transition:opacity .3s}
+    #app-loading-spinner{width:40px;height:40px;border:3px solid rgba(245,124,0,.25);border-top-color:#F57C00;border-radius:50%;animation:agl-spin .8s linear infinite}
+    #app-loading-text{color:rgba(255,255,255,.5);font-family:sans-serif;font-size:13px;letter-spacing:.05em}
+    @keyframes agl-spin{to{transform:rotate(360deg)}}
+  </style>
 </head>
 <body>
+  <!-- Loading overlay: blocks input until React has fully mounted.
+       Removed by RootComponent's useEffect in __root.tsx. -->
+  <div id="app-loading">
+    <div id="app-loading-spinner"></div>
+    <div id="app-loading-text">Carregando…</div>
+  </div>
   <div id="app"></div>
   <script type="module" src="/${csrFileName}"></script>
 </body>

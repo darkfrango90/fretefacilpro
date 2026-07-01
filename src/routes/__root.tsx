@@ -107,6 +107,11 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   useEffect(() => {
+    // Remove the loading overlay injected by the CSR shell HTML so users
+    // cannot interact with inputs before React has fully mounted.
+    const overlay = document.getElementById("app-loading");
+    if (overlay) overlay.remove();
+    // Unregister any stale service workers.
     void import("../lib/pwa/register-sw").then((m) => m.registerServiceWorker());
   }, []);
   return (
