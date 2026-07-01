@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -13,85 +13,6 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  
-  // Diagnostics states
-  const renderCountRef = useRef(0);
-  renderCountRef.current += 1;
-
-  const [diagnostics, setDiagnostics] = useState<{
-    renders: number;
-    errors: string[];
-    supabaseEnv: string;
-    sessionState: string;
-    userAgent: string;
-  }>({
-    renders: 0,
-    errors: [],
-    supabaseEnv: "Verificando...",
-    sessionState: "Verificando...",
-    userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "SSR",
-  });
-
-  // Track global errors
-  useEffect(() => {
-    const handleErr = (e: ErrorEvent) => {
-      const msg = `Erro: ${e.message} em ${e.filename}:${e.lineno}`;
-      setDiagnostics(prev => ({
-        ...prev,
-        errors: [...prev.errors, msg]
-      }));
-    };
-    const handleRej = (e: PromiseRejectionEvent) => {
-      const msg = `Rejeição: ${e.reason?.message || String(e.reason)}`;
-      setDiagnostics(prev => ({
-        ...prev,
-        errors: [...prev.errors, msg]
-      }));
-    };
-    window.addEventListener("error", handleErr);
-    window.addEventListener("unhandledrejection", handleRej);
-    return () => {
-      window.removeEventListener("error", handleErr);
-      window.removeEventListener("unhandledrejection", handleRej);
-    };
-  }, []);
-
-  // Check variables and session
-  useEffect(() => {
-    let cancelled = false;
-    const urlExists = !!import.meta.env.VITE_SUPABASE_URL;
-    const keyExists = !!import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-    const envStr = `URL: ${urlExists ? "OK" : "AUSENTE"} | KEY: ${keyExists ? "OK" : "AUSENTE"}`;
-
-    supabase.auth.getSession().then(({ data, error }) => {
-      if (cancelled) return;
-      let sessionStr = "";
-      if (error) {
-        sessionStr = `Erro: ${error.message}`;
-      } else {
-        sessionStr = data.session ? "Autenticado (Redirecionando...)" : "Sem Sessão Ativa";
-      }
-
-      setDiagnostics(prev => ({
-        ...prev,
-        renders: renderCountRef.current,
-        supabaseEnv: envStr,
-        sessionState: sessionStr,
-      }));
-    }).catch(err => {
-      if (cancelled) return;
-      setDiagnostics(prev => ({
-        ...prev,
-        renders: renderCountRef.current,
-        supabaseEnv: envStr,
-        sessionState: `Exceção no getSession: ${err?.message || String(err)}`,
-      }));
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // Check session redirect
   useEffect(() => {
@@ -175,34 +96,6 @@ function AuthPage() {
               </p>
             </form>
           </div>
-        </div>
-
-        {/* Diagnostic Panel */}
-        <div className="mt-4 p-4 rounded-xl bg-black/60 border border-white/10 text-white text-xs space-y-2">
-          <div className="font-semibold text-orange-400 border-b border-white/10 pb-1">
-            Painel de Diagnóstico do Sistema
-          </div>
-          <div>
-            <strong>Vezes renderizado:</strong> {renderCountRef.current}
-          </div>
-          <div>
-            <strong>Status das Chaves:</strong> {diagnostics.supabaseEnv}
-          </div>
-          <div>
-            <strong>Status da Sessão:</strong> {diagnostics.sessionState}
-          </div>
-          {diagnostics.errors.length > 0 ? (
-            <div className="text-red-400">
-              <strong>Erros capturados ({diagnostics.errors.length}):</strong>
-              <ul className="list-disc pl-4 mt-1 space-y-1">
-                {diagnostics.errors.map((err, idx) => (
-                  <li key={idx} className="break-all">{err}</li>
-                ))}
-              </ul>
-            </div>
-          ) : (
-            <div className="text-green-400">Nenhum erro registrado no console do app.</div>
-          )}
         </div>
 
         <p className="mt-6 text-center text-xs text-white/60">

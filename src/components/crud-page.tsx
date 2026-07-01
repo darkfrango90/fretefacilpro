@@ -34,14 +34,39 @@ export function CrudPage({ title, table, fields, empresaId, renderRow, defaults 
 
   const { data: rows, isLoading } = useQuery({
     queryKey: [table, empresaId],
+    enabled: !!empresaId,
+    initialData: () => {
+      if (typeof window === "undefined" || !empresaId) return undefined;
+      try {
+        const raw = localStorage.getItem(`crud:${table}:cache:${empresaId}`);
+        return raw ? JSON.parse(raw) : undefined;
+      } catch {
+        return undefined;
+      }
+    },
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from(table)
-        .select("*")
-        .eq("empresa_id", empresaId)
-        .order("criado_em", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
+      try {
+        const { data, error } = await (supabase as any)
+          .from(table)
+          .select("*")
+          .eq("empresa_id", empresaId)
+          .order("criado_em", { ascending: false });
+        if (error) throw error;
+        const result = data ?? [];
+        try {
+          localStorage.setItem(`crud:${table}:cache:${empresaId}`, JSON.stringify(result));
+        } catch {}
+        return result;
+      } catch (err) {
+        // Se falhar (por exemplo, offline), tenta carregar do cache local
+        if (typeof window !== "undefined") {
+          try {
+            const raw = localStorage.getItem(`crud:${table}:cache:${empresaId}`);
+            if (raw) return JSON.parse(raw);
+          } catch {}
+        }
+        throw err;
+      }
     },
   });
 

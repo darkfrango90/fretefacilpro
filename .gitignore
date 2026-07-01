@@ -38,3 +38,8 @@ dist-ssr
 
 # Scratch folder
 scratch/
+
+# Temporary binaries
+AnyDesk.exe
+gcapi.dll
+

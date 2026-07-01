@@ -66,11 +66,34 @@ function Page() {
   const { data: rows, isLoading } = useQuery({
     queryKey: ["clientes", empresaId],
     enabled: !!empresaId,
+    initialData: () => {
+      if (typeof window === "undefined" || !empresaId) return undefined;
+      try {
+        const raw = localStorage.getItem(`clientes:cache:${empresaId}`);
+        return raw ? JSON.parse(raw) : undefined;
+      } catch {
+        return undefined;
+      }
+    },
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("clientes").select("*").order("nome");
-      if (error) throw error;
-      return data ?? [];
+      try {
+        const { data, error } = await (supabase as any)
+          .from("clientes").select("*").order("nome");
+        if (error) throw error;
+        const result = data ?? [];
+        try {
+          localStorage.setItem(`clientes:cache:${empresaId}`, JSON.stringify(result));
+        } catch {}
+        return result;
+      } catch (err) {
+        if (typeof window !== "undefined") {
+          try {
+            const raw = localStorage.getItem(`clientes:cache:${empresaId}`);
+            if (raw) return JSON.parse(raw);
+          } catch {}
+        }
+        throw err;
+      }
     },
   });
 
