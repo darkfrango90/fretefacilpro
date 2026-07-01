@@ -56,19 +56,35 @@ function AuthPage() {
       <div className="relative grid min-h-screen place-items-center px-4 py-8">
         <div className="w-full max-w-md">
           <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/95 text-foreground shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)]">
-            <div className="flex flex-col items-center px-6 pt-8 pb-4">
-              <Logo variant="stacked" size="xl" />
+            <div className="flex flex-col items-center px-6 pt-6 pb-2">
+              <Logo variant="stacked" size="lg" />
             </div>
 
-            <div className="px-6 pb-8 pt-4">
+            <div className="px-6 pb-8 pt-2">
               <form onSubmit={signIn} action="#" method="post" className="space-y-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="li-email">Email</Label>
-                  <Input id="li-email" name="email" type="email" required autoComplete="email" placeholder="voce@empresa.com" className="text-slate-900 bg-white rounded-xl" />
+                  <input
+                    id="li-email"
+                    name="email"
+                    type="email"
+                    required
+                    autoComplete="username"
+                    placeholder="voce@empresa.com"
+                    className="flex h-11 w-full rounded-xl border border-input bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#F57C00] focus:border-[#F57C00] placeholder:text-muted-foreground"
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="li-pwd">Senha</Label>
-                  <Input id="li-pwd" name="password" type="password" required autoComplete="current-password" placeholder="••••••••" className="text-slate-900 bg-white rounded-xl" />
+                  <input
+                    id="li-pwd"
+                    name="password"
+                    type="password"
+                    required
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    className="flex h-11 w-full rounded-xl border border-input bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#F57C00] focus:border-[#F57C00] placeholder:text-muted-foreground"
+                  />
                 </div>
                 <Button type="submit" variant="action" size="lg" className="w-full" disabled={loading}>
                   {loading ? "Entrando..." : "Entrar"}
