@@ -46,12 +46,78 @@ function NovaVenda() {
   const { data: clientes } = useQuery({
     queryKey: ["clientes-list", empresaId],
     enabled: !!empresaId,
-    queryFn: async () => (await (supabase as any).from("clientes").select("id, nome, endereco, cidade, estado").order("nome")).data ?? [],
+    initialData: () => {
+      if (typeof window === "undefined" || !empresaId) return undefined;
+      try {
+        const raw = localStorage.getItem(`clientes:cache:${empresaId}`) || 
+                    localStorage.getItem(`clientes-list:cache:${empresaId}`);
+        return raw ? JSON.parse(raw) : undefined;
+      } catch {
+        return undefined;
+      }
+    },
+    queryFn: async () => {
+      try {
+        const { data, error } = await (supabase as any)
+          .from("clientes")
+          .select("id, nome, endereco, cidade, estado")
+          .order("nome");
+        if (error) throw error;
+        const result = data ?? [];
+        try {
+          localStorage.setItem(`clientes-list:cache:${empresaId}`, JSON.stringify(result));
+        } catch {}
+        return result;
+      } catch (err) {
+        if (typeof window !== "undefined") {
+          try {
+            const raw = localStorage.getItem(`clientes:cache:${empresaId}`) || 
+                        localStorage.getItem(`clientes-list:cache:${empresaId}`);
+            if (raw) return JSON.parse(raw);
+          } catch {}
+        }
+        throw err;
+      }
+    },
   });
+
   const { data: materiaisAll } = useQuery({
     queryKey: ["materiais-list", empresaId],
     enabled: !!empresaId,
-    queryFn: async () => (await (supabase as any).from("materiais").select("id, nome, preco_base, unidade").eq("ativo", true).order("nome")).data ?? [],
+    initialData: () => {
+      if (typeof window === "undefined" || !empresaId) return undefined;
+      try {
+        const raw = localStorage.getItem(`crud:materiais:cache:${empresaId}`) || 
+                    localStorage.getItem(`materiais-list:cache:${empresaId}`);
+        return raw ? JSON.parse(raw) : undefined;
+      } catch {
+        return undefined;
+      }
+    },
+    queryFn: async () => {
+      try {
+        const { data, error } = await (supabase as any)
+          .from("materiais")
+          .select("id, nome, preco_base, unidade")
+          .eq("ativo", true)
+          .order("nome");
+        if (error) throw error;
+        const result = data ?? [];
+        try {
+          localStorage.setItem(`materiais-list:cache:${empresaId}`, JSON.stringify(result));
+        } catch {}
+        return result;
+      } catch (err) {
+        if (typeof window !== "undefined") {
+          try {
+            const raw = localStorage.getItem(`crud:materiais:cache:${empresaId}`) || 
+                        localStorage.getItem(`materiais-list:cache:${empresaId}`);
+            if (raw) return JSON.parse(raw);
+          } catch {}
+        }
+        throw err;
+      }
+    },
   });
 
   const materiais = useMemo(() => {
