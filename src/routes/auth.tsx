@@ -20,7 +20,7 @@ function AuthPage() {
     supabase.auth.getSession().then(({ data }) => {
       if (cancelled) return;
       if (data.session) {
-        navigate({ to: "/", replace: true });
+        navigate({ to: "/dashboard", replace: true });
       }
     });
     return () => {
@@ -42,7 +42,7 @@ function AuthPage() {
       return;
     }
     window.history.replaceState({}, "", "/auth");
-    navigate({ to: "/", replace: true });
+    navigate({ to: "/dashboard", replace: true });
   }
 
   return (

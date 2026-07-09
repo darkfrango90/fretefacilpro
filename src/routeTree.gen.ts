@@ -11,7 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
-import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedVeiculosRouteImport } from './routes/_authenticated/veiculos'
 import { Route as AuthenticatedTrocarSenhaRouteImport } from './routes/_authenticated/trocar-senha'
 import { Route as AuthenticatedSincronizacaoRouteImport } from './routes/_authenticated/sincronizacao'
@@ -26,6 +26,7 @@ import { Route as AuthenticatedMateriaisRouteImport } from './routes/_authentica
 import { Route as AuthenticatedMasterRouteImport } from './routes/_authenticated/master'
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedEntregasRouteImport } from './routes/_authenticated/entregas'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedConsumoPrecisoRouteImport } from './routes/_authenticated/consumo-preciso'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedClientesRouteImport } from './routes/_authenticated/clientes'
@@ -51,10 +52,10 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
+const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AuthenticatedRouteRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedVeiculosRoute = AuthenticatedVeiculosRouteImport.update({
   id: '/veiculos',
@@ -128,6 +129,11 @@ const AuthenticatedFinanceiroRoute = AuthenticatedFinanceiroRouteImport.update({
 const AuthenticatedEntregasRoute = AuthenticatedEntregasRouteImport.update({
   id: '/entregas',
   path: '/entregas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedConsumoPrecisoRoute =
@@ -219,7 +225,7 @@ const AuthenticatedEntregaIdFinalizarRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof AuthenticatedIndexRoute
+  '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/abastecimento': typeof AuthenticatedAbastecimentoRoute
   '/acesso-expirado': typeof AuthenticatedAcessoExpiradoRoute
@@ -227,6 +233,7 @@ export interface FileRoutesByFullPath {
   '/clientes': typeof AuthenticatedClientesRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/consumo-preciso': typeof AuthenticatedConsumoPrecisoRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
   '/entregas': typeof AuthenticatedEntregasRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/master': typeof AuthenticatedMasterRoute
@@ -252,6 +259,7 @@ export interface FileRoutesByFullPath {
   '/pneus/remover/$id': typeof AuthenticatedPneusRemoverIdRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/abastecimento': typeof AuthenticatedAbastecimentoRoute
   '/acesso-expirado': typeof AuthenticatedAcessoExpiradoRoute
@@ -259,6 +267,7 @@ export interface FileRoutesByTo {
   '/clientes': typeof AuthenticatedClientesRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/consumo-preciso': typeof AuthenticatedConsumoPrecisoRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
   '/entregas': typeof AuthenticatedEntregasRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/master': typeof AuthenticatedMasterRoute
@@ -273,7 +282,6 @@ export interface FileRoutesByTo {
   '/sincronizacao': typeof AuthenticatedSincronizacaoRouteWithChildren
   '/trocar-senha': typeof AuthenticatedTrocarSenhaRoute
   '/veiculos': typeof AuthenticatedVeiculosRoute
-  '/': typeof AuthenticatedIndexRoute
   '/despesas/nova': typeof AuthenticatedDespesasNovaRoute
   '/pneus/instalar': typeof AuthenticatedPneusInstalarRoute
   '/pneus/relatorio': typeof AuthenticatedPneusRelatorioRoute
@@ -286,6 +294,7 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/abastecimento': typeof AuthenticatedAbastecimentoRoute
@@ -294,6 +303,7 @@ export interface FileRoutesById {
   '/_authenticated/clientes': typeof AuthenticatedClientesRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/consumo-preciso': typeof AuthenticatedConsumoPrecisoRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/entregas': typeof AuthenticatedEntregasRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/master': typeof AuthenticatedMasterRoute
@@ -308,7 +318,6 @@ export interface FileRoutesById {
   '/_authenticated/sincronizacao': typeof AuthenticatedSincronizacaoRouteWithChildren
   '/_authenticated/trocar-senha': typeof AuthenticatedTrocarSenhaRoute
   '/_authenticated/veiculos': typeof AuthenticatedVeiculosRoute
-  '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/despesas/nova': typeof AuthenticatedDespesasNovaRoute
   '/_authenticated/pneus/instalar': typeof AuthenticatedPneusInstalarRoute
   '/_authenticated/pneus/relatorio': typeof AuthenticatedPneusRelatorioRoute
@@ -330,6 +339,7 @@ export interface FileRouteTypes {
     | '/clientes'
     | '/configuracoes'
     | '/consumo-preciso'
+    | '/dashboard'
     | '/entregas'
     | '/financeiro'
     | '/master'
@@ -355,6 +365,7 @@ export interface FileRouteTypes {
     | '/pneus/remover/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
     | '/auth'
     | '/abastecimento'
     | '/acesso-expirado'
@@ -362,6 +373,7 @@ export interface FileRouteTypes {
     | '/clientes'
     | '/configuracoes'
     | '/consumo-preciso'
+    | '/dashboard'
     | '/entregas'
     | '/financeiro'
     | '/master'
@@ -376,7 +388,6 @@ export interface FileRouteTypes {
     | '/sincronizacao'
     | '/trocar-senha'
     | '/veiculos'
-    | '/'
     | '/despesas/nova'
     | '/pneus/instalar'
     | '/pneus/relatorio'
@@ -388,6 +399,7 @@ export interface FileRouteTypes {
     | '/pneus/remover/$id'
   id:
     | '__root__'
+    | '/'
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/abastecimento'
@@ -396,6 +408,7 @@ export interface FileRouteTypes {
     | '/_authenticated/clientes'
     | '/_authenticated/configuracoes'
     | '/_authenticated/consumo-preciso'
+    | '/_authenticated/dashboard'
     | '/_authenticated/entregas'
     | '/_authenticated/financeiro'
     | '/_authenticated/master'
@@ -410,7 +423,6 @@ export interface FileRouteTypes {
     | '/_authenticated/sincronizacao'
     | '/_authenticated/trocar-senha'
     | '/_authenticated/veiculos'
-    | '/_authenticated/'
     | '/_authenticated/despesas/nova'
     | '/_authenticated/pneus/instalar'
     | '/_authenticated/pneus/relatorio'
@@ -423,6 +435,7 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
 }
@@ -443,12 +456,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/': {
-      id: '/_authenticated/'
+    '/': {
+      id: '/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/veiculos': {
       id: '/_authenticated/veiculos'
@@ -546,6 +559,13 @@ declare module '@tanstack/react-router' {
       path: '/entregas'
       fullPath: '/entregas'
       preLoaderRoute: typeof AuthenticatedEntregasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/consumo-preciso': {
@@ -678,6 +698,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedClientesRoute: typeof AuthenticatedClientesRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedConsumoPrecisoRoute: typeof AuthenticatedConsumoPrecisoRoute
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEntregasRoute: typeof AuthenticatedEntregasRoute
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
   AuthenticatedMasterRoute: typeof AuthenticatedMasterRoute
@@ -692,7 +713,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSincronizacaoRoute: typeof AuthenticatedSincronizacaoRouteWithChildren
   AuthenticatedTrocarSenhaRoute: typeof AuthenticatedTrocarSenhaRoute
   AuthenticatedVeiculosRoute: typeof AuthenticatedVeiculosRoute
-  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedDespesasNovaRoute: typeof AuthenticatedDespesasNovaRoute
   AuthenticatedPneusInstalarRoute: typeof AuthenticatedPneusInstalarRoute
   AuthenticatedPneusRelatorioRoute: typeof AuthenticatedPneusRelatorioRoute
@@ -710,6 +730,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedClientesRoute: AuthenticatedClientesRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedConsumoPrecisoRoute: AuthenticatedConsumoPrecisoRoute,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEntregasRoute: AuthenticatedEntregasRoute,
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
   AuthenticatedMasterRoute: AuthenticatedMasterRoute,
@@ -724,7 +745,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSincronizacaoRoute: AuthenticatedSincronizacaoRouteWithChildren,
   AuthenticatedTrocarSenhaRoute: AuthenticatedTrocarSenhaRoute,
   AuthenticatedVeiculosRoute: AuthenticatedVeiculosRoute,
-  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedDespesasNovaRoute: AuthenticatedDespesasNovaRoute,
   AuthenticatedPneusInstalarRoute: AuthenticatedPneusInstalarRoute,
   AuthenticatedPneusRelatorioRoute: AuthenticatedPneusRelatorioRoute,
@@ -739,6 +759,7 @@ const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
 }

@@ -137,7 +137,7 @@ function Page() {
       } else {
         toast.success("Abastecimento salvo offline. Será enviado quando houver conexão.");
       }
-      navigate({ to: "/" });
+      navigate({ to: "/dashboard" });
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao salvar");
     } finally {

@@ -57,7 +57,7 @@ export const Route = createFileRoute("/_authenticated")({
 type NavItem = { to: string; icon: React.ReactNode; label: string };
 
 const ADMIN_NAV: NavItem[] = [
-  { to: "/", icon: <LayoutDashboard className="h-5 w-5" />, label: "Painel" },
+  { to: "/dashboard", icon: <LayoutDashboard className="h-5 w-5" />, label: "Painel" },
   { to: "/entrega", icon: <Plus className="h-5 w-5" />, label: "Nova venda" },
   { to: "/clientes", icon: <Users className="h-5 w-5" />, label: "Clientes" },
   { to: "/veiculos", icon: <Car className="h-5 w-5" />, label: "Veículos" },

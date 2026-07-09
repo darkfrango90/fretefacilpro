@@ -16,10 +16,9 @@ function TrocarSenha() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  // Se não precisa trocar, manda pra home
   useEffect(() => {
     if (data && !data.profile_extras?.precisa_trocar_senha) {
-      navigate({ to: "/", replace: true });
+      navigate({ to: "/dashboard", replace: true });
     }
   }, [data, navigate]);
 
@@ -45,7 +44,7 @@ function TrocarSenha() {
     setLoading(false);
     toast.success("Senha atualizada!");
     await refetch();
-    navigate({ to: "/", replace: true });
+    navigate({ to: "/dashboard", replace: true });
   }
 
   return (
