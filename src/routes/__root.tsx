@@ -120,6 +120,18 @@ function RootComponent() {
     // cannot interact with inputs before React has fully mounted.
     const overlay = document.getElementById("app-loading");
     if (overlay) overlay.remove();
+
+    // Segurança: Limpa fragmentos de hash (#access_token=...) da barra de endereços do navegador.
+    // Isso impede que um usuário copie a URL inteira com seu token pessoal e a compartilhe,
+    // o que daria acesso direto à sua conta para outras pessoas.
+    if (typeof window !== "undefined" && window.location.hash) {
+      const hash = window.location.hash;
+      if (hash.includes("access_token=") || hash.includes("id_token=") || hash.includes("error=")) {
+        const cleanUrl = window.location.pathname + window.location.search;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    }
+
     // Unregister any stale service workers.
     void import("../lib/pwa/register-sw").then((m) => m.registerServiceWorker());
   }, []);
