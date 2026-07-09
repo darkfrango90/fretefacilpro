@@ -1,25 +1,6 @@
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Logo } from "@/components/logo";
-import {
-  Users,
-  Truck,
-  Wrench,
-  ShieldCheck,
-  MapPin,
-  PenTool,
-  TrendingUp,
-  CircleDollarSign,
-  Zap,
-  CheckCircle2,
-  Lock,
-  ArrowRight,
-  Menu,
-  X,
-  Plus
-} from "lucide-react";
 
 export const Route = createFileRoute("/")({
   // Se o usuário já estiver logado, redireciona direto para o painel interno
@@ -31,8 +12,9 @@ export const Route = createFileRoute("/")({
   },
   head: () => ({
     meta: [
-      { title: "Frete Fácil PRO — Gestão de Fretes, Entregas e Vendas Offline" },
-      { name: "description", content: "A solução completa e robusta para gerenciamento de fretes, frotas, pneus e vendas com total suporte offline. Apenas R$ 149,90/mês." }
+      { title: "Frete Fácil PRO — Gestão de entregas para materiais de construção" },
+      { name: "description", content: "Organize entregas, motoristas e frota em um só painel. Comprovante por foto, funcionamento offline e visão em tempo real. Feito para lojas de materiais de construção." },
+      { name: "theme-color", content: "#1B2A4A" }
     ]
   }),
   component: LandingPage,
@@ -40,392 +22,1873 @@ export const Route = createFileRoute("/")({
 
 function LandingPage() {
   const navigate = useNavigate();
+  const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Monitora scroll para fixar o header com transparência
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 30);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Monitora animações de revelar ao rolar (reveal on scroll)
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry, idx) => {
+          if (entry.isIntersecting) {
+            // Adiciona atraso escalonado com base na posição
+            (entry.target as HTMLElement).style.transitionDelay = `${(idx % 3) * 90}ms`;
+            entry.target.classList.add("in");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.14 }
+    );
+
+    document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
 
   const contactWhatsapp = "https://wa.me/5563984446555?text=Olá!%20Gostaria%20de%20assinar%20o%20plano%20PRO%20do%20Frete%20Fácil%20PRO.";
 
   return (
-    <div className="min-h-screen bg-[#0b1530] text-slate-100 font-sans selection:bg-[#F57C00]/30 selection:text-white">
-      
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#0b1530]/90 backdrop-blur-md border-b border-white/5 px-4 lg:px-8 py-3">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <Logo variant="horizontal" size="md" />
+    <>
+      {/* Estilos originais incorporados da Landing Page do Usuário */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        :root {
+          --navy-950: #081226;
+          --navy-900: #0B1730;
+          --navy-800: #122447;
+          --navy-700: #1B2A4A;
+          --navy-600: #27406E;
+          --amber: #FFB020;
+          --amber-deep: #F08C00;
+          --paper: #F4F6FA;
+          --white: #FFFFFF;
+          --ink: #101828;
+          --ink-soft: #42506B;
+          --line: #E3E8F0;
+          --green: #12B76A;
+          --green-soft: #E4F8EE;
+          --blue-soft: #E8F0FE;
+          --amber-soft: #FFF3DC;
+          --red-soft: #FEECEB;
+          --red: #E5484D;
+          --radius: 16px;
+          --shadow-lg: 0 24px 60px -18px rgba(11,23,48,.35);
+          --shadow-md: 0 12px 32px -12px rgba(11,23,48,.18);
+          --shadow-sm: 0 4px 14px -4px rgba(11,23,48,.12);
+          --font-display: 'Archivo', sans-serif;
+          --font-body: 'Manrope', sans-serif;
+          --font-mono: 'IBM Plex Mono', monospace;
+        }
 
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
-            <a href="#funcionalidades" className="hover:text-[#F57C00] transition-colors">Funcionalidades</a>
-            <a href="#offline" className="hover:text-[#F57C00] transition-colors">Tecnologia Offline</a>
-            <a href="#precos" className="hover:text-[#F57C00] transition-colors">Preço</a>
-            <a href="#contato" className="hover:text-[#F57C00] transition-colors">Suporte</a>
-          </nav>
+        /* Reset local para a Landing Page */
+        .lp-wrapper {
+          font-family: var(--font-body);
+          color: var(--ink);
+          background: var(--paper);
+          line-height: 1.6;
+          -webkit-font-smoothing: antialiased;
+          overflow-x: hidden;
+          width: 100%;
+        }
 
-          <div className="hidden md:flex items-center gap-3">
-            <Button
-              variant="ghost"
-              onClick={() => navigate({ to: "/auth" })}
-              className="text-slate-300 hover:text-white hover:bg-white/5 rounded-xl px-4 text-xs font-semibold"
-            >
-              Acessar Sistema
-            </Button>
-            <a href={contactWhatsapp} target="_blank" rel="noopener noreferrer">
-              <Button
-                variant="action"
-                size="sm"
-                className="bg-[#F57C00] hover:bg-[#E65100] text-white shadow-lg shadow-orange-500/10 text-xs font-semibold rounded-xl"
-              >
-                Assinar Plano PRO
-              </Button>
+        .lp-wrapper * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+
+        .lp-wrapper html {
+          scroll-behavior: smooth;
+        }
+
+        .lp-wrapper img {
+          max-width: 100%;
+          display: block;
+        }
+
+        .lp-wrapper a {
+          color: inherit;
+          text-decoration: none;
+        }
+
+        .lp-wrapper ul {
+          list-style: none;
+        }
+
+        .lp-wrapper .container {
+          width: min(1160px, 92%);
+          margin-inline: auto;
+        }
+
+        /* ============ UTILITIES ============ */
+        .lp-wrapper .eyebrow {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          font-family: var(--font-mono);
+          font-size: .72rem;
+          font-weight: 600;
+          letter-spacing: .14em;
+          text-transform: uppercase;
+          color: var(--amber-deep);
+        }
+
+        .lp-wrapper .eyebrow::before {
+          content: "";
+          width: 26px;
+          height: 2px;
+          background: var(--amber);
+          border-radius: 2px;
+        }
+
+        .lp-wrapper .section {
+          padding: 96px 0;
+        }
+
+        .lp-wrapper .section-head {
+          max-width: 640px;
+          margin-bottom: 56px;
+        }
+
+        .lp-wrapper .section-head h2 {
+          font-family: var(--font-display);
+          font-weight: 800;
+          font-size: clamp(1.8rem, 3.6vw, 2.6rem);
+          line-height: 1.15;
+          letter-spacing: -.02em;
+          margin: 14px 0 14px;
+        }
+
+        .lp-wrapper .section-head p {
+          color: var(--ink-soft);
+          font-size: 1.05rem;
+        }
+
+        .lp-wrapper .btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          font-family: var(--font-display);
+          font-weight: 700;
+          font-size: .95rem;
+          padding: 15px 28px;
+          border-radius: 12px;
+          border: none;
+          cursor: pointer;
+          transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+          letter-spacing: .01em;
+        }
+
+        .lp-wrapper .btn:focus-visible {
+          outline: 3px solid var(--amber);
+          outline-offset: 3px;
+        }
+
+        .lp-wrapper .btn-amber {
+          background: linear-gradient(180deg, var(--amber), var(--amber-deep));
+          color: var(--navy-950);
+          box-shadow: 0 10px 24px -8px rgba(240,140,0,.55);
+        }
+
+        .lp-wrapper .btn-amber:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 16px 32px -8px rgba(240,140,0,.6);
+        }
+
+        .lp-wrapper .btn-ghost {
+          background: transparent;
+          color: var(--white);
+          border: 1.5px solid rgba(255, 255, 255, .28);
+        }
+
+        .lp-wrapper .btn-ghost:hover {
+          background: rgba(255, 255, 255, .08);
+          transform: translateY(-2px);
+        }
+
+        .lp-wrapper .btn-navy {
+          background: var(--navy-800);
+          color: var(--white);
+        }
+
+        .lp-wrapper .btn-navy:hover {
+          background: var(--navy-700);
+          transform: translateY(-2px);
+        }
+
+        /* reveal on scroll */
+        .lp-wrapper .reveal {
+          opacity: 0;
+          transform: translateY(26px);
+          transition: opacity .7s ease, transform .7s ease;
+        }
+
+        .lp-wrapper .reveal.in {
+          opacity: 1;
+          transform: none;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .lp-wrapper .reveal {
+            opacity: 1;
+            transform: none;
+          }
+        }
+
+        /* ============ NAV ============ */
+        .lp-wrapper .nav {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          z-index: 60;
+          transition: background .25s ease, box-shadow .25s ease;
+        }
+
+        .lp-wrapper .nav.scrolled {
+          background: rgba(8, 18, 38, .92);
+          backdrop-filter: blur(12px);
+          box-shadow: 0 2px 20px rgba(0, 0, 0, .3);
+        }
+
+        .lp-wrapper .nav-inner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 18px 0;
+        }
+
+        .lp-wrapper .logo {
+          display: flex;
+          align-items: center;
+          gap: 11px;
+          color: var(--white);
+        }
+
+        .lp-wrapper .logo-mark {
+          width: 40px;
+          height: 40px;
+          border-radius: 11px;
+          background: linear-gradient(140deg, var(--amber), var(--amber-deep));
+          display: grid;
+          place-items: center;
+          flex-shrink: 0;
+        }
+
+        .lp-wrapper .logo-mark svg {
+          width: 23px;
+          height: 23px;
+        }
+
+        .lp-wrapper .logo-text {
+          font-family: var(--font-display);
+          font-weight: 800;
+          font-size: 1.08rem;
+          letter-spacing: -.01em;
+          line-height: 1.1;
+        }
+
+        .lp-wrapper .logo-text span {
+          display: block;
+          font-family: var(--font-mono);
+          font-size: .6rem;
+          font-weight: 600;
+          letter-spacing: .22em;
+          color: var(--amber);
+        }
+
+        .lp-wrapper .nav-links {
+          display: flex;
+          gap: 32px;
+          align-items: center;
+        }
+
+        .lp-wrapper .nav-links a {
+          color: rgba(255, 255, 255, .78);
+          font-weight: 600;
+          font-size: .92rem;
+          transition: color .2s;
+        }
+
+        .lp-wrapper .nav-links a:hover {
+          color: var(--amber);
+        }
+
+        .lp-wrapper .nav .btn {
+          padding: 11px 22px;
+          font-size: .86rem;
+        }
+
+        .lp-wrapper .nav-toggle {
+          display: none;
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 6px;
+        }
+
+        .lp-wrapper .nav-toggle span {
+          display: block;
+          width: 24px;
+          height: 2.5px;
+          background: var(--white);
+          margin: 5px 0;
+          border-radius: 2px;
+          transition: .25s;
+        }
+
+        /* ============ HERO ============ */
+        .lp-wrapper .hero {
+          position: relative;
+          overflow: hidden;
+          background: radial-gradient(1000px 500px at 85% -10%, rgba(39,64,110,.55), transparent 60%),
+            radial-gradient(700px 420px at -10% 110%, rgba(240,140,0,.14), transparent 55%),
+            linear-gradient(165deg, var(--navy-900) 0%, var(--navy-950) 100%);
+          color: var(--white);
+          padding: 168px 0 120px;
+        }
+
+        .lp-wrapper .hero-grid {
+          display: grid;
+          grid-template-columns: 1.05fr .95fr;
+          gap: 56px;
+          align-items: center;
+        }
+
+        .lp-wrapper .hero h1 {
+          font-family: var(--font-display);
+          font-weight: 900;
+          font-size: clamp(2.4rem, 5vw, 3.7rem);
+          line-height: 1.06;
+          letter-spacing: -.025em;
+          margin: 20px 0 22px;
+        }
+
+        .lp-wrapper .hero h1 em {
+          font-style: normal;
+          color: var(--amber);
+          position: relative;
+          white-space: nowrap;
+        }
+
+        .lp-wrapper .hero h1 em::after {
+          content: "";
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: 4px;
+          height: 10px;
+          background: rgba(255, 176, 32, .22);
+          border-radius: 4px;
+          z-index: -1;
+        }
+
+        .lp-wrapper .hero-sub {
+          color: rgba(255, 255, 255, .75);
+          font-size: 1.13rem;
+          max-width: 520px;
+          margin-bottom: 34px;
+        }
+
+        .lp-wrapper .hero-ctas {
+          display: flex;
+          gap: 14px;
+          flex-wrap: wrap;
+          margin-bottom: 40px;
+        }
+
+        .lp-wrapper .hero-proof {
+          display: flex;
+          gap: 28px;
+          flex-wrap: wrap;
+        }
+
+        .lp-wrapper .proof-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          color: rgba(255, 255, 255, .7);
+          font-size: .88rem;
+          font-weight: 600;
+        }
+
+        .lp-wrapper .proof-item svg {
+          width: 18px;
+          height: 18px;
+          flex-shrink: 0;
+        }
+
+        /* route line decorativa */
+        .lp-wrapper .route-svg {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+          opacity: .5;
+        }
+
+        .lp-wrapper .route-path {
+          fill: none;
+          stroke: var(--amber);
+          stroke-width: 2.5;
+          stroke-dasharray: 10 12;
+          animation: routeflow 26s linear infinite;
+        }
+
+        @keyframes routeflow {
+          to {
+            stroke-dashoffset: -880;
+          }
+        }
+
+        /* ---- phone mockup ---- */
+        .lp-wrapper .hero-visual {
+          position: relative;
+          display: flex;
+          justify-content: center;
+        }
+
+        .lp-wrapper .phone {
+          width: 318px;
+          background: var(--navy-950);
+          border-radius: 42px;
+          padding: 12px;
+          box-shadow: var(--shadow-lg), inset 0 0 0 2px rgba(255, 255, 255, .07);
+          position: relative;
+          z-index: 2;
+          animation: phonefloat 7s ease-in-out infinite;
+        }
+
+        @keyframes phonefloat {
+          0%, 100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-12px);
+          }
+        }
+
+        .lp-wrapper .phone-screen {
+          background: var(--paper);
+          border-radius: 32px;
+          overflow: hidden;
+        }
+
+        .lp-wrapper .phone-top {
+          background: var(--navy-700);
+          color: var(--white);
+          padding: 20px 18px 16px;
+        }
+
+        .lp-wrapper .phone-top .greeting {
+          font-size: .72rem;
+          color: rgba(255, 255, 255, .6);
+          font-weight: 600;
+        }
+
+        .lp-wrapper .phone-top .title {
+          font-family: var(--font-display);
+          font-weight: 800;
+          font-size: 1.05rem;
+          margin-top: 2px;
+        }
+
+        .lp-wrapper .phone-stats {
+          display: flex;
+          gap: 8px;
+          margin-top: 14px;
+        }
+
+        .lp-wrapper .pstat {
+          flex: 1;
+          background: rgba(255, 255, 255, .1);
+          border-radius: 10px;
+          padding: 8px 10px;
+        }
+
+        .lp-wrapper .pstat b {
+          font-family: var(--font-display);
+          font-size: 1.05rem;
+          display: block;
+          line-height: 1.1;
+        }
+
+        .lp-wrapper .pstat span {
+          font-size: .62rem;
+          color: rgba(255, 255, 255, .65);
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: .06em;
+        }
+
+        .lp-wrapper .phone-body {
+          padding: 14px 14px 18px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .lp-wrapper .dcard {
+          background: var(--white);
+          border: 1px solid var(--line);
+          border-radius: 14px;
+          padding: 12px 14px;
+          box-shadow: var(--shadow-sm);
+        }
+
+        .lp-wrapper .dcard-head {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .lp-wrapper .dcard-head b {
+          font-size: .84rem;
+          font-weight: 800;
+        }
+
+        .lp-wrapper .dcard-head .cod {
+          font-family: var(--font-mono);
+          font-size: .62rem;
+          color: var(--ink-soft);
+        }
+
+        .lp-wrapper .dcard p {
+          font-size: .72rem;
+          color: var(--ink-soft);
+          margin-top: 3px;
+        }
+
+        .lp-wrapper .chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: .62rem;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: .05em;
+          padding: 4px 10px;
+          border-radius: 999px;
+          margin-top: 8px;
+        }
+
+        .lp-wrapper .chip::before {
+          content: "";
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: currentColor;
+        }
+
+        .lp-wrapper .chip.pendente {
+          background: var(--amber-soft);
+          color: var(--amber-deep);
+        }
+
+        .lp-wrapper .chip.rota {
+          background: var(--blue-soft);
+          color: #2563EB;
+        }
+
+        .lp-wrapper .chip.rota::before {
+          animation: pulse 1.4s ease infinite;
+        }
+
+        .lp-wrapper .chip.entregue {
+          background: var(--green-soft);
+          color: var(--green);
+        }
+
+        @keyframes pulse {
+          50% {
+            opacity: .3;
+          }
+        }
+
+        /* floating badges ao redor do phone */
+        .lp-wrapper .float-badge {
+          position: absolute;
+          background: var(--white);
+          border-radius: 14px;
+          box-shadow: var(--shadow-md);
+          padding: 12px 16px;
+          z-index: 3;
+          display: flex;
+          align-items: center;
+          gap: 11px;
+          animation: phonefloat 8s ease-in-out infinite;
+        }
+
+        .lp-wrapper .float-badge .fb-icon {
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
+          display: grid;
+          place-items: center;
+          flex-shrink: 0;
+        }
+
+        .lp-wrapper .float-badge b {
+          font-family: var(--font-display);
+          font-size: .82rem;
+          display: block;
+          line-height: 1.2;
+          color: var(--ink);
+        }
+
+        .lp-wrapper .float-badge span {
+          font-size: .68rem;
+          color: var(--ink-soft);
+          font-weight: 600;
+        }
+
+        .lp-wrapper .fb-1 {
+          top: 9%;
+          left: -4%;
+          animation-delay: .8s;
+        }
+
+        .lp-wrapper .fb-1 .fb-icon {
+          background: var(--green-soft);
+        }
+
+        .lp-wrapper .fb-2 {
+          bottom: 14%;
+          right: -6%;
+          animation-delay: 1.6s;
+        }
+
+        .lp-wrapper .fb-2 .fb-icon {
+          background: var(--amber-soft);
+        }
+
+        @media(max-width:560px) {
+          .lp-wrapper .fb-1 {
+            left: 0;
+          }
+          .lp-wrapper .fb-2 {
+            right: 0;
+          }
+        }
+
+        /* ============ LOGO STRIP / NUMBERS ============ */
+        .lp-wrapper .strip {
+          background: var(--navy-950);
+          color: var(--white);
+          padding: 34px 0;
+        }
+
+        .lp-wrapper .strip-inner {
+          display: flex;
+          justify-content: space-between;
+          gap: 24px;
+          flex-wrap: wrap;
+        }
+
+        .lp-wrapper .strip-item {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+
+        .lp-wrapper .strip-item b {
+          font-family: var(--font-display);
+          font-size: 1.5rem;
+          font-weight: 800;
+          color: var(--amber);
+        }
+
+        .lp-wrapper .strip-item span {
+          font-size: .82rem;
+          color: rgba(255, 255, 255, .65);
+          font-weight: 600;
+          max-width: 150px;
+          line-height: 1.35;
+        }
+
+        /* ============ PAIN ============ */
+        .lp-wrapper .pain-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 22px;
+        }
+
+        .lp-wrapper .pain-card {
+          background: var(--white);
+          border-radius: var(--radius);
+          padding: 30px 28px;
+          border: 1px solid var(--line);
+          position: relative;
+          overflow: hidden;
+          transition: transform .25s ease, box-shadow .25s ease;
+        }
+
+        .lp-wrapper .pain-card:hover {
+          transform: translateY(-5px);
+          box-shadow: var(--shadow-md);
+        }
+
+        .lp-wrapper .pain-card::before {
+          content: "";
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 4px;
+          background: linear-gradient(90deg, var(--red), #FF8A65);
+        }
+
+        .lp-wrapper .pain-card .p-icon {
+          width: 46px;
+          height: 46px;
+          border-radius: 12px;
+          background: var(--red-soft);
+          display: grid;
+          place-items: center;
+          margin-bottom: 18px;
+        }
+
+        .lp-wrapper .pain-card h3 {
+          font-family: var(--font-display);
+          font-size: 1.08rem;
+          font-weight: 800;
+          margin-bottom: 8px;
+        }
+
+        .lp-wrapper .pain-card p {
+          color: var(--ink-soft);
+          font-size: .93rem;
+        }
+
+        /* ============ FEATURES ============ */
+        .lp-wrapper .features {
+          background: var(--white);
+        }
+
+        .lp-wrapper .feat-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 22px;
+        }
+
+        .lp-wrapper .feat-card {
+          background: var(--paper);
+          border-radius: var(--radius);
+          padding: 32px 28px;
+          border: 1px solid var(--line);
+          transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+        }
+
+        .lp-wrapper .feat-card:hover {
+          transform: translateY(-5px);
+          box-shadow: var(--shadow-md);
+          border-color: var(--amber);
+        }
+
+        .lp-wrapper .feat-icon {
+          width: 52px;
+          height: 52px;
+          border-radius: 14px;
+          background: linear-gradient(140deg, var(--navy-700), var(--navy-900));
+          display: grid;
+          place-items: center;
+          margin-bottom: 20px;
+          box-shadow: 0 8px 18px -6px rgba(27, 42, 74, .5);
+        }
+
+        .lp-wrapper .feat-icon svg {
+          width: 26px;
+          height: 26px;
+        }
+
+        .lp-wrapper .feat-card h3 {
+          font-family: var(--font-display);
+          font-size: 1.1rem;
+          font-weight: 800;
+          margin-bottom: 9px;
+        }
+
+        .lp-wrapper .feat-card p {
+          color: var(--ink-soft);
+          font-size: .93rem;
+        }
+
+        .lp-wrapper .feat-tag {
+          display: inline-block;
+          margin-top: 14px;
+          font-family: var(--font-mono);
+          font-size: .64rem;
+          font-weight: 600;
+          letter-spacing: .1;
+          text-transform: uppercase;
+          background: var(--amber-soft);
+          color: var(--amber-deep);
+          padding: 4px 10px;
+          border-radius: 6px;
+        }
+
+        /* ============ FLOW (como funciona) ============ */
+        .lp-wrapper .flow {
+          background: var(--navy-900);
+          color: var(--white);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .lp-wrapper .flow .section-head h2 {
+          color: var(--white);
+        }
+
+        .lp-wrapper .flow .section-head p {
+          color: rgba(255, 255, 255, .7);
+        }
+
+        .lp-wrapper .flow-steps {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 26px;
+          position: relative;
+          z-index: 2;
+        }
+
+        .lp-wrapper .flow-step {
+          background: rgba(255, 255, 255, .05);
+          border: 1px solid rgba(255, 255, 255, .1);
+          border-radius: var(--radius);
+          padding: 34px 28px;
+          backdrop-filter: blur(4px);
+          transition: transform .25s ease, background .25s ease;
+        }
+
+        .lp-wrapper .flow-step:hover {
+          transform: translateY(-5px);
+          background: rgba(255, 255, 255, .08);
+        }
+
+        .lp-wrapper .flow-num {
+          font-family: var(--font-mono);
+          font-weight: 600;
+          font-size: .75rem;
+          color: var(--amber);
+          letter-spacing: .16em;
+          margin-bottom: 16px;
+          display: block;
+        }
+
+        .lp-wrapper .flow-step h3 {
+          font-family: var(--font-display);
+          font-size: 1.15rem;
+          font-weight: 800;
+          margin-bottom: 10px;
+        }
+
+        .lp-wrapper .flow-step p {
+          color: rgba(255, 255, 255, .7);
+          font-size: .93rem;
+        }
+
+        .lp-wrapper .flow-status {
+          margin-top: 20px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .lp-wrapper .flow-status .chip {
+          margin-top: 0;
+        }
+
+        .lp-wrapper .flow-status svg {
+          width: 14px;
+          height: 14px;
+          opacity: .5;
+        }
+
+        /* ============ PRICING ============ */
+        .lp-wrapper .price-grid {
+          display: flex;
+          justify-content: center;
+          gap: 24px;
+          align-items: stretch;
+          max-width: 480px;
+          margin-inline: auto;
+        }
+
+        .lp-wrapper .price-card {
+          background: var(--white);
+          border-radius: 20px;
+          padding: 42px 36px;
+          border: 1.5px solid var(--line);
+          display: flex;
+          flex-direction: column;
+          transition: transform .25s ease, box-shadow .25s ease;
+          position: relative;
+          width: 100%;
+        }
+
+        .lp-wrapper .price-card:hover {
+          transform: translateY(-6px);
+          box-shadow: var(--shadow-md);
+        }
+
+        .lp-wrapper .price-card.featured {
+          background: linear-gradient(170deg, var(--navy-800), var(--navy-950));
+          color: var(--white);
+          border-color: var(--amber);
+          box-shadow: var(--shadow-lg);
+        }
+
+        .lp-wrapper .badge-pop {
+          position: absolute;
+          top: -14px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: linear-gradient(90deg, var(--amber), var(--amber-deep));
+          color: var(--navy-950);
+          font-family: var(--font-display);
+          font-weight: 800;
+          font-size: .7rem;
+          letter-spacing: .08em;
+          text-transform: uppercase;
+          padding: 7px 18px;
+          border-radius: 999px;
+          white-space: nowrap;
+        }
+
+        .lp-wrapper .plan-name {
+          font-family: var(--font-display);
+          font-weight: 800;
+          font-size: 1.3rem;
+          text-align: center;
+        }
+
+        .lp-wrapper .plan-desc {
+          font-size: .88rem;
+          color: rgba(255, 255, 255, .65);
+          margin-top: 6px;
+          text-align: center;
+          min-height: 40px;
+        }
+
+        .lp-wrapper .plan-price {
+          margin: 24px 0 6px;
+          display: flex;
+          align-items: baseline;
+          justify-content: center;
+          gap: 6px;
+        }
+
+        .lp-wrapper .plan-price .cur {
+          font-family: var(--font-mono);
+          font-size: .9rem;
+          font-weight: 600;
+          color: rgba(255, 255, 255, .6);
+        }
+
+        .lp-wrapper .plan-price .val {
+          font-family: var(--font-display);
+          font-weight: 900;
+          font-size: 3.3rem;
+          letter-spacing: -.03em;
+          line-height: 1;
+        }
+
+        .lp-wrapper .plan-price .per {
+          font-size: .85rem;
+          color: rgba(255, 255, 255, .6);
+          font-weight: 600;
+        }
+
+        .lp-wrapper .plan-note {
+          font-size: .75rem;
+          color: rgba(255, 255, 255, .55);
+          margin-bottom: 24px;
+          text-align: center;
+        }
+
+        .lp-wrapper .plan-list {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          margin-bottom: 34px;
+          flex: 1;
+        }
+
+        .lp-wrapper .plan-list li {
+          display: flex;
+          gap: 10px;
+          font-size: .92rem;
+          align-items: flex-start;
+        }
+
+        .lp-wrapper .plan-list svg {
+          width: 18px;
+          height: 18px;
+          flex-shrink: 0;
+          margin-top: 2px;
+        }
+
+        .lp-wrapper .price-card .btn {
+          width: 100%;
+        }
+
+        /* ============ TESTIMONIAL / CASE ============ */
+        .lp-wrapper .case {
+          background: var(--white);
+        }
+
+        .lp-wrapper .case-box {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 56px;
+          align-items: center;
+          background: linear-gradient(150deg, var(--navy-800), var(--navy-950));
+          border-radius: 26px;
+          padding: 64px;
+          color: var(--white);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .lp-wrapper .case-box::after {
+          content: "";
+          position: absolute;
+          right: -120px;
+          top: -120px;
+          width: 340px;
+          height: 340px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(255, 176, 32, .22), transparent 65%);
+        }
+
+        .lp-wrapper .case-quote {
+          font-family: var(--font-display);
+          font-weight: 700;
+          font-size: 1.4rem;
+          line-height: 1.4;
+          letter-spacing: -.01em;
+        }
+
+        .lp-wrapper .case-quote::before {
+          content: "“";
+          color: var(--amber);
+          font-size: 3rem;
+          line-height: 0;
+          vertical-align: -14px;
+          margin-right: 6px;
+        }
+
+        .lp-wrapper .case-author {
+          margin-top: 26px;
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+
+        .lp-wrapper .case-avatar {
+          width: 48px;
+          height: 48px;
+          border-radius: 50%;
+          background: linear-gradient(140deg, var(--amber), var(--amber-deep));
+          display: grid;
+          place-items: center;
+          font-family: var(--font-display);
+          font-weight: 800;
+          color: var(--navy-950);
+          font-size: 1rem;
+        }
+
+        .lp-wrapper .case-author b {
+          font-size: .95rem;
+          display: block;
+        }
+
+        .lp-wrapper .case-author span {
+          font-size: .8rem;
+          color: rgba(255, 255, 255, .6);
+        }
+
+        .lp-wrapper .case-stats {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 18px;
+          position: relative;
+          z-index: 2;
+        }
+
+        .lp-wrapper .cs-item {
+          background: rgba(255, 255, 255, .06);
+          border: 1px solid rgba(255, 255, 255, .1);
+          border-radius: 16px;
+          padding: 24px;
+        }
+
+        .lp-wrapper .cs-item b {
+          font-family: var(--font-display);
+          font-weight: 900;
+          font-size: 2rem;
+          color: var(--amber);
+          display: block;
+          letter-spacing: -.02em;
+        }
+
+        .lp-wrapper .cs-item span {
+          font-size: .8rem;
+          color: rgba(255, 255, 255, .7);
+          font-weight: 600;
+        }
+
+        /* ============ FAQ ============ */
+        .lp-wrapper .faq-list {
+          max-width: 760px;
+          margin-inline: auto;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+
+        .lp-wrapper .faq-item {
+          background: var(--white);
+          border: 1px solid var(--line);
+          border-radius: 14px;
+          overflow: hidden;
+          transition: box-shadow .2s;
+        }
+
+        .lp-wrapper .faq-item[open] {
+          box-shadow: var(--shadow-sm);
+        }
+
+        .lp-wrapper .faq-item summary {
+          cursor: pointer;
+          list-style: none;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px 24px;
+          font-family: var(--font-display);
+          font-weight: 700;
+          font-size: .98rem;
+          gap: 16px;
+        }
+
+        .lp-wrapper .faq-item summary::-webkit-details-marker {
+          display: none;
+        }
+
+        .lp-wrapper .faq-item summary::after {
+          content: "+";
+          font-size: 1.5rem;
+          color: var(--amber-deep);
+          font-weight: 500;
+          transition: transform .25s;
+          flex-shrink: 0;
+          line-height: 1;
+        }
+
+        .lp-wrapper .faq-item[open] summary::after {
+          transform: rotate(45deg);
+        }
+
+        .lp-wrapper .faq-item .faq-body {
+          padding: 0 24px 22px;
+          color: var(--ink-soft);
+          font-size: .93rem;
+        }
+
+        /* ============ CTA FINAL ============ */
+        .lp-wrapper .cta-final {
+          background: radial-gradient(700px 340px at 50% -20%, rgba(255, 176, 32, .16), transparent 60%),
+            linear-gradient(165deg, var(--navy-900), var(--navy-950));
+          color: var(--white);
+          text-align: center;
+          padding: 110px 0;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .lp-wrapper .cta-final h2 {
+          font-family: var(--font-display);
+          font-weight: 900;
+          font-size: clamp(2rem, 4.4vw, 3.1rem);
+          letter-spacing: -.025em;
+          line-height: 1.1;
+          max-width: 720px;
+          margin: 0 auto 18px;
+        }
+
+        .lp-wrapper .cta-final p {
+          color: rgba(255, 255, 255, .7);
+          max-width: 520px;
+          margin: 0 auto 36px;
+          font-size: 1.08rem;
+        }
+
+        .lp-wrapper .cta-final .hero-ctas {
+          justify-content: center;
+          margin-bottom: 26px;
+        }
+
+        .lp-wrapper .cta-note {
+          font-size: .8rem;
+          color: rgba(255, 255, 255, .5);
+          font-family: var(--font-mono);
+        }
+
+        /* ============ FOOTER ============ */
+        .lp-wrapper footer {
+          background: var(--navy-950);
+          color: rgba(255, 255, 255, .6);
+          padding: 56px 0 32px;
+        }
+
+        .lp-wrapper .footer-grid {
+          display: flex;
+          justify-content: space-between;
+          gap: 40px;
+          flex-wrap: wrap;
+          margin-bottom: 40px;
+        }
+
+        .lp-wrapper .footer-brand {
+          max-width: 300px;
+        }
+
+        .lp-wrapper .footer-brand p {
+          font-size: .85rem;
+          margin-top: 14px;
+        }
+
+        .lp-wrapper .footer-col h4 {
+          font-family: var(--font-display);
+          color: var(--white);
+          font-size: .85rem;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: .08em;
+          margin-bottom: 16px;
+        }
+
+        .lp-wrapper .footer-col ul {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .lp-wrapper .footer-col a {
+          font-size: .88rem;
+          transition: color .2s;
+        }
+
+        .lp-wrapper .footer-col a:hover {
+          color: var(--amber);
+        }
+
+        .lp-wrapper .footer-bottom {
+          border-top: 1px solid rgba(255, 255, 255, .08);
+          padding-top: 26px;
+          display: flex;
+          justify-content: space-between;
+          gap: 14px;
+          flex-wrap: wrap;
+          font-size: .78rem;
+          font-family: var(--font-mono);
+        }
+
+        /* ============ RESPONSIVE ============ */
+        @media(max-width:960px) {
+          .lp-wrapper .hero-grid {
+            grid-template-columns: 1fr;
+            gap: 64px;
+          }
+          .lp-wrapper .hero {
+            padding-top: 140px;
+          }
+          .lp-wrapper .pain-grid,
+          .lp-wrapper .feat-grid,
+          .lp-wrapper .flow-steps {
+            grid-template-columns: 1fr 1fr;
+          }
+          .lp-wrapper .price-grid {
+            max-width: 100%;
+          }
+          .lp-wrapper .case-box {
+            grid-template-columns: 1fr;
+            padding: 44px 32px;
+            gap: 36px;
+          }
+        }
+
+        @media(max-width:680px) {
+          .lp-wrapper .section {
+            padding: 72px 0;
+          }
+          .lp-wrapper .pain-grid,
+          .lp-wrapper .feat-grid,
+          .lp-wrapper .flow-steps {
+            grid-template-columns: 1fr;
+          }
+          .lp-wrapper .nav-links {
+            position: fixed;
+            inset: 0;
+            background: var(--navy-950);
+            flex-direction: column;
+            justify-content: center;
+            gap: 30px;
+            transform: translateX(100%);
+            transition: transform .3s ease;
+          }
+          .lp-wrapper .nav-links.open {
+            transform: none;
+          }
+          .lp-wrapper .nav-links a {
+            font-size: 1.2rem;
+          }
+          .lp-wrapper .nav-toggle {
+            display: block;
+            position: relative;
+            z-index: 70;
+          }
+          .lp-wrapper .nav-toggle.open span:nth-child(1) {
+            transform: translateY(7.5px) rotate(45deg);
+          }
+          .lp-wrapper .nav-toggle.open span:nth-child(2) {
+            opacity: 0;
+          }
+          .lp-wrapper .nav-toggle.open span:nth-child(3) {
+            transform: translateY(-7.5px) rotate(-45deg);
+          }
+          .lp-wrapper .strip-inner {
+            justify-content: flex-start;
+          }
+          .lp-wrapper .case-stats {
+            grid-template-columns: 1fr;
+          }
+          .lp-wrapper .phone {
+            width: 280px;
+          }
+        }
+      `}} />
+
+      <div className="lp-wrapper">
+
+        {/* ==================== NAV ==================== */}
+        <nav className={`nav ${scrolled ? "scrolled" : ""}`} id="nav">
+          <div className="container nav-inner">
+            <a href="#" className="logo" aria-label="Frete Fácil PRO">
+              <div className="logo-mark">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#081226" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 8h12v9H1z" />
+                  <path d="M13 11h4l3 3v3h-7" />
+                  <circle cx="6" cy="19" r="1.8" />
+                  <circle cx="17" cy="19" r="1.8" />
+                </svg>
+              </div>
+              <div className="logo-text">Frete Fácil<span>PRO · ENTREGAS</span></div>
             </a>
-          </div>
-
-          {/* Mobile Menu Button */}
-          <button 
-            className="md:hidden p-2 text-slate-300 hover:text-white"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        </div>
-      </header>
-
-      {/* Mobile Menu Overlay */}
-      {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-40 bg-[#0b1530] pt-20 px-6 flex flex-col gap-6 text-lg font-medium text-slate-300">
-          <a href="#funcionalidades" onClick={() => setMobileMenuOpen(false)} className="hover:text-[#F57C00]">Funcionalidades</a>
-          <a href="#offline" onClick={() => setMobileMenuOpen(false)} className="hover:text-[#F57C00]">Tecnologia Offline</a>
-          <a href="#precos" onClick={() => setMobileMenuOpen(false)} className="hover:text-[#F57C00]">Preço</a>
-          <a href="#contato" onClick={() => setMobileMenuOpen(false)} className="hover:text-[#F57C00]">Suporte</a>
-          <hr className="border-white/5 my-2" />
-          <Button
-            variant="outline"
-            onClick={() => { setMobileMenuOpen(false); navigate({ to: "/auth" }); }}
-            className="w-full text-white border-white/10 hover:bg-white/5 rounded-xl py-3"
-          >
-            Acessar Sistema
-          </Button>
-          <a href={contactWhatsapp} target="_blank" rel="noopener noreferrer" className="w-full">
-            <Button
-              variant="action"
-              className="w-full bg-[#F57C00] hover:bg-[#E65100] text-white rounded-xl py-3"
-            >
-              Assinar Plano PRO
-            </Button>
-          </a>
-        </div>
-      )}
-
-      {/* Hero Section */}
-      <section className="relative overflow-hidden pt-16 pb-20 px-4 md:px-8 max-w-6xl mx-auto">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#F57C00]/5 rounded-full blur-3xl -z-10 pointer-events-none" />
-        
-        <div className="text-center space-y-6 max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-orange-400">
-            <Zap className="h-3.5 w-3.5 fill-current text-orange-400" /> Versão PRO Liberada por R$ 149,90/mês
-          </div>
-          
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight leading-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-            Gestão Inteligente de Fretes, Entregas e Vendas
-          </h1>
-          
-          <p className="text-lg sm:text-xl text-slate-300 font-medium max-w-2xl mx-auto leading-relaxed">
-            Funciona 100% offline para motoristas em campo. Controle de frota, pneus, despesas e faturamento integrado em uma plataforma robusta e moderna.
-          </p>
-
-          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a href={contactWhatsapp} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
-              <Button
-                variant="action"
-                size="xl"
-                className="w-full sm:w-auto bg-[#F57C00] hover:bg-[#E65100] text-white font-bold text-base px-8 py-6 shadow-lg shadow-orange-500/20 rounded-2xl flex items-center justify-center gap-2 group transition-all"
-              >
-                Assinar Plano PRO <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </a>
-            <Button
-              variant="outline"
-              size="xl"
-              onClick={() => navigate({ to: "/auth" })}
-              className="w-full sm:w-auto text-white border-white/10 hover:bg-white/5 font-bold text-base px-8 py-6 rounded-2xl"
-            >
-              Testar e Acessar
-            </Button>
-          </div>
-
-          <div className="pt-10 flex items-center justify-center gap-8 text-xs font-semibold text-slate-400">
-            <div className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-[#F57C00]" /> Sem fidelidade</div>
-            <div className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-[#F57C00]" /> Implantação rápida</div>
-            <div className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-[#F57C00]" /> Suporte humano</div>
-          </div>
-        </div>
-      </section>
-
-      {/* Funcionalidades */}
-      <section id="funcionalidades" className="py-20 bg-slate-900/50 border-y border-white/5 px-4 md:px-8">
-        <div className="max-w-6xl mx-auto space-y-12">
-          <div className="text-center space-y-4 max-w-xl mx-auto">
-            <h2 className="text-3xl font-extrabold tracking-tight">O que o Frete Fácil PRO faz por você?</h2>
-            <p className="text-slate-400">Uma única ferramenta para consolidar e descomplicar todo o faturamento e monitoramento das suas entregas rodoviárias.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             
-            {/* Feature 1 */}
-            <div className="p-6 rounded-2xl bg-[#0b1530] border border-white/5 hover:border-orange-500/30 transition-all hover:-translate-y-1 group">
-              <div className="h-10 w-10 rounded-xl bg-orange-500/10 text-[#F57C00] grid place-items-center mb-4 group-hover:bg-[#F57C00] group-hover:text-white transition-all">
-                <Truck className="h-5 w-5" />
-              </div>
-              <h3 className="text-lg font-bold mb-2">Entregas & Vendas</h3>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                Lançamento ágil de pedidos de fretes. Os motoristas recebem em tempo real as entregas pendentes direto na tela de seus celulares.
-              </p>
+            <div className={`nav-links ${mobileMenuOpen ? "open" : ""}`} id="navLinks">
+              <a href="#recursos" onClick={() => setMobileMenuOpen(false)}>Recursos</a>
+              <a href="#como-funciona" onClick={() => setMobileMenuOpen(false)}>Como funciona</a>
+              <a href="#planos" onClick={() => setMobileMenuOpen(false)}>Planos</a>
+              <a href="#faq" onClick={() => setMobileMenuOpen(false)}>Dúvidas</a>
+              <a href="/auth" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); navigate({ to: "/auth" }); }} className="btn btn-ghost" style={{ border: "1px solid rgba(255,255,255,0.15)", padding: "10px 20px" }}>Acessar Sistema</a>
+              <a href={contactWhatsapp} target="_blank" rel="noopener noreferrer" className="btn btn-amber">Assinar Plano PRO</a>
             </div>
 
-            {/* Feature 2 */}
-            <div className="p-6 rounded-2xl bg-[#0b1530] border border-white/5 hover:border-orange-500/30 transition-all hover:-translate-y-1 group">
-              <div className="h-10 w-10 rounded-xl bg-orange-500/10 text-[#F57C00] grid place-items-center mb-4 group-hover:bg-[#F57C00] group-hover:text-white transition-all">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-              <h3 className="text-lg font-bold mb-2">Funcionamento 100% Offline</h3>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                Desenvolvido especialmente para rodovias e áreas sem sinal. O motorista faz a entrega, anexa fotos e assinaturas mesmo sem internet. Os dados sobem quando houver conexão.
-              </p>
-            </div>
-
-            {/* Feature 3 */}
-            <div className="p-6 rounded-2xl bg-[#0b1530] border border-white/5 hover:border-orange-500/30 transition-all hover:-translate-y-1 group">
-              <div className="h-10 w-10 rounded-xl bg-orange-500/10 text-[#F57C00] grid place-items-center mb-4 group-hover:bg-[#F57C00] group-hover:text-white transition-all">
-                <Wrench className="h-5 w-5" />
-              </div>
-              <h3 className="text-lg font-bold mb-2">Gestão Completa de Pneus</h3>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                Controle de pneus instalados, rodízios, aferição de profundidade de sulco (milímetros) e histórico de descartes. Reduza custos drasticamente.
-              </p>
-            </div>
-
-            {/* Feature 4 */}
-            <div className="p-6 rounded-2xl bg-[#0b1530] border border-white/5 hover:border-orange-500/30 transition-all hover:-translate-y-1 group">
-              <div className="h-10 w-10 rounded-xl bg-orange-500/10 text-[#F57C00] grid place-items-center mb-4 group-hover:bg-[#F57C00] group-hover:text-white transition-all">
-                <MapPin className="h-5 w-5" />
-              </div>
-              <h3 className="text-lg font-bold mb-2">Comprovação com GPS e Foto</h3>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                Tire fotos da carga entregue e do odômetro. O sistema registra automaticamente a coordenada GPS (latitude/longitude) no exato instante do descarregamento.
-              </p>
-            </div>
-
-            {/* Feature 5 */}
-            <div className="p-6 rounded-2xl bg-[#0b1530] border border-white/5 hover:border-orange-500/30 transition-all hover:-translate-y-1 group">
-              <div className="h-10 w-10 rounded-xl bg-orange-500/10 text-[#F57C00] grid place-items-center mb-4 group-hover:bg-[#F57C00] group-hover:text-white transition-all">
-                <PenTool className="h-5 w-5" />
-              </div>
-              <h3 className="text-lg font-bold mb-2">Assinatura Digital no Celular</h3>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                Sem papelada. Colete a assinatura do cliente recebedor desenhando com o dedo na própria tela do dispositivo móvel do motorista.
-              </p>
-            </div>
-
-            {/* Feature 6 */}
-            <div className="p-6 rounded-2xl bg-[#0b1530] border border-white/5 hover:border-orange-500/30 transition-all hover:-translate-y-1 group">
-              <div className="h-10 w-10 rounded-xl bg-orange-500/10 text-[#F57C00] grid place-items-center mb-4 group-hover:bg-[#F57C00] group-hover:text-white transition-all">
-                <CircleDollarSign className="h-5 w-5" />
-              </div>
-              <h3 className="text-lg font-bold mb-2">Financeiro & Despesas</h3>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                Acompanhe o faturamento por veículo, despesas com abastecimento e custos fixos. Calcule com precisão a rentabilidade da sua operação.
-              </p>
-            </div>
-
+            <button className={`nav-toggle ${mobileMenuOpen ? "open" : ""}`} id="navToggle" aria-label="Abrir menu" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+              <span></span><span></span><span></span>
+            </button>
           </div>
-        </div>
-      </section>
+        </nav>
 
-      {/* Destaque Offline */}
-      <section id="offline" className="py-20 px-4 md:px-8 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-        <div className="space-y-6">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/10 text-orange-400 text-xs font-semibold">
-            Tecnologia PWA de Ponta
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
-            Seus motoristas nunca ficarão travados sem internet!
-          </h2>
-          <p className="text-slate-300 leading-relaxed">
-            Sabemos que o sinal de internet nas rodovias brasileiras e zonas rurais é instável. Por isso, o Frete Fácil PRO foi projetado com banco de dados embarcado na memória do dispositivo (`IndexedDB/Dexie`).
-          </p>
-          <ul className="space-y-3.5">
-            <li className="flex items-start gap-3">
-              <CheckCircle2 className="h-5 w-5 text-orange-400 shrink-0 mt-0.5" />
-              <span>O app abre e funciona mesmo sem nenhuma rede active.</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <CheckCircle2 className="h-5 w-5 text-orange-400 shrink-0 mt-0.5" />
-              <span>Fila de sincronização inteligente gerencia o envio em segundo plano assim que a rede móvel retornar.</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <CheckCircle2 className="h-5 w-5 text-orange-400 shrink-0 mt-0.5" />
-              <span>Sem perda de fotos, assinaturas ou registros de quilometragem.</span>
-            </li>
-          </ul>
-        </div>
-        
-        {/* Mockup visual */}
-        <div className="p-8 rounded-3xl bg-slate-900 border border-white/5 shadow-2xl relative">
-          <div className="absolute top-0 right-0 p-3 bg-green-500/10 text-green-400 text-xs font-semibold rounded-tr-3xl rounded-bl-3xl border-l border-b border-white/5 flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span> Banco Local Ativo (Offline)
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 pb-3 border-b border-white/5">
-              <div className="h-3.5 w-3.5 rounded-full bg-red-400"></div>
-              <div className="h-3.5 w-3.5 rounded-full bg-yellow-400"></div>
-              <div className="h-3.5 w-3.5 rounded-full bg-green-400"></div>
-              <span className="text-xs text-slate-500 ml-2">Simulador de Fila de Envio Offline</span>
-            </div>
-            
-            <div className="p-3.5 rounded-xl bg-[#0b1530] border border-white/5 text-xs flex justify-between items-center">
-              <div>
-                <p className="font-semibold text-slate-200">Entrega #1405 - Areia Fina (15m³)</p>
-                <p className="text-slate-500 mt-0.5">Aguardando conexão · Foto & GPS Salvos</p>
+        {/* ==================== HERO ==================== */}
+        <header className="hero">
+          <svg className="route-svg" viewBox="0 0 1440 700" preserveAspectRatio="none" aria-hidden="true">
+            <path className="route-path" d="M-40,560 C240,470 320,640 560,540 S900,320 1120,400 S1380,300 1500,340" />
+          </svg>
+          <div className="container hero-grid">
+            <div>
+              <span className="eyebrow">Gestão de entregas · materiais de construção</span>
+              <h1>Da loja ao canteiro, <em>cada entrega</em> sob controle.</h1>
+              <p className="hero-sub">
+                Chega de canhoto perdido e telefone tocando. O Frete Fácil PRO organiza
+                entregas, motoristas e frota em um só painel — com comprovante por foto,
+                funcionamento offline e visão em tempo real.
+              </p>
+              <div className="hero-ctas">
+                <a href={contactWhatsapp} target="_blank" rel="noopener noreferrer" className="btn btn-amber">
+                  Assinar Plano PRO
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </a>
+                <a href="#como-funciona" className="btn btn-ghost">Ver como funciona</a>
               </div>
-              <span className="px-2.5 py-1 bg-amber-500/10 text-amber-400 rounded-md font-semibold text-[10px]">Pendente na Fila</span>
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-[#0b1530] border border-white/5 text-xs flex justify-between items-center opacity-60">
-              <div>
-                <p className="font-semibold text-slate-200">Abastecimento Veículo (AAA-1234)</p>
-                <p className="text-slate-500 mt-0.5">Enviado com sucesso para a Nuvem</p>
+              <div className="hero-proof">
+                <div className="proof-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#12B76A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                  Ativação imediata
+                </div>
+                <div className="proof-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#12B76A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                  Configuração em minutos
+                </div>
+                <div className="proof-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#12B76A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                  Funciona sem internet
+                </div>
               </div>
-              <span className="px-2.5 py-1 bg-green-500/10 text-green-400 rounded-md font-semibold text-[10px]">Sincronizado</span>
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* Preços */}
-      <section id="precos" className="py-20 bg-slate-900/50 border-t border-white/5 px-4 md:px-8">
-        <div className="max-w-6xl mx-auto space-y-12">
-          <div className="text-center space-y-4 max-w-xl mx-auto">
-            <h2 className="text-3xl font-extrabold tracking-tight">Um plano sob medida para sua frota</h2>
-            <p className="text-slate-400">Acesso completo sem limites abusivos, taxas ocultas ou sustos no fim do mês.</p>
-          </div>
-
-          <div className="max-w-md mx-auto rounded-3xl bg-[#0b1530] border-2 border-orange-500/30 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 bg-[#F57C00] text-white text-[10px] font-extrabold px-5 py-1.5 uppercase tracking-wider rotate-45 translate-x-8 translate-y-3">
-              Completo
-            </div>
-            
-            <div className="p-8 text-center border-b border-white/5">
-              <h3 className="text-2xl font-extrabold text-white">Plano Único PRO</h3>
-              <p className="text-sm text-slate-400 mt-1">Todas as funcionalidades inclusas</p>
+            <div className="hero-visual">
+              {/* badge flutuante 1 */}
+              <div className="float-badge fb-1">
+                <div class="fb-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#12B76A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                </div>
+                <div><b>Entrega concluída</b><span>Foto + assinatura salvas</span></div>
+              </div>
               
-              <div className="mt-6 flex items-baseline justify-center gap-1.5">
-                <span className="text-sm font-semibold text-slate-400">R$</span>
-                <span className="text-5xl font-extrabold text-white tracking-tight">149,90</span>
-                <span className="text-sm font-semibold text-slate-400">/ mês</span>
+              {/* badge flutuante 2 */}
+              <div className="float-badge fb-2">
+                <div class="fb-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F08C00" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="14" rx="2" />
+                    <path d="M7 20h10M9 9h6M9 13h4" />
+                  </svg>
+                </div>
+                <div><b>Controle de Frota</b><span>Manutenção e pneus</span></div>
               </div>
-              <p className="text-[11px] text-slate-500 mt-2">Sem taxas de adesão · Cancele quando quiser</p>
+
+              {/* mockup do app */}
+              <div className="phone" aria-hidden="true">
+                <div className="phone-screen">
+                  <div className="phone-top">
+                    <div className="greeting">Bom dia, Carlos 👋</div>
+                    <div className="title">Entregas de hoje</div>
+                    <div className="phone-stats">
+                      <div className="pstat"><b>8</b><span>Pendentes</span></div>
+                      <div className="pstat"><b>3</b><span>Em rota</span></div>
+                      <div className="pstat"><b>14</b><span>Entregues</span></div>
+                    </div>
+                  </div>
+                  <div className="phone-body">
+                    <div className="dcard">
+                      <div className="dcard-head"><b>Constr. Bela Vista</b><span className="cod">#2841</span></div>
+                      <p>40 sacos de cimento · 2 ton de areia</p>
+                      <span className="chip rota">Em rota</span>
+                    </div>
+                    <div className="dcard">
+                      <div className="dcard-head"><b>Obra Jardim Europa</b><span class="cod">#2842</span></div>
+                      <p>Cerâmica 60x60 · argamassa AC-III</p>
+                      <span className="chip pendente">Pendente</span>
+                    </div>
+                    <div className="dcard">
+                      <div className="dcard-head"><b>Residencial Aurora</b><span class="cod">#2839</span></div>
+                      <p>Tijolos 8 furos · vergalhão 10mm</p>
+                      <span className="chip entregue">Entregue</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
+          </div>
+        </header>
 
-            <div className="p-8 space-y-6">
-              <ul className="space-y-4 text-sm text-slate-300">
-                <li className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-orange-400 shrink-0" />
-                  <span>Suporte a motoristas ilimitados</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-orange-400 shrink-0" />
-                  <span>Módulo completo de pneus e sulcos</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-orange-400 shrink-0" />
-                  <span>Controle de combustível e odômetros</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-orange-400 shrink-0" />
-                  <span>Sincronização offline em tempo real</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-orange-400 shrink-0" />
-                  <span>Assinaturas na tela & fotos geolocalizadas</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-orange-400 shrink-0" />
-                  <span>Exportação de relatórios financeiros</span>
-                </li>
-              </ul>
+        {/* ==================== STRIP ==================== */}
+        <div className="strip">
+          <div className="container strip-inner">
+            <div className="strip-item"><b>100%</b><span>das entregas com comprovação digital</span></div>
+            <div className="strip-item"><b>3</b><span>perfis de acesso: gestor, balcão e motorista</span></div>
+            <div className="strip-item"><b>0</b><span>papel: adeus pranchetas e canhotos</span></div>
+            <div className="strip-item"><b>24/7</b><span>funciona offline e sincroniza sozinho</span></div>
+          </div>
+        </div>
 
-              <a href={contactWhatsapp} target="_blank" rel="noopener noreferrer" className="block w-full pt-4">
-                <Button
-                  variant="action"
-                  size="lg"
-                  className="w-full bg-[#F57C00] hover:bg-[#E65100] text-white font-bold text-base py-6 rounded-2xl shadow-lg shadow-orange-500/10 flex items-center justify-center gap-2 group transition-all"
-                >
-                  Contratar Agora <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-                </Button>
+        {/* ==================== DORES ==================== */}
+        <section className="section" id="dores">
+          <div className="container">
+            <div className="section-head reveal">
+              <span className="eyebrow">O problema de todo dia</span>
+              <h2>Você reconhece essa rotina?</h2>
+              <p>Quem tem loja de material de construção sabe: a entrega é onde a operação vira caos — e onde o cliente forma a opinião sobre a sua loja.</p>
+            </div>
+            <div className="pain-grid">
+              <div className="pain-card reveal">
+                <div className="p-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E5484D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <path d="M14 2v6h6M9 15l6-6M15 15l-6-6" />
+                  </svg>
+                </div>
+                <h3>Canhoto que some</h3>
+                <p>O cliente jura que não recebeu, o papel sumiu na caçamba e a loja fica sem prova. Toda discussão de entrega vira prejuízo ou desgaste.</p>
+              </div>
+              <div className="pain-card reveal">
+                <div class="p-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E5484D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.34 1.79.63 2.65a2 2 0 0 1-.45 2.11L8 9.91a16 16 0 0 0 6 6l1.43-1.29a2 2 0 0 1 2.11-.45c.86.29 1.75.51 2.65.63A2 2 0 0 1 22 16.92z" />
+                  </svg>
+                </div>
+                <h3>Telefone que não para</h3>
+                <p>"Onde está minha entrega?" O balcão vira central de atendimento, o motorista não atende e ninguém sabe responder o cliente com certeza.</p>
+              </div>
+              <div className="pain-card reveal">
+                <div class="p-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E5484D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 6v6l4 2" />
+                  </svg>
+                </div>
+                <h3>Frota no escuro</h3>
+                <p>Combustível, pneu, manutenção: os custos do caminhão aparecem só no fim do mês — e sempre maiores do que você imaginava.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ==================== RECURSOS ==================== */}
+        <section className="section features" id="recursos">
+          <div className="container">
+            <div className="section-head reveal">
+              <span className="eyebrow">A solução completa</span>
+              <h2>Tudo o que a sua operação de entrega precisa</h2>
+              <p>Do pedido no balcão à assinatura no canteiro, cada etapa registrada — sem papel, sem planilha, sem adivinhação.</p>
+            </div>
+            <div className="feat-grid">
+              <div className="feat-card reveal">
+                <div className="feat-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 8h12v9H1z" />
+                    <path d="M13 11h4l3 3v3h-7" />
+                    <circle cx="6" cy="19" r="1.8" />
+                    <circle cx="17" cy="19" r="1.8" />
+                  </svg>
+                </div>
+                <h3>Fluxo de entrega em tempo real</h3>
+                <p>Cada entrega passa por status claros — pendente, em rota, entregue — visíveis para o balcão e para o gestor no mesmo instante.</p>
+                <span className="feat-tag">Tempo real</span>
+              </div>
+              <div className="feat-card reveal">
+                <div className="feat-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                    <circle cx="12" cy="13" r="4" />
+                  </svg>
+                </div>
+                <h3>Comprovação por foto e assinatura</h3>
+                <p>O motorista registra foto da entrega e assinatura do cliente direto no celular. A prova fica salva para sempre, ligada ao pedido.</p>
+                <span class="feat-tag">Fim do canhoto</span>
+              </div>
+              <div className="feat-card reveal">
+                <div className="feat-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="14" rx="2" />
+                    <path d="M7 20h10M9 9h6M9 13h4" />
+                  </svg>
+                </div>
+                <h3>Abastecimento simplificado</h3>
+                <p>Monitore médias de consumo de combustível, lançando de forma rápida os abastecimentos diretamente no sistema em rota.</p>
+                <span class="feat-tag">Combustível</span>
+              </div>
+              <div className="feat-card reveal">
+                <div className="feat-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="9" />
+                    <circle cx="12" cy="12" r="3.5" />
+                    <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
+                  </svg>
+                </div>
+                <h3>Gestão de pneus e sulcos</h3>
+                <p>Controle rodízio, quilometragem, aferições de sulco (em milímetros) e vida útil dos pneus da frota. Evite desgastes prematuros.</p>
+                <span class="feat-tag">Frota</span>
+              </div>
+              <div className="feat-card reveal">
+                <div className="feat-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                  </svg>
+                </div>
+                <h3>Custo real por veículo</h3>
+                <p>Combustível, manutenção e despesas lançadas na hora. Você enxerga quanto cada caminhão custa de verdade, todo mês.</p>
+                <span class="feat-tag">Financeiro</span>
+              </div>
+              <div className="feat-card reveal">
+                <div className="feat-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1.42 9a16 16 0 0 1 21.16 0M5 12.55a11 11 0 0 1 14.08 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01" />
+                  </svg>
+                </div>
+                <h3>Funciona sem internet</h3>
+                <p>No canteiro sem sinal? O app continua funcionando e sincroniza tudo sozinho quando a conexão volta. Nenhum registro se perde.</p>
+                <span class="feat-tag">Offline-first</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ==================== COMO FUNCIONA ==================== */}
+        <section className="section flow" id="como-funciona">
+          <div className="container">
+            <div className="section-head reveal">
+              <span className="eyebrow">Como funciona</span>
+              <h2>Três passos. Zero papel.</h2>
+              <p>O Frete Fácil PRO acompanha a entrega do jeito que ela acontece de verdade na sua loja.</p>
+            </div>
+            <div className="flow-steps">
+              <div className="flow-step reveal">
+                <span className="flow-num">PASSO 01</span>
+                <h3>O balcão registra</h3>
+                <p>Fechou a venda? Em segundos a entrega está no sistema, com endereço, itens e veículo definidos. Sem prancheta, sem bloquinho.</p>
+                <div className="flow-status"><span className="chip pendente">Pendente</span></div>
+              </div>
+              <div className="flow-step reveal">
+                <span className="flow-num">PASSO 02</span>
+                <h3>O motorista recebe no celular</h3>
+                <p>A rota do dia aparece no app do motorista. Ele inicia a entrega com um toque e a loja acompanha tudo em tempo real.</p>
+                <div className="flow-status">
+                  <span className="chip pendente">Pendente</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                  <span className="chip rota">Em rota</span>
+                </div>
+              </div>
+              <div className="flow-step reveal">
+                <span className="flow-num">PASSO 03</span>
+                <h3>O cliente confirma no canteiro</h3>
+                <p>Foto do material entregue e assinatura na tela. A comprovação fica salva no pedido, disponível para consulta a qualquer momento.</p>
+                <div className="flow-status">
+                  <span className="chip rota">Em rota</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                  <span className="chip entregue">Entregue ✓</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ==================== CASE ==================== */}
+        <section className="section case">
+          <div className="container">
+            <div className="case-box reveal">
+              <div>
+                <p className="case-quote">Antes, toda semana tinha discussão por causa de entrega sem comprovante. Hoje o cliente pergunta e eu respondo na hora, com foto e assinatura na tela.</p>
+                <div className="case-author">
+                  <div className="case-avatar">CR</div>
+                  <div>
+                    <b>CR Materiais para Construção</b>
+                    <span>Luzimangues · Tocantins — primeira operação rodando com Frete Fácil PRO</span>
+                  </div>
+                </div>
+              </div>
+              <div className="case-stats">
+                <div className="cs-item"><b>-90%</b><span>de ligações \"cadê minha entrega?\"</span></div>
+                <div className="cs-item"><b>100%</b><span>das entregas com foto e assinatura</span></div>
+                <div className="cs-item"><b>1 tela</b><span>para toda a operação do dia</span></div>
+                <div className="cs-item"><b>R$ 0</b><span>gastos com bloco de canhoto</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ==================== PLANOS ==================== */}
+        <section className="section" id="planos">
+          <div className="container">
+            <div className="section-head reveal" style={{ marginInline: "auto", textAlign: "center", maxWidth: "600px" }}>
+              <span className="eyebrow" style={{ justifyContent: "center" }}>Plano e preço</span>
+              <h2>O plano completo para a sua operação</h2>
+              <p>Adote o Frete Fácil PRO com tudo liberado e simplifique o controle das suas entregas hoje mesmo.</p>
+            </div>
+            
+            <div className="price-grid">
+              <div className="price-card featured reveal">
+                <span className="badge-pop">Plano Comercial Único</span>
+                <div className="plan-name">Plano PRO</div>
+                <p className="plan-desc">Acesso completo para toda a sua equipe de balcão e estrada.</p>
+                
+                <div className="plan-price">
+                  <span className="cur">R$</span>
+                  <span className="val">149,90</span>
+                  <span className="per">/mês</span>
+                </div>
+                <p className="plan-note">Sem taxa de adesão · Cancele quando quiser</p>
+                
+                <ul className="plan-list">
+                  <li>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                    Motoristas e veículos ilimitados
+                  </li>
+                  <li>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                    Comprovação digital por foto e assinatura
+                  </li>
+                  <li>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                    Funcionamento offline com sincronização automática
+                  </li>
+                  <li>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                    Gestão de pneus, sulcos e manutenções da frota
+                  </li>
+                  <li>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                    Lançamento de despesas e custos reais dos veículos
+                  </li>
+                  <li>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                    Suporte humanizado direto via WhatsApp
+                  </li>
+                </ul>
+                
+                <a href={contactWhatsapp} target="_blank" rel="noopener noreferrer" className="btn btn-amber">
+                  Assinar Plano PRO
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ==================== FAQ ==================== */}
+        <section className="section" id="faq" style={{ paddingTop: 0 }}>
+          <div className="container">
+            <div className="section-head reveal" style={{ marginInline: "auto", textAlign: "center" }}>
+              <span className="eyebrow" style={{ justifyContent: "center" }}>Perguntas frequentes</span>
+              <h2>Ficou alguma dúvida?</h2>
+            </div>
+            <div className="faq-list">
+              <details className="faq-item reveal">
+                <summary>Preciso instalar algum programa?</summary>
+                <div class="faq-body">Não. O Frete Fácil PRO funciona direto no navegador do computador e pode ser instalado como aplicativo no celular do motorista com um toque — sem loja de aplicativos, sem complicação.</div>
+              </details>
+              <details className="faq-item reveal">
+                <summary>E se o motorista ficar sem internet na rota?</summary>
+                <div class="faq-body">O app continua funcionando normalmente. O motorista registra a entrega, tira foto e coleta assinatura mesmo sem sinal. Quando a conexão volta, tudo sincroniza sozinho — nada se perde.</div>
+              </details>
+              <details className="faq-item reveal">
+                <summary>O motorista consegue ver dados da loja?</summary>
+                <div class="faq-body">Não. Cada perfil vê apenas o que precisa: o motorista vê só as entregas dele; o balcão registra e acompanha; o gestor enxerga a operação inteira, incluindo custos e relatórios.</div>
+              </details>
+              <details className="faq-item reveal">
+                <summary>Meus dados ficam seguros?</summary>
+                <div class="faq-body">Sim. Os dados ficam em nuvem com criptografia e isolamento por empresa: as informações da sua loja são acessíveis apenas pelos usuários que você autorizar.</div>
+              </details>
+              <details className="faq-item reveal">
+                <summary>Consigo cancelar quando quiser?</summary>
+                <div class="faq-body">Sim. Não há fidelidade nem multa no Plano PRO. Você pode cancelar a qualquer momento e exportar seus dados antes de sair.</div>
+              </details>
+            </div>
+          </div>
+        </section>
+
+        {/* ==================== CTA FINAL ==================== */}
+        <section className="cta-final">
+          <div className="container reveal">
+            <h2>Sua próxima entrega já pode sair com o Frete Fácil PRO.</h2>
+            <p>Assine hoje mesmo por apenas R$ 149,90 ao mês e revolucione o fluxo de expedição do seu negócio.</p>
+            <div className="hero-ctas">
+              <a href={contactWhatsapp} target="_blank" rel="noopener noreferrer" className="btn btn-amber">
+                Assinar Plano PRO
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
               </a>
+              <a href={contactWhatsapp} target="_blank" rel="noopener noreferrer" className="btn btn-ghost">Falar no WhatsApp</a>
+            </div>
+            <span className="cta-note">SEM ADESÃO · SEM FIDELIDADE · SUPORTE DIRETO COM DESENVOLVEDOR</span>
+          </div>
+        </section>
+
+        {/* ==================== FOOTER ==================== */}
+        <footer>
+          <div className="container">
+            <div className="footer-grid">
+              <div className="footer-brand">
+                <a href="#" className="logo">
+                  <div className="logo-mark">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#081226" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M1 8h12v9H1z" />
+                      <path d="M13 11h4l3 3v3h-7" />
+                      <circle cx="6" cy="19" r="1.8" />
+                      <circle cx="17" cy="19" r="1.8" />
+                    </svg>
+                  </div>
+                  <div className="logo-text">Frete Fácil<span>PRO · ENTREGAS</span></div>
+                </a>
+                <p>Gestão de entregas feita para lojas de materiais de construção. Do balcão ao canteiro, tudo sob controle.</p>
+              </div>
+              
+              <div className="footer-col">
+                <h4>Produto</h4>
+                <ul>
+                  <li><a href="#recursos">Recursos</a></li>
+                  <li><a href="#como-funciona">Como funciona</a></li>
+                  <li><a href="#planos">Planos</a></li>
+                  <li><a href="#faq">Dúvidas</a></li>
+                </ul>
+              </div>
+              
+              <div className="footer-col">
+                <h4>Contato</h4>
+                <ul>
+                  <li><a href="https://wa.me/5563984446555">WhatsApp Comercial</a></li>
+                  <li><a href="mailto:comercial@fretefacilpro.com.br">comercial@fretefacilpro.com.br</a></li>
+                  <li style={{ marginTop: "10px", fontSize: "0.8rem", color: "#FFB020" }}>Suporte Rodrigo: (63) 98444-6555</li>
+                </ul>
+              </div>
+              
+              <div className="footer-col">
+                <h4>Legal</h4>
+                <ul>
+                  <li><a href="#">Política de privacidade</a></li>
+                  <li><a href="#">Termos de uso</a></li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="footer-bottom">
+              <span>© {new Date().getFullYear()} Frete Fácil PRO. Todos os direitos reservados.</span>
+              <span>fretefacilpro.vercel.app</span>
             </div>
           </div>
-        </div>
-      </section>
+        </footer>
 
-      {/* CTA final */}
-      <section className="py-20 px-4 md:px-8 max-w-4xl mx-auto text-center space-y-6">
-        <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Pronto para digitalizar seu negócio?</h2>
-        <p className="text-slate-300 max-w-xl mx-auto">Elimine anotações de papel de uma vez por todas, reduza o desgaste de pneus e simplifique o acerto de contas com motoristas.</p>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-          <a href={contactWhatsapp} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
-            <Button
-              variant="action"
-              size="lg"
-              className="w-full sm:w-auto bg-[#F57C00] hover:bg-[#E65100] text-white font-bold px-8 py-5 rounded-2xl shadow-lg shadow-orange-500/15"
-            >
-              Falar com Consultor
-            </Button>
-          </a>
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={() => navigate({ to: "/auth" })}
-            className="w-full sm:w-auto text-white border-white/10 hover:bg-white/5 font-bold px-8 py-5 rounded-2xl"
-          >
-            Entrar no Painel
-          </Button>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer id="contato" className="bg-[#060c1d] border-t border-white/5 px-4 md:px-8 py-12 text-xs text-slate-500">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 pb-8 border-b border-white/5">
-          <div className="space-y-3">
-            <Logo variant="horizontal" size="sm" />
-            <p className="max-w-xs leading-relaxed">Gestão inteligente e segura de fretes e entregas. Projetado para transportadoras e motoristas autônomos.</p>
-          </div>
-          
-          <div className="space-y-2">
-            <h4 className="font-bold text-slate-300 uppercase tracking-wider text-[10px]">Contato Comercial</h4>
-            <p className="text-slate-400">Rodrigo Rodrigues</p>
-            <p className="text-slate-400">Telefone: (63) 98444-6555</p>
-            <p className="text-slate-400">E-mail: comercial@fretefacilpro.com.br</p>
-          </div>
-
-          <div className="space-y-2">
-            <h4 className="font-bold text-slate-300 uppercase tracking-wider text-[10px]">Endereço Eletrônico</h4>
-            <p className="text-slate-400">Palmas - Tocantins, Brasil</p>
-            <div className="pt-2 flex items-center gap-1.5 text-slate-400">
-              <Lock className="h-3.5 w-3.5 text-orange-400" /> Servidores Supabase Criptografados
-            </div>
-          </div>
-        </div>
-
-        <div className="max-w-6xl mx-auto pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© {new Date().getFullYear()} Frete Fácil PRO. Todos os direitos reservados.</p>
-          <div className="flex gap-6 text-slate-400">
-            <a href="#funcionalidades" className="hover:underline">Funcionalidades</a>
-            <a href="#precos" className="hover:underline">Assinatura</a>
-            <a href="/auth" className="hover:underline font-semibold text-[#F57C00]">Login</a>
-          </div>
-        </div>
-      </footer>
-
-    </div>
+      </div>
+    </>
   );
 }
