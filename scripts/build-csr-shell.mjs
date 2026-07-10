@@ -125,8 +125,27 @@ const html = `<!doctype html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Frete Facil PRO</title>
+  <title>Frete Fácil PRO — Gestão de entregas para materiais de construção</title>
+  <meta name="description" content="Organize entregas, motoristas e frota em um só painel. Comprovante por foto, funcionamento offline e visão em tempo real. Feito para lojas de materiais de construção.">
   <meta name="theme-color" content="#1B2A4A">
+
+  <!-- Open Graph / WhatsApp / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://fretefacilpro.com.br/">
+  <meta property="og:title" content="Frete Fácil PRO — Gestão de entregas para materiais de construção">
+  <meta property="og:description" content="Organize entregas, motoristas e frota em um só painel. Comprovante por foto, funcionamento offline e visão em tempo real. Feito para lojas de materiais de construção.">
+  <meta property="og:image" content="https://fretefacilpro.vercel.app/og-image.jpg">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <!-- Twitter / LinkedIn -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://fretefacilpro.com.br/">
+  <meta name="twitter:title" content="Frete Fácil PRO — Gestão de entregas para materiais de construção">
+  <meta name="twitter:description" content="Organize entregas, motoristas e frota em um só painel. Comprovante por foto, funcionamento offline e visão em tempo real. Feito para lojas de materiais de construção.">
+  <meta name="twitter:image" content="https://fretefacilpro.vercel.app/og-image.jpg">
+
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Frete Fácil PRO">
