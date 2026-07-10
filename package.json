@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build && node scripts/build-csr-shell.mjs",
-    "build:dev": "vite build --mode development && node scripts/build-csr-shell.mjs",
+    "build": "vite build && node scripts/compress-og-image.mjs && node scripts/build-csr-shell.mjs",
+    "build:dev": "vite build --mode development && node scripts/compress-og-image.mjs && node scripts/build-csr-shell.mjs",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write ."
