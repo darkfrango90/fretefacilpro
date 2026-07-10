@@ -14,7 +14,19 @@ export const Route = createFileRoute("/")({
     meta: [
       { title: "Frete Fácil PRO — Gestão de entregas para materiais de construção" },
       { name: "description", content: "Organize entregas, motoristas e frota em um só painel. Comprovante por foto, funcionamento offline e visão em tempo real. Feito para lojas de materiais de construção." },
-      { name: "theme-color", content: "#1B2A4A" }
+      { name: "theme-color", content: "#1B2A4A" },
+      // Open Graph / Facebook / WhatsApp
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://fretefacilpro.com.br/" },
+      { property: "og:title", content: "Frete Fácil PRO — Gestão de entregas para materiais de construção" },
+      { property: "og:description", content: "Organize entregas, motoristas e frota em um só painel. Comprovante por foto, funcionamento offline e visão em tempo real. Feito para lojas de materiais de construção." },
+      { property: "og:image", content: "https://fretefacilpro.vercel.app/og-image.jpg" },
+      // Twitter
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:url", content: "https://fretefacilpro.com.br/" },
+      { name: "twitter:title", content: "Frete Fácil PRO — Gestão de entregas para materiais de construção" },
+      { name: "twitter:description", content: "Organize entregas, motoristas e frota em um só painel. Comprovante por foto, funcionamento offline e visão em tempo real. Feito para lojas de materiais de construção." },
+      { name: "twitter:image", content: "https://fretefacilpro.vercel.app/og-image.jpg" }
     ]
   }),
   component: LandingPage,
