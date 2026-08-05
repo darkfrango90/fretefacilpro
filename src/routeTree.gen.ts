@@ -24,6 +24,7 @@ import { Route as AuthenticatedMotoristasRouteImport } from './routes/_authentic
 import { Route as AuthenticatedMinhasEntregasRouteImport } from './routes/_authenticated/minhas-entregas'
 import { Route as AuthenticatedMateriaisRouteImport } from './routes/_authenticated/materiais'
 import { Route as AuthenticatedMasterRouteImport } from './routes/_authenticated/master'
+import { Route as AuthenticatedImportTempRouteImport } from './routes/_authenticated/import-temp'
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedEntregasRouteImport } from './routes/_authenticated/entregas'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -119,6 +120,11 @@ const AuthenticatedMateriaisRoute = AuthenticatedMateriaisRouteImport.update({
 const AuthenticatedMasterRoute = AuthenticatedMasterRouteImport.update({
   id: '/master',
   path: '/master',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedImportTempRoute = AuthenticatedImportTempRouteImport.update({
+  id: '/import-temp',
+  path: '/import-temp',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedFinanceiroRoute = AuthenticatedFinanceiroRouteImport.update({
@@ -236,6 +242,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/entregas': typeof AuthenticatedEntregasRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/import-temp': typeof AuthenticatedImportTempRoute
   '/master': typeof AuthenticatedMasterRoute
   '/materiais': typeof AuthenticatedMateriaisRoute
   '/minhas-entregas': typeof AuthenticatedMinhasEntregasRoute
@@ -270,6 +277,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/entregas': typeof AuthenticatedEntregasRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/import-temp': typeof AuthenticatedImportTempRoute
   '/master': typeof AuthenticatedMasterRoute
   '/materiais': typeof AuthenticatedMateriaisRoute
   '/minhas-entregas': typeof AuthenticatedMinhasEntregasRoute
@@ -306,6 +314,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/entregas': typeof AuthenticatedEntregasRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/_authenticated/import-temp': typeof AuthenticatedImportTempRoute
   '/_authenticated/master': typeof AuthenticatedMasterRoute
   '/_authenticated/materiais': typeof AuthenticatedMateriaisRoute
   '/_authenticated/minhas-entregas': typeof AuthenticatedMinhasEntregasRoute
@@ -342,6 +351,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/entregas'
     | '/financeiro'
+    | '/import-temp'
     | '/master'
     | '/materiais'
     | '/minhas-entregas'
@@ -376,6 +386,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/entregas'
     | '/financeiro'
+    | '/import-temp'
     | '/master'
     | '/materiais'
     | '/minhas-entregas'
@@ -411,6 +422,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/entregas'
     | '/_authenticated/financeiro'
+    | '/_authenticated/import-temp'
     | '/_authenticated/master'
     | '/_authenticated/materiais'
     | '/_authenticated/minhas-entregas'
@@ -545,6 +557,13 @@ declare module '@tanstack/react-router' {
       path: '/master'
       fullPath: '/master'
       preLoaderRoute: typeof AuthenticatedMasterRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/import-temp': {
+      id: '/_authenticated/import-temp'
+      path: '/import-temp'
+      fullPath: '/import-temp'
+      preLoaderRoute: typeof AuthenticatedImportTempRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/financeiro': {
@@ -701,6 +720,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEntregasRoute: typeof AuthenticatedEntregasRoute
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
+  AuthenticatedImportTempRoute: typeof AuthenticatedImportTempRoute
   AuthenticatedMasterRoute: typeof AuthenticatedMasterRoute
   AuthenticatedMateriaisRoute: typeof AuthenticatedMateriaisRoute
   AuthenticatedMinhasEntregasRoute: typeof AuthenticatedMinhasEntregasRoute
@@ -733,6 +753,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEntregasRoute: AuthenticatedEntregasRoute,
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
+  AuthenticatedImportTempRoute: AuthenticatedImportTempRoute,
   AuthenticatedMasterRoute: AuthenticatedMasterRoute,
   AuthenticatedMateriaisRoute: AuthenticatedMateriaisRoute,
   AuthenticatedMinhasEntregasRoute: AuthenticatedMinhasEntregasRoute,
