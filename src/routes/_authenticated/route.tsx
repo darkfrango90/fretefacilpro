@@ -23,7 +23,7 @@ import { SyncStatus } from "@/components/offline/sync-status";
 import { Logo } from "@/components/logo";
 
 const OFFLINE_VALIDATION_KEY = "auth:last_online_validation";
-const MAX_OFFLINE_DAYS = 14;
+const MAX_OFFLINE_DAYS = 15;
 const MAX_OFFLINE_MS = MAX_OFFLINE_DAYS * 24 * 60 * 60 * 1000;
 
 export const Route = createFileRoute("/_authenticated")({
