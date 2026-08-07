@@ -13,7 +13,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Truck, MapPin, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
+import { Truck, MapPin, CheckCircle2, Loader2, RefreshCw, Undo2 } from "lucide-react";
+import { SwipeToAction } from "@/components/swipe-to-action";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/minhas-entregas")({
   component: MinhasEntregas,
@@ -87,6 +89,27 @@ function MinhasEntregas() {
     },
   });
 
+  async function voltarPendente(id: string) {
+    const { data, error } = await (supabase as any)
+      .from("entregas")
+      .update({
+        status: "pendente",
+        motorista_entrega_id: null,
+        veiculo_id: null,
+        km_inicial: null,
+        iniciada_em: null,
+      })
+      .eq("id", id)
+      .select("id");
+    if (error) return toast.error(error.message);
+    if (!data || data.length === 0) return toast.error("Sem permissão para voltar esta entrega");
+    toast.success("Entrega voltou para pendentes");
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["minhas-entregas"] }),
+      queryClient.invalidateQueries({ queryKey: ["pendentes"] }),
+    ]);
+  }
+
   return (
     <div className="space-y-3">
       <h1 className="text-xl font-bold flex items-center gap-2">
@@ -103,7 +126,12 @@ function MinhasEntregas() {
 
         <TabsContent value="em_rota" className="space-y-3 mt-3">
           <div className="flex items-center justify-between">
-            <div className="text-sm font-semibold">Em rota de entrega</div>
+            <div className="text-sm font-semibold">
+              Em rota de entrega
+              <span className="block text-xs font-normal text-muted-foreground">
+                Arraste um card para o lado para voltar para pendentes
+              </span>
+            </div>
             <Button
               size="sm"
               variant="outline"
@@ -121,6 +149,7 @@ function MinhasEntregas() {
             empty="Você não tem entregas em andamento."
             onOpen={setDetalheId}
             mostrarFinalizar
+            onVoltarPendente={voltarPendente}
           />
         </TabsContent>
 
@@ -159,6 +188,7 @@ function ListaCards({
   empty,
   onOpen,
   mostrarFinalizar,
+  onVoltarPendente,
 }: {
   rows?: any[];
   loading: boolean;
@@ -166,6 +196,7 @@ function ListaCards({
   empty: string;
   onOpen: (id: string) => void;
   mostrarFinalizar?: boolean;
+  onVoltarPendente?: (id: string) => void | Promise<void>;
 }) {
   if (loading && !rows) {
     return (
@@ -181,51 +212,65 @@ function ListaCards({
           <Loader2 className="h-3 w-3 animate-spin" /> Atualizando...
         </div>
       )}
-      {(rows ?? []).map((r: any) => (
-        <Card key={r.id} className="cursor-pointer active:opacity-70" onClick={() => onOpen(r.id)}>
-          <CardContent className="p-3 space-y-2">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="font-medium truncate flex items-center gap-1">
-                  {r.status === "entregue" && (
-                    <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
-                  )}
-                  {r.numero != null && <span className="text-muted-foreground">#{r.numero}</span>}
-                  {r.cliente?.nome ?? "—"}
+      {(rows ?? []).map((r: any) => {
+        const card = (
+          <Card className="cursor-pointer active:opacity-70" onClick={() => onOpen(r.id)}>
+            <CardContent className="p-3 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-medium truncate flex items-center gap-1">
+                    {r.status === "entregue" && (
+                      <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                    )}
+                    {r.numero != null && <span className="text-muted-foreground">#{r.numero}</span>}
+                    {r.cliente?.nome ?? "—"}
+                  </div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {r.material?.nome} · {r.quantidade} {r.material?.unidade}
+                    {r.veiculo?.placa ? ` · ${r.veiculo.placa}` : ""}
+                  </div>
                 </div>
-                <div className="text-xs text-muted-foreground truncate">
-                  {r.material?.nome} · {r.quantidade} {r.material?.unidade}
-                  {r.veiculo?.placa ? ` · ${r.veiculo.placa}` : ""}
+                <div className="text-right text-xs text-muted-foreground whitespace-nowrap">
+                  {r.status === "entregue" && r.finalizada_em
+                    ? new Date(r.finalizada_em).toLocaleDateString("pt-BR")
+                    : r.km_inicial != null
+                      ? `KM ${r.km_inicial}`
+                      : ""}
                 </div>
               </div>
-              <div className="text-right text-xs text-muted-foreground whitespace-nowrap">
-                {r.status === "entregue" && r.finalizada_em
-                  ? new Date(r.finalizada_em).toLocaleDateString("pt-BR")
-                  : r.km_inicial != null
-                    ? `KM ${r.km_inicial}`
-                    : ""}
-              </div>
-            </div>
-            {r.endereco && (
-              <div className="text-xs text-muted-foreground flex items-start gap-1">
-                <MapPin className="h-3 w-3 mt-0.5 shrink-0" /> {r.endereco}
-              </div>
-            )}
-            {mostrarFinalizar && (
-              <Link
-                to="/entrega/$id/finalizar"
-                params={{ id: r.id }}
-                className="block"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Button size="sm" variant="action" className="w-full">
-                  Finalizar entrega
-                </Button>
-              </Link>
-            )}
-          </CardContent>
-        </Card>
-      ))}
+              {r.endereco && (
+                <div className="text-xs text-muted-foreground flex items-start gap-1">
+                  <MapPin className="h-3 w-3 mt-0.5 shrink-0" /> {r.endereco}
+                </div>
+              )}
+              {mostrarFinalizar && (
+                <Link
+                  to="/entrega/$id/finalizar"
+                  params={{ id: r.id }}
+                  className="block"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Button size="sm" variant="action" className="w-full">
+                    Finalizar entrega
+                  </Button>
+                </Link>
+              )}
+            </CardContent>
+          </Card>
+        );
+        if (!onVoltarPendente) return <div key={r.id}>{card}</div>;
+        return (
+          <SwipeToAction
+            key={r.id}
+            actionLabel="Voltar p/ pendente"
+            actionIcon={<Undo2 className="h-4 w-4" />}
+            actionClassName="bg-amber-500 text-white"
+            onAction={() => onVoltarPendente(r.id)}
+          >
+            {card}
+          </SwipeToAction>
+        );
+      })}
       {!loading && (rows ?? []).length === 0 && (
         <p className="text-sm text-muted-foreground text-center py-8">{empty}</p>
       )}

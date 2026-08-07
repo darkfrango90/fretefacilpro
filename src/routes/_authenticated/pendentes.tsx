@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/use-session";
+import { usePermissoes } from "@/hooks/use-permissoes";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,9 +11,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { MapPin, Truck, PackageCheck, RefreshCw } from "lucide-react";
+import { MapPin, Truck, PackageCheck, RefreshCw, Trash2 } from "lucide-react";
 import { enqueue, listPending } from "@/lib/offline/queue";
 import { syncNow } from "@/lib/offline/sync";
+import { SwipeToAction } from "@/components/swipe-to-action";
 
 export const Route = createFileRoute("/_authenticated/pendentes")({
   component: Pendentes,
@@ -20,7 +22,10 @@ export const Route = createFileRoute("/_authenticated/pendentes")({
 
 function Pendentes() {
   const { data: prof } = useProfile();
+  const { perms } = usePermissoes();
   const empresaId = prof?.profile.empresa_id;
+  const isAdmin = !!prof?.roles.includes("admin") || !!prof?.roles.includes("master");
+  const podeExcluir = isAdmin || perms.pode_cancelar_entrega;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -125,6 +130,22 @@ function Pendentes() {
     }
   }
 
+  async function excluir(id: string) {
+    if (!confirm("Excluir esta venda pendente?")) return;
+    const { data, error } = await (supabase as any)
+      .from("entregas")
+      .update({ status: "cancelada" })
+      .eq("id", id)
+      .select("id");
+    if (error) return toast.error(error.message);
+    if (!data || data.length === 0) return toast.error("Sem permissão para excluir esta venda");
+    toast.success("Venda removida");
+    await Promise.all([
+      refetch(),
+      queryClient.invalidateQueries({ queryKey: ["entregas"] }),
+    ]);
+  }
+
   const visible = (rows ?? []).filter((r: any) => !iniciandoIds.includes(r.id));
 
   return (
@@ -145,34 +166,44 @@ function Pendentes() {
       </div>
       <p className="text-xs text-muted-foreground -mt-2">
         Pool compartilhado. Quem pegar primeiro, faz a entrega.
+        {podeExcluir && " Arraste um card para o lado para excluir."}
       </p>
 
       {isLoading && <p className="text-sm text-muted-foreground">Carregando...</p>}
 
       {visible.map((r: any) => (
-        <Card key={r.id}>
-          <CardContent className="p-3 space-y-2">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="font-medium truncate">{r.cliente?.nome ?? "—"}</div>
-                <div className="text-xs text-muted-foreground truncate">
-                  {r.material?.nome} · {r.quantidade} {r.material?.unidade}
+        <SwipeToAction
+          key={r.id}
+          actionLabel="Excluir"
+          actionIcon={<Trash2 className="h-4 w-4" />}
+          actionClassName="bg-destructive text-destructive-foreground"
+          disabled={!podeExcluir}
+          onAction={() => excluir(r.id)}
+        >
+          <Card>
+            <CardContent className="p-3 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-medium truncate">{r.cliente?.nome ?? "—"}</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {r.material?.nome} · {r.quantidade} {r.material?.unidade}
+                  </div>
+                </div>
+                <div className="text-right text-sm font-semibold whitespace-nowrap">
+                  R$ {(Number(r.valor_praticado) * Number(r.quantidade || 1) + Number(r.valor_frete || 0)).toFixed(2)}
                 </div>
               </div>
-              <div className="text-right text-sm font-semibold whitespace-nowrap">
-                R$ {(Number(r.valor_praticado) * Number(r.quantidade || 1) + Number(r.valor_frete || 0)).toFixed(2)}
-              </div>
-            </div>
-            {r.endereco && (
-              <div className="text-xs text-muted-foreground flex items-start gap-1">
-                <MapPin className="h-3 w-3 mt-0.5 shrink-0" /> {r.endereco}
-              </div>
-            )}
-            <Button size="sm" variant="action" className="w-full" onClick={() => abrir(r)}>
-              <Truck className="h-4 w-4 mr-1" /> Iniciar entrega
-            </Button>
-          </CardContent>
-        </Card>
+              {r.endereco && (
+                <div className="text-xs text-muted-foreground flex items-start gap-1">
+                  <MapPin className="h-3 w-3 mt-0.5 shrink-0" /> {r.endereco}
+                </div>
+              )}
+              <Button size="sm" variant="action" className="w-full" onClick={() => abrir(r)}>
+                <Truck className="h-4 w-4 mr-1" /> Iniciar entrega
+              </Button>
+            </CardContent>
+          </Card>
+        </SwipeToAction>
       ))}
 
       {!isLoading && visible.length === 0 && (
