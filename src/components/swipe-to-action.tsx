@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface SwipeToActionProps {
   children: React.ReactNode;
@@ -22,50 +22,111 @@ export function SwipeToAction({
 }: SwipeToActionProps) {
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const dragXRef = useRef(0);
   const start = useRef<{ x: number; y: number } | null>(null);
   const axisLocked = useRef<"x" | "y" | null>(null);
   const acted = useRef(false);
   const wasDragged = useRef(false);
+  const surfaceRef = useRef<HTMLDivElement>(null);
 
-  function onPointerDown(e: React.PointerEvent) {
+  function begin(x: number, y: number) {
     if (disabled) return;
-    start.current = { x: e.clientX, y: e.clientY };
+    start.current = { x, y };
     axisLocked.current = null;
     acted.current = false;
+    // Um arraste por toque não gera o clique que resetaria a flag no
+    // onClickCapture; sem isso o toque seguinte seria engolido.
+    wasDragged.current = false;
     setDragging(true);
   }
 
-  function onPointerMove(e: React.PointerEvent) {
-    if (!start.current) return;
-    const dx = e.clientX - start.current.x;
-    const dy = e.clientY - start.current.y;
+  // Retorna true enquanto o gesto estiver travado no eixo horizontal.
+  function move(x: number, y: number): boolean {
+    if (!start.current) return false;
+    const dx = x - start.current.x;
+    const dy = y - start.current.y;
 
     if (!axisLocked.current) {
-      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return false;
       axisLocked.current = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
     }
-    if (axisLocked.current !== "x") return;
+    if (axisLocked.current !== "x") return false;
 
     wasDragged.current = true;
-    e.currentTarget.setPointerCapture(e.pointerId);
     const clamped = Math.max(-MAX_DRAG, Math.min(MAX_DRAG, dx));
+    dragXRef.current = clamped;
     setDragX(clamped);
+    return true;
   }
 
-  async function onPointerUp() {
+  async function finish() {
     if (!start.current) return;
     const wasX = axisLocked.current === "x";
     start.current = null;
     axisLocked.current = null;
     setDragging(false);
 
-    if (wasX && Math.abs(dragX) >= THRESHOLD && !acted.current) {
-      acted.current = true;
-      setDragX(0);
-      await onAction();
-      return;
-    }
+    const finalX = dragXRef.current;
+    dragXRef.current = 0;
     setDragX(0);
+    if (wasX && Math.abs(finalX) >= THRESHOLD && !acted.current) {
+      acted.current = true;
+      await onAction();
+    }
+  }
+
+  // Toque: listeners nativos não-passivos. O WebView do Android (APK) cancela
+  // pointer events e assume a rolagem mesmo com touch-action: pan-y; chamar
+  // preventDefault() no touchmove quando o arraste trava na horizontal é a
+  // única forma confiável de manter o gesto vivo lá. React registra touchmove
+  // como passivo, então os listeners vão direto no elemento via ref.
+  const gestureRef = useRef({ begin, move, finish });
+  gestureRef.current = { begin, move, finish };
+
+  useEffect(() => {
+    const el = surfaceRef.current;
+    if (!el) return;
+    const onTouchStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (t) gestureRef.current.begin(t.clientX, t.clientY);
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (!t) return;
+      if (gestureRef.current.move(t.clientX, t.clientY) && e.cancelable) {
+        e.preventDefault();
+      }
+    };
+    const onTouchEnd = () => void gestureRef.current.finish();
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd);
+    el.addEventListener("touchcancel", onTouchEnd);
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchEnd);
+    };
+  }, []);
+
+  // Mouse/caneta continuam via pointer events; toques ficam por conta dos
+  // listeners acima para não processar o mesmo gesto duas vezes.
+  function onPointerDown(e: React.PointerEvent) {
+    if (e.pointerType === "touch") return;
+    begin(e.clientX, e.clientY);
+  }
+
+  function onPointerMove(e: React.PointerEvent) {
+    if (e.pointerType === "touch") return;
+    if (move(e.clientX, e.clientY)) {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+  }
+
+  function onPointerUp(e: React.PointerEvent) {
+    if (e.pointerType === "touch") return;
+    void finish();
   }
 
   const revealFraction = Math.min(1, Math.abs(dragX) / THRESHOLD);
@@ -84,6 +145,7 @@ export function SwipeToAction({
         {revealFraction > 0.5 && <span>{actionLabel}</span>}
       </div>
       <div
+        ref={surfaceRef}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -95,7 +157,7 @@ export function SwipeToAction({
             wasDragged.current = false;
           }
         }}
-        className="touch-pan-y"
+        className="touch-pan-y select-none"
         style={{
           transform: `translateX(${dragX}px)`,
           transition: dragging ? "none" : "transform 0.2s ease",
