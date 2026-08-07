@@ -93,11 +93,15 @@ function MinhasEntregas() {
     const { data, error } = await supabase.functions.invoke("sync-entrega", {
       body: { action: "voltar_pendente", entrega_id: id },
     });
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     if (data?.erro) {
-      return toast.error(
+      toast.error(
         data.erro === "SEM_PERMISSAO" ? "Sem permissão para voltar esta entrega" : data.erro,
       );
+      return;
     }
     toast.success("Entrega voltou para pendentes");
     await Promise.all([

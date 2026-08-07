@@ -148,17 +148,26 @@ Deno.serve(async (req) => {
       const entregaId = String(body?.entrega_id ?? "");
       if (!entregaId) return businessError("ENTREGA_OBRIGATORIA");
 
-      const podeCancelar = await podeGerenciarEntrega(admin, userData.user.id, profile.empresa_id, {
-        checarPermissaoCancelar: true,
-      });
-      if (!podeCancelar) return businessError("SEM_PERMISSAO");
+      // Admin/master pode cancelar pendentes e entregues; motorista com
+      // pode_cancelar_entrega, apenas pendentes.
+      const isAdminOuMaster = await podeGerenciarEntrega(admin, userData.user.id, profile.empresa_id, {});
+      let statusPermitidos: string[];
+      if (isAdminOuMaster) {
+        statusPermitidos = ["pendente", "entregue"];
+      } else {
+        const podeCancelar = await podeGerenciarEntrega(admin, userData.user.id, profile.empresa_id, {
+          checarPermissaoCancelar: true,
+        });
+        if (!podeCancelar) return businessError("SEM_PERMISSAO");
+        statusPermitidos = ["pendente"];
+      }
 
       const { data: updated, error } = await admin
         .from("entregas")
         .update({ status: "cancelada" })
         .eq("id", entregaId)
         .eq("empresa_id", profile.empresa_id)
-        .eq("status", "pendente")
+        .in("status", statusPermitidos)
         .select("id")
         .maybeSingle();
       if (error) throw error;

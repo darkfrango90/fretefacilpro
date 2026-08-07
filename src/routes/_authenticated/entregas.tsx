@@ -124,11 +124,15 @@ function Page() {
     const { data, error } = await supabase.functions.invoke("sync-entrega", {
       body: { action: "voltar_pendente", entrega_id: id },
     });
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     if (data?.erro) {
-      return toast.error(
+      toast.error(
         data.erro === "SEM_PERMISSAO" ? "Sem permissão para voltar esta entrega" : data.erro,
       );
+      return;
     }
     toast.success("Entrega voltou para pendentes");
     await invalidarListas();
@@ -148,7 +152,7 @@ function Page() {
     <div className="space-y-3">
       <h1 className="text-xl font-bold">Entregas</h1>
       <p className="text-xs text-muted-foreground -mt-2">
-        Arraste um card pendente para o lado para excluir; em entrega, para voltar a pendente.
+        Arraste um card para o lado: pendente/entregue exclui; em entrega volta a pendente.
       </p>
 
       <div className="flex gap-1.5 flex-wrap">
@@ -218,7 +222,7 @@ function Page() {
             </CardContent>
           </Card>
         );
-        if (r.status === "pendente") {
+        if (r.status === "pendente" || r.status === "entregue") {
           return (
             <SwipeToAction
               key={r.id}
@@ -259,7 +263,7 @@ function Page() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir venda pendente?</AlertDialogTitle>
+            <AlertDialogTitle>Excluir esta venda?</AlertDialogTitle>
             <AlertDialogDescription>
               Esta ação não pode ser desfeita. A venda será marcada como cancelada.
             </AlertDialogDescription>
