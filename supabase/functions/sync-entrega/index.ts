@@ -14,6 +14,25 @@ const json = (body: unknown, status = 200) =>
 
 const businessError = (erro: string) => json({ ok: false, erro });
 
+async function podeGerenciarEntrega(
+  admin: any,
+  userId: string,
+  empresaId: string,
+  opts: { checarPermissaoCancelar?: boolean },
+): Promise<boolean> {
+  const { data: roles } = await admin
+    .from("user_roles")
+    .select("role, empresa_id")
+    .eq("user_id", userId);
+  const isMaster = (roles ?? []).some((r: any) => r.role === "master");
+  const isAdmin = (roles ?? []).some((r: any) => r.role === "admin" && r.empresa_id === empresaId);
+  if (isMaster || isAdmin) return true;
+  if (!opts.checarPermissaoCancelar) return false;
+
+  const { data: perms } = await admin.rpc("get_permissoes_efetivas", { _motorista_id: userId });
+  return perms?.pode_cancelar_entrega === true;
+}
+
 async function getProfile(admin: any, userId: string) {
   const { data, error } = await admin
     .from("profiles")
@@ -122,6 +141,55 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (error) throw error;
       if (!updated) return businessError("ENTREGA_JA_INICIADA");
+      return json({ ok: true });
+    }
+
+    if (action === "cancelar_entrega") {
+      const entregaId = String(body?.entrega_id ?? "");
+      if (!entregaId) return businessError("ENTREGA_OBRIGATORIA");
+
+      const podeCancelar = await podeGerenciarEntrega(admin, userData.user.id, profile.empresa_id, {
+        checarPermissaoCancelar: true,
+      });
+      if (!podeCancelar) return businessError("SEM_PERMISSAO");
+
+      const { data: updated, error } = await admin
+        .from("entregas")
+        .update({ status: "cancelada" })
+        .eq("id", entregaId)
+        .eq("empresa_id", profile.empresa_id)
+        .eq("status", "pendente")
+        .select("id")
+        .maybeSingle();
+      if (error) throw error;
+      if (!updated) return businessError("ENTREGA_NAO_ENCONTRADA");
+      return json({ ok: true });
+    }
+
+    if (action === "voltar_pendente") {
+      const entregaId = String(body?.entrega_id ?? "");
+      if (!entregaId) return businessError("ENTREGA_OBRIGATORIA");
+
+      const isAdminOuMaster = await podeGerenciarEntrega(admin, userData.user.id, profile.empresa_id, {});
+
+      let query = admin
+        .from("entregas")
+        .update({
+          status: "pendente",
+          motorista_entrega_id: null,
+          veiculo_id: null,
+          km_inicial: null,
+          iniciada_em: null,
+        })
+        .eq("id", entregaId)
+        .eq("empresa_id", profile.empresa_id)
+        .eq("status", "em_rota");
+      if (!isAdminOuMaster) {
+        query = query.eq("motorista_entrega_id", userData.user.id);
+      }
+      const { data: updated, error } = await query.select("id").maybeSingle();
+      if (error) throw error;
+      if (!updated) return businessError("ENTREGA_NAO_ENCONTRADA");
       return json({ ok: true });
     }
 

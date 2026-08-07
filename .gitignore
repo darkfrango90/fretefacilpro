@@ -39,6 +39,9 @@ dist-ssr
 # Scratch folder
 scratch/
 
+# Supabase CLI local cache
+supabase/.temp/
+
 # Temporary binaries
 AnyDesk.exe
 gcapi.dll

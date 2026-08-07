@@ -132,13 +132,15 @@ function Pendentes() {
 
   async function excluir(id: string) {
     if (!confirm("Excluir esta venda pendente?")) return;
-    const { data, error } = await (supabase as any)
-      .from("entregas")
-      .update({ status: "cancelada" })
-      .eq("id", id)
-      .select("id");
+    const { data, error } = await supabase.functions.invoke("sync-entrega", {
+      body: { action: "cancelar_entrega", entrega_id: id },
+    });
     if (error) return toast.error(error.message);
-    if (!data || data.length === 0) return toast.error("Sem permissão para excluir esta venda");
+    if (data?.erro) {
+      return toast.error(
+        data.erro === "SEM_PERMISSAO" ? "Sem permissão para excluir esta venda" : data.erro,
+      );
+    }
     toast.success("Venda removida");
     await Promise.all([
       refetch(),

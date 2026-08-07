@@ -90,19 +90,15 @@ function MinhasEntregas() {
   });
 
   async function voltarPendente(id: string) {
-    const { data, error } = await (supabase as any)
-      .from("entregas")
-      .update({
-        status: "pendente",
-        motorista_entrega_id: null,
-        veiculo_id: null,
-        km_inicial: null,
-        iniciada_em: null,
-      })
-      .eq("id", id)
-      .select("id");
+    const { data, error } = await supabase.functions.invoke("sync-entrega", {
+      body: { action: "voltar_pendente", entrega_id: id },
+    });
     if (error) return toast.error(error.message);
-    if (!data || data.length === 0) return toast.error("Sem permissão para voltar esta entrega");
+    if (data?.erro) {
+      return toast.error(
+        data.erro === "SEM_PERMISSAO" ? "Sem permissão para voltar esta entrega" : data.erro,
+      );
+    }
     toast.success("Entrega voltou para pendentes");
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["minhas-entregas"] }),
