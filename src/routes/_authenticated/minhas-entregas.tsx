@@ -244,16 +244,32 @@ function ListaCards({
                 </div>
               )}
               {mostrarFinalizar && (
-                <Link
-                  to="/entrega/$id/finalizar"
-                  params={{ id: r.id }}
-                  className="block"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Button size="sm" variant="action" className="w-full">
-                    Finalizar entrega
-                  </Button>
-                </Link>
+                <div className="flex gap-2">
+                  <Link
+                    to="/entrega/$id/finalizar"
+                    params={{ id: r.id }}
+                    className="flex-1 block"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Button size="sm" variant="action" className="w-full">
+                      Finalizar entrega
+                    </Button>
+                  </Link>
+                  {onVoltarPendente && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0 text-amber-600 hover:bg-amber-500/10"
+                      aria-label="Voltar para pendente"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onVoltarPendente(r.id);
+                      }}
+                    >
+                      <Undo2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>

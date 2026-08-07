@@ -218,9 +218,22 @@ function Pendentes() {
                   <MapPin className="h-3 w-3 mt-0.5 shrink-0" /> {r.endereco}
                 </div>
               )}
-              <Button size="sm" variant="action" className="w-full" onClick={() => abrir(r)}>
-                <Truck className="h-4 w-4 mr-1" /> Iniciar entrega
-              </Button>
+              <div className="flex gap-2">
+                <Button size="sm" variant="action" className="flex-1" onClick={() => abrir(r)}>
+                  <Truck className="h-4 w-4 mr-1" /> Iniciar entrega
+                </Button>
+                {podeExcluir && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0 text-destructive hover:bg-destructive/10"
+                    aria-label="Excluir venda"
+                    onClick={() => setConfirmarExcluirId(r.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
         </SwipeToAction>

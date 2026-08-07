@@ -196,7 +196,37 @@ function Page() {
                   {r.numero != null && <span className="text-muted-foreground mr-1">#{r.numero}</span>}
                   {r.cliente?.nome ?? "—"}
                 </div>
-                <Badge variant="outline" className={st.cls}>{st.label}</Badge>
+                <span className="flex items-center gap-1 shrink-0">
+                  <Badge variant="outline" className={st.cls}>{st.label}</Badge>
+                  {(r.status === "pendente" || r.status === "entregue") && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                      aria-label="Excluir venda"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setConfirmarExcluirId(r.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {r.status === "em_rota" && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-amber-600 hover:bg-amber-500/10"
+                      aria-label="Voltar para pendente"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        voltarPendente(r.id);
+                      }}
+                    >
+                      <Undo2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </span>
               </div>
               <div className="text-xs text-muted-foreground truncate">
                 {r.material?.nome} · {r.quantidade} {r.material?.unidade}
