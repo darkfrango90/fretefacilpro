@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/use-session";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,9 +13,21 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { AlertTriangle, Clock, CheckCircle2, Loader2, MapPin, User } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { AlertTriangle, Clock, CheckCircle2, Loader2, MapPin, User, Trash2, Undo2 } from "lucide-react";
+import { toast } from "sonner";
 import { pendingByType } from "@/lib/offline/queue";
 import type { OutboxItem } from "@/lib/offline/db";
+import { SwipeToAction } from "@/components/swipe-to-action";
 
 import { AdminOnly } from "@/components/role-guard";
 
@@ -44,8 +56,9 @@ function Page() {
   const empresaId = prof?.profile.empresa_id;
   const [filtro, setFiltro] = useState<StatusFiltro>("todos");
   const [detalheId, setDetalheId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const { data: rows, isLoading } = useQuery({
+  const { data: rows, isLoading, refetch } = useQuery({
     queryKey: ["entregas", empresaId, filtro],
     enabled: !!empresaId,
     queryFn: async () => {
@@ -76,6 +89,51 @@ function Page() {
   const remoteIds = useMemo(() => new Set((rows ?? []).map((r: any) => r.id)), [rows]);
   const pendingOnly = pending.filter((p) => !remoteIds.has(p.id));
 
+  const [confirmarExcluirId, setConfirmarExcluirId] = useState<string | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
+
+  async function invalidarListas() {
+    await Promise.all([
+      refetch(),
+      queryClient.invalidateQueries({ queryKey: ["pendentes"] }),
+      queryClient.invalidateQueries({ queryKey: ["minhas-entregas"] }),
+    ]);
+  }
+
+  async function excluir(id: string) {
+    setExcluindo(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-entrega", {
+        body: { action: "cancelar_entrega", entrega_id: id },
+      });
+      if (error) return toast.error(error.message);
+      if (data?.erro) {
+        return toast.error(
+          data.erro === "SEM_PERMISSAO" ? "Sem permissão para excluir esta venda" : data.erro,
+        );
+      }
+      toast.success("Venda removida");
+      setConfirmarExcluirId(null);
+      await invalidarListas();
+    } finally {
+      setExcluindo(false);
+    }
+  }
+
+  async function voltarPendente(id: string) {
+    const { data, error } = await supabase.functions.invoke("sync-entrega", {
+      body: { action: "voltar_pendente", entrega_id: id },
+    });
+    if (error) return toast.error(error.message);
+    if (data?.erro) {
+      return toast.error(
+        data.erro === "SEM_PERMISSAO" ? "Sem permissão para voltar esta entrega" : data.erro,
+      );
+    }
+    toast.success("Entrega voltou para pendentes");
+    await invalidarListas();
+  }
+
   if (!prof) return null;
 
   const filtros: { v: StatusFiltro; label: string }[] = [
@@ -89,6 +147,9 @@ function Page() {
   return (
     <div className="space-y-3">
       <h1 className="text-xl font-bold">Entregas</h1>
+      <p className="text-xs text-muted-foreground -mt-2">
+        Arraste um card pendente para o lado para excluir; em entrega, para voltar a pendente.
+      </p>
 
       <div className="flex gap-1.5 flex-wrap">
         {filtros.map((f) => (
@@ -120,9 +181,8 @@ function Page() {
       {(rows ?? []).map((r: any) => {
         const diff = Number(r.valor_praticado) !== Number(r.preco_base_no_momento);
         const st = STATUS_LABEL[r.status] ?? { label: r.status, cls: "" };
-        return (
+        const card = (
           <Card
-            key={r.id}
             className="cursor-pointer active:opacity-70"
             onClick={() => setDetalheId(r.id)}
           >
@@ -158,6 +218,33 @@ function Page() {
             </CardContent>
           </Card>
         );
+        if (r.status === "pendente") {
+          return (
+            <SwipeToAction
+              key={r.id}
+              actionLabel="Excluir"
+              actionIcon={<Trash2 className="h-4 w-4" />}
+              actionClassName="bg-destructive text-destructive-foreground"
+              onAction={() => setConfirmarExcluirId(r.id)}
+            >
+              {card}
+            </SwipeToAction>
+          );
+        }
+        if (r.status === "em_rota") {
+          return (
+            <SwipeToAction
+              key={r.id}
+              actionLabel="Voltar p/ pendente"
+              actionIcon={<Undo2 className="h-4 w-4" />}
+              actionClassName="bg-amber-500 text-white"
+              onAction={() => voltarPendente(r.id)}
+            >
+              {card}
+            </SwipeToAction>
+          );
+        }
+        return <div key={r.id}>{card}</div>;
       })}
       {!isLoading && (rows ?? []).length === 0 && pendingOnly.length === 0 && (
         <p className="text-sm text-muted-foreground text-center py-8">Nenhuma entrega encontrada.</p>
@@ -165,6 +252,33 @@ function Page() {
       <Link to="/" className="block text-center text-sm text-primary pt-2">← Voltar</Link>
 
       <DetalheDialog id={detalheId} onClose={() => setDetalheId(null)} />
+
+      <AlertDialog
+        open={!!confirmarExcluirId}
+        onOpenChange={(o) => !o && setConfirmarExcluirId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir venda pendente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. A venda será marcada como cancelada.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={excluindo}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={excluindo}
+              onClick={(e) => {
+                e.preventDefault();
+                if (confirmarExcluirId) excluir(confirmarExcluirId);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {excluindo ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
