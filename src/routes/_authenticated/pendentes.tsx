@@ -10,6 +10,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { MapPin, Truck, PackageCheck, RefreshCw, Trash2 } from "lucide-react";
 import { enqueue, listPending } from "@/lib/offline/queue";
@@ -130,22 +140,30 @@ function Pendentes() {
     }
   }
 
+  const [confirmarExcluirId, setConfirmarExcluirId] = useState<string | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
+
   async function excluir(id: string) {
-    if (!confirm("Excluir esta venda pendente?")) return;
-    const { data, error } = await supabase.functions.invoke("sync-entrega", {
-      body: { action: "cancelar_entrega", entrega_id: id },
-    });
-    if (error) return toast.error(error.message);
-    if (data?.erro) {
-      return toast.error(
-        data.erro === "SEM_PERMISSAO" ? "Sem permissão para excluir esta venda" : data.erro,
-      );
+    setExcluindo(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-entrega", {
+        body: { action: "cancelar_entrega", entrega_id: id },
+      });
+      if (error) return toast.error(error.message);
+      if (data?.erro) {
+        return toast.error(
+          data.erro === "SEM_PERMISSAO" ? "Sem permissão para excluir esta venda" : data.erro,
+        );
+      }
+      toast.success("Venda removida");
+      setConfirmarExcluirId(null);
+      await Promise.all([
+        refetch(),
+        queryClient.invalidateQueries({ queryKey: ["entregas"] }),
+      ]);
+    } finally {
+      setExcluindo(false);
     }
-    toast.success("Venda removida");
-    await Promise.all([
-      refetch(),
-      queryClient.invalidateQueries({ queryKey: ["entregas"] }),
-    ]);
   }
 
   const visible = (rows ?? []).filter((r: any) => !iniciandoIds.includes(r.id));
@@ -180,7 +198,7 @@ function Pendentes() {
           actionIcon={<Trash2 className="h-4 w-4" />}
           actionClassName="bg-destructive text-destructive-foreground"
           disabled={!podeExcluir}
-          onAction={() => excluir(r.id)}
+          onAction={() => setConfirmarExcluirId(r.id)}
         >
           <Card>
             <CardContent className="p-3 space-y-2">
@@ -245,6 +263,30 @@ function Pendentes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!confirmarExcluirId} onOpenChange={(o) => !o && setConfirmarExcluirId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir venda pendente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. A venda será removida da lista de pendentes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={excluindo}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={excluindo}
+              onClick={(e) => {
+                e.preventDefault();
+                if (confirmarExcluirId) excluir(confirmarExcluirId);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {excluindo ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
