@@ -95,10 +95,10 @@ export function SwipeToAction({
             wasDragged.current = false;
           }
         }}
+        className="touch-pan-y"
         style={{
           transform: `translateX(${dragX}px)`,
           transition: dragging ? "none" : "transform 0.2s ease",
-          touchAction: "pan-y",
         }}
       >
         {children}
