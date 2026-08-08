@@ -292,17 +292,6 @@ function Pendentes() {
                     <Pencil className="h-4 w-4" />
                   </Button>
                 )}
-                {podeExcluir && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="shrink-0 text-destructive hover:bg-destructive/10"
-                    aria-label="Excluir venda"
-                    onClick={() => setConfirmarExcluirId(r.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
               </div>
             </CardContent>
           </Card>
