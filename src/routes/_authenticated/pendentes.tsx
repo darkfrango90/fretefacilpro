@@ -21,7 +21,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { MapPin, Truck, PackageCheck, RefreshCw, Trash2 } from "lucide-react";
+import { MapPin, Truck, PackageCheck, RefreshCw, Trash2, Pencil } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { enqueue, listPending } from "@/lib/offline/queue";
 import { syncNow } from "@/lib/offline/sync";
 import { SwipeToAction } from "@/components/swipe-to-action";
@@ -69,7 +70,7 @@ function Pendentes() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("entregas")
-        .select("id, valor_praticado, valor_frete, quantidade, endereco, criada_em, cliente:clientes(nome), material:materiais(nome, unidade)")
+        .select("id, valor_praticado, valor_frete, quantidade, endereco, observacoes, criada_em, motorista_id, cliente:clientes(nome), material:materiais(nome, unidade)")
         .eq("status", "pendente")
         .order("criada_em", { ascending: true })
         .limit(100);
@@ -142,6 +143,64 @@ function Pendentes() {
 
   const [confirmarExcluirId, setConfirmarExcluirId] = useState<string | null>(null);
   const [excluindo, setExcluindo] = useState(false);
+
+  const [editar, setEditar] = useState<{
+    id: string;
+    quantidade: string;
+    valor_praticado: string;
+    valor_frete: string;
+    endereco: string;
+    observacoes: string;
+  } | null>(null);
+  const [salvando, setSalvando] = useState(false);
+
+  function abrirEdicao(r: any) {
+    setEditar({
+      id: r.id,
+      quantidade: String(r.quantidade ?? ""),
+      valor_praticado: String(r.valor_praticado ?? ""),
+      valor_frete: String(r.valor_frete ?? ""),
+      endereco: r.endereco ?? "",
+      observacoes: r.observacoes ?? "",
+    });
+  }
+
+  async function salvarEdicao() {
+    if (!editar) return;
+    const quantidade = Number(editar.quantidade);
+    const valorPraticado = Number(editar.valor_praticado);
+    const valorFrete = Number(editar.valor_frete || 0);
+    if (!Number.isFinite(quantidade) || quantidade <= 0) return toast.error("Quantidade inválida");
+    if (!Number.isFinite(valorPraticado) || valorPraticado < 0) return toast.error("Valor inválido");
+    if (!Number.isFinite(valorFrete) || valorFrete < 0) return toast.error("Frete inválido");
+
+    setSalvando(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-entrega", {
+        body: {
+          action: "editar_entrega",
+          entrega_id: editar.id,
+          quantidade,
+          valor_praticado: valorPraticado,
+          valor_frete: valorFrete,
+          endereco: editar.endereco,
+          observacoes: editar.observacoes,
+        },
+      });
+      if (error) return toast.error(error.message);
+      if (data?.erro) {
+        if (data.erro === "SEM_PERMISSAO") return toast.error("Sem permissão para editar esta venda");
+        if (data.erro === "ENTREGA_NAO_ENCONTRADA")
+          return toast.error("Você só pode editar vendas pendentes criadas por você");
+        return toast.error(String(data.erro).replace("PERMISSAO_NEGADA: ", ""));
+      }
+      toast.success("Venda atualizada");
+      setEditar(null);
+      await refetch();
+    } finally {
+      setSalvando(false);
+    }
+  }
 
   async function excluir(id: string) {
     setExcluindo(true);
@@ -222,6 +281,17 @@ function Pendentes() {
                 <Button size="sm" variant="action" className="flex-1" onClick={() => abrir(r)}>
                   <Truck className="h-4 w-4 mr-1" /> Iniciar entrega
                 </Button>
+                {(isAdmin || r.motorista_id === prof?.profile.id) && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0 text-primary hover:bg-primary/10"
+                    aria-label="Editar venda"
+                    onClick={() => abrirEdicao(r)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                )}
                 {podeExcluir && (
                   <Button
                     size="sm"
@@ -274,6 +344,68 @@ function Pendentes() {
               {submitting ? "Iniciando..." : "Confirmar"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editar} onOpenChange={(o) => !o && setEditar(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Editar venda</DialogTitle>
+          </DialogHeader>
+          {editar && (
+            <div className="space-y-3">
+              <div>
+                <Label>Quantidade</Label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  value={editar.quantidade}
+                  onChange={(e) => setEditar({ ...editar, quantidade: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Valor praticado (R$)</Label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  value={editar.valor_praticado}
+                  onChange={(e) => setEditar({ ...editar, valor_praticado: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Valor do frete (R$)</Label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  value={editar.valor_frete}
+                  onChange={(e) => setEditar({ ...editar, valor_frete: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Endereço</Label>
+                <Input
+                  value={editar.endereco}
+                  onChange={(e) => setEditar({ ...editar, endereco: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Observações</Label>
+                <Textarea
+                  rows={2}
+                  value={editar.observacoes}
+                  onChange={(e) => setEditar({ ...editar, observacoes: e.target.value })}
+                />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button variant="outline" className="flex-1" onClick={() => setEditar(null)}>
+                  Cancelar
+                </Button>
+                <Button variant="action" className="flex-1" onClick={salvarEdicao} disabled={salvando}>
+                  {salvando ? "Salvando..." : "Salvar"}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

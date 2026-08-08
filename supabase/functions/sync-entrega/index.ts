@@ -180,7 +180,6 @@ Deno.serve(async (req) => {
       if (!entregaId) return businessError("ENTREGA_OBRIGATORIA");
 
       const isAdminOuMaster = await podeGerenciarEntrega(admin, userData.user.id, profile.empresa_id, {});
-      if (!isAdminOuMaster) return businessError("SEM_PERMISSAO");
 
       const patch: Record<string, unknown> = {};
       if (body.quantidade != null) {
@@ -202,17 +201,24 @@ Deno.serve(async (req) => {
       if (body.observacoes !== undefined) patch.observacoes = String(body.observacoes ?? "").trim() || null;
       if (Object.keys(patch).length === 0) return businessError("NADA_PARA_ATUALIZAR");
 
-      // Atualiza com o client do usuário (não service role): o trigger de
-      // validação enxerga o admin autenticado e o isenta dos limites de
-      // motorista; a RLS da empresa também é aplicada normalmente.
-      const { data: updated, error } = await userClient
+      // Atualiza com o client do usuário (não service role): admin fica
+      // isento dos limites no trigger de validação; motorista só alcança as
+      // próprias vendas via RLS e continua sujeito aos limites de permissão.
+      // Motorista edita apenas pendentes; admin também pode editar entregues.
+      let query = userClient
         .from("entregas")
         .update(patch)
         .eq("id", entregaId)
-        .eq("empresa_id", profile.empresa_id)
-        .select("id")
-        .maybeSingle();
-      if (error) throw error;
+        .eq("empresa_id", profile.empresa_id);
+      query = isAdminOuMaster
+        ? query.in("status", ["pendente", "entregue"])
+        : query.eq("status", "pendente");
+      const { data: updated, error } = await query.select("id").maybeSingle();
+      if (error) {
+        const msg = error.message ?? String(error);
+        if (msg.includes("PERMISSAO_NEGADA")) return businessError(msg);
+        throw error;
+      }
       if (!updated) return businessError("ENTREGA_NAO_ENCONTRADA");
       return json({ ok: true });
     }
