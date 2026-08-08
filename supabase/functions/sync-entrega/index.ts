@@ -175,6 +175,48 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    if (action === "editar_entrega") {
+      const entregaId = String(body?.entrega_id ?? "");
+      if (!entregaId) return businessError("ENTREGA_OBRIGATORIA");
+
+      const isAdminOuMaster = await podeGerenciarEntrega(admin, userData.user.id, profile.empresa_id, {});
+      if (!isAdminOuMaster) return businessError("SEM_PERMISSAO");
+
+      const patch: Record<string, unknown> = {};
+      if (body.quantidade != null) {
+        const q = Number(body.quantidade);
+        if (!Number.isFinite(q) || q <= 0) return businessError("QUANTIDADE_INVALIDA");
+        patch.quantidade = q;
+      }
+      if (body.valor_praticado != null) {
+        const v = Number(body.valor_praticado);
+        if (!Number.isFinite(v) || v < 0) return businessError("VALOR_INVALIDO");
+        patch.valor_praticado = v;
+      }
+      if (body.valor_frete != null) {
+        const v = Number(body.valor_frete);
+        if (!Number.isFinite(v) || v < 0) return businessError("FRETE_INVALIDO");
+        patch.valor_frete = v;
+      }
+      if (body.endereco !== undefined) patch.endereco = String(body.endereco ?? "").trim() || null;
+      if (body.observacoes !== undefined) patch.observacoes = String(body.observacoes ?? "").trim() || null;
+      if (Object.keys(patch).length === 0) return businessError("NADA_PARA_ATUALIZAR");
+
+      // Atualiza com o client do usuário (não service role): o trigger de
+      // validação enxerga o admin autenticado e o isenta dos limites de
+      // motorista; a RLS da empresa também é aplicada normalmente.
+      const { data: updated, error } = await userClient
+        .from("entregas")
+        .update(patch)
+        .eq("id", entregaId)
+        .eq("empresa_id", profile.empresa_id)
+        .select("id")
+        .maybeSingle();
+      if (error) throw error;
+      if (!updated) return businessError("ENTREGA_NAO_ENCONTRADA");
+      return json({ ok: true });
+    }
+
     if (action === "voltar_pendente") {
       const entregaId = String(body?.entrega_id ?? "");
       if (!entregaId) return businessError("ENTREGA_OBRIGATORIA");
