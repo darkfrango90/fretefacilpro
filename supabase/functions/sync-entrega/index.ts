@@ -325,7 +325,7 @@ Deno.serve(async (req) => {
 
       const { data: entregaAtual, error: buscaError } = await admin
         .from("entregas")
-        .select("id, status, observacoes")
+        .select("id, status, observacoes, motorista_id, motorista_venda_id, motorista_entrega_id")
         .eq("id", entregaId)
         .eq("empresa_id", profile.empresa_id)
         .in("status", ["pendente", "em_rota"])
@@ -338,6 +338,10 @@ Deno.serve(async (req) => {
       const observacoes = observacoesAnteriores
         ? `${observacoesAnteriores}\n${observacaoAdmin}`
         : observacaoAdmin;
+      const motoristaResponsavel =
+        entregaAtual.motorista_entrega_id ??
+        entregaAtual.motorista_venda_id ??
+        entregaAtual.motorista_id;
 
       // Usa o client autenticado para que RLS e o bypass administrativo do
       // trigger de validação sejam avaliados com o usuário que fez a ação.
@@ -347,6 +351,7 @@ Deno.serve(async (req) => {
           status: "entregue",
           finalizada_em: new Date().toISOString(),
           observacoes,
+          motorista_entrega_id: motoristaResponsavel,
         })
         .eq("id", entregaId)
         .eq("empresa_id", profile.empresa_id)

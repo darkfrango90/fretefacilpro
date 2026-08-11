@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { addHistory, listPending, markAttempt, removePending } from "./queue";
 import { getDB, type OutboxItem } from "./db";
 import { refreshPermissoesCache } from "@/hooks/use-permissoes";
+import { parseQuilometragem } from "@/lib/quilometragem";
 
 let syncing = false;
 let syncPromise: Promise<SyncResult> | null = null;
@@ -153,6 +154,11 @@ async function pushOne(item: OutboxItem, identity: SyncIdentity): Promise<void> 
     const { error } = await (supabase as any).from("pneus").update(rest).eq("id", id);
     if (error) throw error;
     return;
+  }
+  if (item.type === "abastecimento") {
+    const kmAtual = parseQuilometragem(payload.km_atual);
+    if (kmAtual == null || kmAtual <= 0) throw new Error("KM_ATUAL_INVALIDO");
+    payload.km_atual = kmAtual;
   }
   const { error } = await (supabase as any)
     .from("abastecimentos")

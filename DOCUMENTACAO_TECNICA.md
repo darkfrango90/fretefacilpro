@@ -469,4 +469,24 @@ APK-base não assinado:
 - `PluginHandle` e `getPluginAnnotation()` continuam preservados pelo R8;
 - `assembleRelease --no-daemon`: aprovado.
 
+## 21. Correções OTA 1.6.1 — quilometragem e histórico do motorista
+
+### Abastecimentos
+
+- `km_atual` passou de inteiro para `numeric(12,1)`, preservando a casa decimal exibida pelo odômetro;
+- o aplicativo aceita `547141,7`, `547.141,7`, `547141.7` e `547.141`;
+- a fila offline normaliza novamente o valor antes do envio, corrigindo também registros que já estavam pendentes;
+- a interface formata a quilometragem no padrão brasileiro.
+
+### Entregas concluídas pelo administrador
+
+- ao concluir diretamente, o backend preserva o motorista já atribuído ou usa o motorista que cadastrou a venda;
+- um backfill atribui o responsável às entregas antigas concluídas pelo administrador;
+- a aba **Já entregues** consulta tanto o responsável pela entrega quanto o autor da venda, mantendo o isolamento entre motoristas.
+
+### Publicação
+
+- versão web/OTA: `1.6.1`;
+- compatibilidade nativa mantida em `1.6`, sem necessidade de gerar outro APK.
+
 Limite: OTA atualiza somente HTML, CSS e JavaScript. Mudanças em câmera, localização, permissões, plugins, Gradle ou Manifest continuam exigindo um APK nativo com versão superior. A publicação do primeiro manifesto depende do deploy Git/Vercel; o CLI Vercel local não possuía credenciais e nenhuma conta externa foi criada automaticamente.

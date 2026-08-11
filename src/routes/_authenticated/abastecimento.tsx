@@ -22,6 +22,7 @@ import { enqueue, fileToPhoto, pendingByType } from "@/lib/offline/queue";
 import { syncNow } from "@/lib/offline/sync";
 import { readOfflineCache, writeOfflineCache } from "@/lib/offline/cache";
 import type { OutboxItem } from "@/lib/offline/db";
+import { formatarQuilometragem, parseQuilometragem } from "@/lib/quilometragem";
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -181,6 +182,10 @@ function Page() {
     e.preventDefault();
     if (!veiculoId) return toast.error("Selecione o veículo");
     if (!km) return toast.error("Informe o KM atual");
+    const kmAtual = parseQuilometragem(km);
+    if (kmAtual == null || kmAtual <= 0) {
+      return toast.error("Informe uma quilometragem válida");
+    }
     setSubmitting(true);
     try {
       const id = crypto.randomUUID();
@@ -190,7 +195,7 @@ function Page() {
         veiculo_id: veiculoId,
         litros: litros ? Number(litros) : null,
         valor_total: valor ? Number(valor) : null,
-        km_atual: Number(km),
+        km_atual: kmAtual,
         observacoes: obs || null,
       };
       const photos = foto ? [await fileToPhoto("foto_url", "abastecimentos", foto)] : [];
@@ -326,10 +331,15 @@ function Page() {
           <div>
             <Label>KM atual *</Label>
             <Input
-              type="number"
+              type="text"
               value={km}
               onChange={(e) => setKm(e.target.value)}
-              inputMode="numeric"
+              onBlur={() => {
+                const valor = parseQuilometragem(km);
+                if (valor != null) setKm(formatarQuilometragem(valor));
+              }}
+              inputMode="decimal"
+              placeholder="Ex.: 547.141,7"
               required
             />
           </div>
@@ -382,7 +392,8 @@ function Page() {
                   : ""}
               </div>
               <div className="text-xs text-muted-foreground">
-                KM {item.payload.km_atual} · {new Date(item.created_at).toLocaleString("pt-BR")}
+                KM {formatarQuilometragem(item.payload.km_atual)} ·{" "}
+                {new Date(item.created_at).toLocaleString("pt-BR")}
               </div>
             </CardContent>
           </Card>
@@ -405,7 +416,9 @@ function Page() {
                 {item.litros != null ? `${Number(item.litros).toFixed(3)} L` : "—"}
                 {item.valor_total != null ? ` · R$ ${Number(item.valor_total).toFixed(2)}` : ""}
               </div>
-              <div className="text-xs text-muted-foreground">KM {item.km_atual}</div>
+              <div className="text-xs text-muted-foreground">
+                KM {formatarQuilometragem(item.km_atual)}
+              </div>
               {item.observacoes ? <p className="text-xs">{item.observacoes}</p> : null}
             </CardContent>
           </Card>

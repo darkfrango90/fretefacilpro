@@ -82,7 +82,9 @@ function MinhasEntregas() {
         .from("entregas")
         .select(SELECT_LIST)
         .eq("status", "entregue")
-        .eq("motorista_entrega_id", uid)
+        .or(
+          `motorista_entrega_id.eq.${uid},motorista_venda_id.eq.${uid},and(motorista_venda_id.is.null,motorista_id.eq.${uid})`,
+        )
         .order("finalizada_em", { ascending: false, nullsFirst: false })
         .limit(50);
       if (error) throw error;

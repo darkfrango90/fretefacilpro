@@ -2,10 +2,8 @@
   "nativeVersion": "1.6",
   "required": false,
   "notes": [
-    "Histórico de abastecimentos do motorista.",
-    "Vendas e entregas isoladas por motorista.",
-    "Pesquisa rápida de clientes com rolagem.",
-    "Edição de motoristas e acesso direto às permissões.",
-    "Atualizações futuras disponíveis dentro do aplicativo."
+    "Quilometragem de abastecimento aceita ponto, vírgula e uma casa decimal.",
+    "Correção da sincronização de abastecimentos que estavam pendentes.",
+    "Entregas concluídas pelo administrador aparecem no histórico do motorista responsável."
   ]
 }
