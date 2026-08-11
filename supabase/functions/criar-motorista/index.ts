@@ -5,8 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -23,9 +22,7 @@ Deno.serve(async (req) => {
 
   const url = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const anonKey =
-    Deno.env.get("SUPABASE_ANON_KEY") ||
-    Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
 
   const auth = req.headers.get("Authorization") ?? "";
   if (!auth.startsWith("Bearer ")) {
@@ -65,7 +62,7 @@ Deno.serve(async (req) => {
     .eq("empresa_id", empresaId);
   const ehAdmin = (roles ?? []).some((r: any) => r.role === "admin");
   if (!ehAdmin) {
-    return json({ erro: "Apenas administradores podem criar motoristas" }, 403);
+    return json({ erro: "Apenas administradores podem gerenciar motoristas" }, 403);
   }
 
   // Lê e valida payload
@@ -75,14 +72,76 @@ Deno.serve(async (req) => {
   } catch {
     return json({ erro: "JSON inválido" }, 400);
   }
+  const action = String(body?.action ?? "criar");
   const nome = String(body?.nome ?? "").trim();
-  const email = String(body?.email ?? "").trim().toLowerCase();
-  const senha = String(body?.senha ?? "");
+  const email = String(body?.email ?? "")
+    .trim()
+    .toLowerCase();
   const telefone = body?.telefone ? String(body.telefone).trim() : null;
-  const precisaTrocar = body?.precisa_trocar_senha !== false; // default true
-
   if (!nome || nome.length < 2) return json({ erro: "Nome inválido" }, 400);
   if (!email || !email.includes("@")) return json({ erro: "E-mail inválido" }, 400);
+
+  if (action === "editar") {
+    const motoristaId = String(body?.motorista_id ?? "");
+    if (!motoristaId) return json({ erro: "Motorista obrigatório" }, 400);
+
+    const [{ data: motorista }, { data: roleMotorista }] = await Promise.all([
+      admin
+        .from("profiles")
+        .select("id, email")
+        .eq("id", motoristaId)
+        .eq("empresa_id", empresaId)
+        .maybeSingle(),
+      admin
+        .from("user_roles")
+        .select("user_id")
+        .eq("user_id", motoristaId)
+        .eq("empresa_id", empresaId)
+        .eq("role", "motorista")
+        .maybeSingle(),
+    ]);
+    if (!motorista || !roleMotorista) {
+      return json({ erro: "Motorista não encontrado nesta empresa" }, 404);
+    }
+
+    const { data: authAnterior, error: authBuscaErro } =
+      await admin.auth.admin.getUserById(motoristaId);
+    if (authBuscaErro || !authAnterior.user) {
+      return json({ erro: "Conta de acesso do motorista não encontrada" }, 404);
+    }
+
+    const { error: authErro } = await admin.auth.admin.updateUserById(motoristaId, {
+      email,
+      user_metadata: {
+        ...(authAnterior.user.user_metadata ?? {}),
+        nome,
+        empresa_id: empresaId,
+      },
+    });
+    if (authErro) return json({ erro: authErro.message }, 400);
+
+    const { error: perfilErro } = await admin
+      .from("profiles")
+      .update({ nome, email, telefone })
+      .eq("id", motoristaId)
+      .eq("empresa_id", empresaId);
+    if (perfilErro) {
+      // Evita deixar o e-mail de login diferente do perfil se o segundo passo falhar.
+      await admin.auth.admin.updateUserById(motoristaId, {
+        email: authAnterior.user.email,
+        user_metadata: authAnterior.user.user_metadata,
+      });
+      return json({ erro: "Falha ao atualizar perfil: " + perfilErro.message }, 500);
+    }
+
+    return json({ ok: true, user_id: motoristaId, email });
+  }
+
+  if (action !== "criar") return json({ erro: "Ação inválida" }, 400);
+
+  const senha = String(body?.senha ?? "");
+  const precisaTrocar = body?.precisa_trocar_senha !== false; // default true
+
   if (!senha || senha.length < 6)
     return json({ erro: "Senha deve ter ao menos 6 caracteres" }, 400);
 
@@ -90,8 +149,13 @@ Deno.serve(async (req) => {
   const { data: empresaRow } = await admin
     .from("empresas")
     .select("ativa, data_vencimento, limite_usuarios")
-    .eq("id", empresaId).single();
-  if (!empresaRow?.ativa || (empresaRow.data_vencimento && empresaRow.data_vencimento < new Date().toISOString().slice(0, 10))) {
+    .eq("id", empresaId)
+    .single();
+  if (
+    !empresaRow?.ativa ||
+    (empresaRow.data_vencimento &&
+      empresaRow.data_vencimento < new Date().toISOString().slice(0, 10))
+  ) {
     return json({ erro: "Assinatura da empresa vencida ou inativa" }, 403);
   }
   // Verifica limite de usuários
@@ -103,7 +167,6 @@ Deno.serve(async (req) => {
   if ((count ?? 0) >= (empresaRow.limite_usuarios ?? 5)) {
     return json({ erro: "Limite de usuários da empresa atingido" }, 403);
   }
-
 
   // Cria usuário no Auth (já confirmado para login imediato)
   const { data: created, error: cErr } = await admin.auth.admin.createUser({

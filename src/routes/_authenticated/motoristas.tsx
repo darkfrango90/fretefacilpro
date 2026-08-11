@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/use-session";
@@ -6,9 +6,16 @@ import { AdminOnly } from "@/components/role-guard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { UserPlus, Power, RotateCcw, Copy } from "lucide-react";
+import { Copy, Pencil, Power, RotateCcw, Save, ShieldCheck, UserPlus } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/motoristas")({
   component: () => (
@@ -20,11 +27,17 @@ export const Route = createFileRoute("/_authenticated/motoristas")({
 
 function Page() {
   const { data: me } = useProfile();
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const [loading, setLoading] = useState(false);
-  const [criado, setCriado] = useState<{ email: string; senha: string } | null>(
-    null,
-  );
+  const [criado, setCriado] = useState<{ email: string; senha: string } | null>(null);
+  const [editando, setEditando] = useState<{
+    id: string;
+    nome: string;
+    email: string;
+    telefone: string;
+  } | null>(null);
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
 
   const { data: motoristas, refetch } = useQuery({
     enabled: !!me,
@@ -64,9 +77,7 @@ function Page() {
     });
     setLoading(false);
     if (error || (data as any)?.erro) {
-      return toast.error(
-        (data as any)?.erro || error?.message || "Falha ao criar motorista",
-      );
+      return toast.error((data as any)?.erro || error?.message || "Falha ao criar motorista");
     }
     setCriado({ email: payload.email, senha: payload.senha });
     (e.currentTarget as HTMLFormElement).reset();
@@ -84,12 +95,44 @@ function Page() {
     refetch();
   }
 
+  async function salvarEdicao(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!editando) return;
+    const nome = editando.nome.trim();
+    const email = editando.email.trim().toLowerCase();
+    if (nome.length < 2) return toast.error("Informe o nome do motorista");
+    if (!email.includes("@")) return toast.error("Informe um e-mail válido");
+
+    setSalvandoEdicao(true);
+    const { data, error } = await supabase.functions.invoke("criar-motorista", {
+      body: {
+        action: "editar",
+        motorista_id: editando.id,
+        nome,
+        email,
+        telefone: editando.telefone.trim(),
+      },
+    });
+    setSalvandoEdicao(false);
+    if (error || (data as any)?.erro) {
+      return toast.error((data as any)?.erro || error?.message || "Falha ao editar motorista");
+    }
+    setEditando(null);
+    await qc.invalidateQueries({ queryKey: ["motoristas"] });
+    toast.success("Dados do motorista atualizados");
+  }
+
+  function abrirPermissoes(motoristaId: string) {
+    sessionStorage.setItem("permissoes:motorista-selecionado", motoristaId);
+    navigate({ to: "/permissoes" });
+  }
+
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-bold">Motoristas</h1>
         <p className="text-xs text-muted-foreground">
-          Cadastre, desative ou reative motoristas da sua empresa.
+          Cadastre, edite dados, ajuste permissões e controle o acesso dos motoristas.
         </p>
       </div>
 
@@ -132,9 +175,7 @@ function Page() {
                 variant="ghost"
                 className="h-6 w-6"
                 onClick={() => {
-                  navigator.clipboard?.writeText(
-                    `E-mail: ${criado.email}\nSenha: ${criado.senha}`,
-                  );
+                  navigator.clipboard?.writeText(`E-mail: ${criado.email}\nSenha: ${criado.senha}`);
                   toast.success("Copiado");
                 }}
               >
@@ -154,7 +195,7 @@ function Page() {
           {(motoristas ?? []).map((m: any) => (
             <div
               key={m.id}
-              className="rounded-xl border bg-card p-3 flex items-center justify-between gap-3"
+              className="flex flex-col gap-3 rounded-xl border bg-card p-3 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="min-w-0">
                 <div className="font-medium truncate">{m.nome}</div>
@@ -169,30 +210,106 @@ function Page() {
                   )}
                 </div>
               </div>
-              <Button
-                size="sm"
-                variant={m.ativo ? "destructive" : "default"}
-                onClick={() => toggleAtivo(m.id, m.ativo)}
-              >
-                {m.ativo ? (
-                  <>
-                    <Power className="h-3 w-3 mr-1" /> Desativar
-                  </>
-                ) : (
-                  <>
-                    <RotateCcw className="h-3 w-3 mr-1" /> Reativar
-                  </>
-                )}
-              </Button>
+              <div className="grid shrink-0 grid-cols-2 gap-1 sm:flex sm:flex-wrap sm:justify-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  aria-label={`Editar dados de ${m.nome}`}
+                  onClick={() =>
+                    setEditando({
+                      id: m.id,
+                      nome: m.nome ?? "",
+                      email: m.email ?? "",
+                      telefone: m.telefone ?? "",
+                    })
+                  }
+                >
+                  <Pencil className="mr-1 h-3 w-3" /> Editar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  aria-label={`Editar permissões de ${m.nome}`}
+                  onClick={() => abrirPermissoes(m.id)}
+                >
+                  <ShieldCheck className="mr-1 h-3 w-3" /> Permissões
+                </Button>
+                <Button
+                  size="sm"
+                  className="col-span-2 sm:col-span-1"
+                  variant={m.ativo ? "destructive" : "default"}
+                  onClick={() => toggleAtivo(m.id, m.ativo)}
+                >
+                  {m.ativo ? (
+                    <>
+                      <Power className="h-3 w-3 mr-1" /> Desativar
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="h-3 w-3 mr-1" /> Reativar
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           ))}
           {motoristas && motoristas.length === 0 && (
-            <div className="text-xs text-muted-foreground">
-              Nenhum motorista cadastrado ainda.
-            </div>
+            <div className="text-xs text-muted-foreground">Nenhum motorista cadastrado ainda.</div>
           )}
         </div>
       </section>
+
+      <Dialog open={!!editando} onOpenChange={(open) => !open && setEditando(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar motorista</DialogTitle>
+          </DialogHeader>
+          {editando ? (
+            <form onSubmit={salvarEdicao} className="space-y-3">
+              <div>
+                <Label htmlFor="editar-motorista-nome">Nome</Label>
+                <Input
+                  id="editar-motorista-nome"
+                  value={editando.nome}
+                  onChange={(e) => setEditando({ ...editando, nome: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="editar-motorista-email">E-mail de acesso</Label>
+                <Input
+                  id="editar-motorista-email"
+                  type="email"
+                  value={editando.email}
+                  onChange={(e) => setEditando({ ...editando, email: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="editar-motorista-telefone">Telefone</Label>
+                <Input
+                  id="editar-motorista-telefone"
+                  type="tel"
+                  value={editando.telefone}
+                  onChange={(e) => setEditando({ ...editando, telefone: e.target.value })}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Alterar o e-mail também altera o endereço usado pelo motorista para entrar no app.
+              </p>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setEditando(null)}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={salvandoEdicao}>
+                  <Save className="mr-1 h-4 w-4" />
+                  {salvandoEdicao ? "Salvando..." : "Salvar alterações"}
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

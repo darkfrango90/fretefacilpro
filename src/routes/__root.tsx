@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { notifyUpdateReady } from "../lib/app-update";
 
 function NotFoundComponent() {
   return (
@@ -36,6 +37,10 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
+    // Confirma que o pacote OTA inicializou. Se esta confirmação não ocorrer,
+    // o plugin restaura automaticamente o último pacote funcional.
+    void notifyUpdateReady();
+
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
   return (
@@ -45,7 +50,10 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
         <div className="mt-6 flex justify-center gap-2">
           <button
-            onClick={() => { router.invalidate(); reset(); }}
+            onClick={() => {
+              router.invalidate();
+              reset();
+            }}
             className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground"
           >
             Tentar novamente
@@ -62,13 +70,30 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Frete Facil PRO" },
-      { name: "description", content: "Solidez que você pode confiar — gestão de entregas e vendas." },
+      {
+        name: "description",
+        content: "Solidez que você pode confiar — gestão de entregas e vendas.",
+      },
       { property: "og:title", content: "Frete Facil PRO" },
       { name: "twitter:title", content: "Frete Facil PRO" },
-      { property: "og:description", content: "Solidez que você pode confiar — gestão de entregas e vendas." },
-      { name: "twitter:description", content: "Solidez que você pode confiar — gestão de entregas e vendas." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/cpc1xBoBf9Ra03CEA0STZ76jn5J3/social-images/social-1782666263030-919d4a09-68f0-408e-93a3-8d38cc010865_fundo.webp" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/cpc1xBoBf9Ra03CEA0STZ76jn5J3/social-images/social-1782666263030-919d4a09-68f0-408e-93a3-8d38cc010865_fundo.webp" },
+      {
+        property: "og:description",
+        content: "Solidez que você pode confiar — gestão de entregas e vendas.",
+      },
+      {
+        name: "twitter:description",
+        content: "Solidez que você pode confiar — gestão de entregas e vendas.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/cpc1xBoBf9Ra03CEA0STZ76jn5J3/social-images/social-1782666263030-919d4a09-68f0-408e-93a3-8d38cc010865_fundo.webp",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/cpc1xBoBf9Ra03CEA0STZ76jn5J3/social-images/social-1782666263030-919d4a09-68f0-408e-93a3-8d38cc010865_fundo.webp",
+      },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
       { name: "theme-color", content: "#1B2A4A" },
@@ -107,8 +132,13 @@ function RootShell({ children }: { children: ReactNode }) {
 
   return (
     <html lang="pt-BR">
-      <head><HeadContent /></head>
-      <body>{children}<Scripts /></body>
+      <head>
+        <HeadContent />
+      </head>
+      <body>
+        {children}
+        <Scripts />
+      </body>
     </html>
   );
 }

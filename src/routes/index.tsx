@@ -13,21 +13,39 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Frete Fácil PRO — Gestão de entregas para materiais de construção" },
-      { name: "description", content: "Organize entregas, motoristas e frota em um só painel. Comprovante por foto, funcionamento offline e visão em tempo real. Feito para lojas de materiais de construção." },
+      {
+        name: "description",
+        content:
+          "Organize entregas, motoristas e frota em um só painel. Comprovante por foto, funcionamento offline e visão em tempo real. Feito para lojas de materiais de construção.",
+      },
       { name: "theme-color", content: "#1B2A4A" },
       // Open Graph / Facebook / WhatsApp
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://fretefacilpro.com.br/" },
-      { property: "og:title", content: "Frete Fácil PRO — Gestão de entregas para materiais de construção" },
-      { property: "og:description", content: "Organize entregas, motoristas e frota em um só painel. Comprovante por foto, funcionamento offline e visão em tempo real. Feito para lojas de materiais de construção." },
+      {
+        property: "og:title",
+        content: "Frete Fácil PRO — Gestão de entregas para materiais de construção",
+      },
+      {
+        property: "og:description",
+        content:
+          "Organize entregas, motoristas e frota em um só painel. Comprovante por foto, funcionamento offline e visão em tempo real. Feito para lojas de materiais de construção.",
+      },
       { property: "og:image", content: "https://fretefacilpro.vercel.app/og-image.jpg" },
       // Twitter
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:url", content: "https://fretefacilpro.com.br/" },
-      { name: "twitter:title", content: "Frete Fácil PRO — Gestão de entregas para materiais de construção" },
-      { name: "twitter:description", content: "Organize entregas, motoristas e frota em um só painel. Comprovante por foto, funcionamento offline e visão em tempo real. Feito para lojas de materiais de construção." },
-      { name: "twitter:image", content: "https://fretefacilpro.vercel.app/og-image.jpg" }
-    ]
+      {
+        name: "twitter:title",
+        content: "Frete Fácil PRO — Gestão de entregas para materiais de construção",
+      },
+      {
+        name: "twitter:description",
+        content:
+          "Organize entregas, motoristas e frota em um só painel. Comprovante por foto, funcionamento offline e visão em tempo real. Feito para lojas de materiais de construção.",
+      },
+      { name: "twitter:image", content: "https://fretefacilpro.vercel.app/og-image.jpg" },
+    ],
   }),
   component: LandingPage,
 });
@@ -59,19 +77,22 @@ function LandingPage() {
           }
         });
       },
-      { threshold: 0.14 }
+      { threshold: 0.14 },
     );
 
     document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
     return () => observer.disconnect();
   }, []);
 
-  const contactWhatsapp = "https://wa.me/5563984446555?text=Olá!%20Gostaria%20de%20assinar%20o%20plano%20PRO%20do%20Frete%20Fácil%20PRO.";
+  const contactWhatsapp =
+    "https://wa.me/5563984446555?text=Olá!%20Gostaria%20de%20assinar%20o%20plano%20PRO%20do%20Frete%20Fácil%20PRO.";
 
   return (
     <>
       {/* Estilos originais incorporados da Landing Page do Usuário */}
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         :root {
           --navy-950: #081226;
           --navy-900: #0B1730;
@@ -1392,78 +1413,167 @@ function LandingPage() {
             width: 280px;
           }
         }
-      `}} />
+      `,
+        }}
+      />
 
       <div className="lp-wrapper">
-
         {/* ==================== NAV ==================== */}
         <nav className={`nav ${scrolled ? "scrolled" : ""}`} id="nav">
           <div className="container nav-inner">
             <a href="#" className="logo" aria-label="Frete Fácil PRO">
               <div className="logo-mark">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#081226" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#081226"
+                  stroke-width="2.2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
                   <path d="M1 8h12v9H1z" />
                   <path d="M13 11h4l3 3v3h-7" />
                   <circle cx="6" cy="19" r="1.8" />
                   <circle cx="17" cy="19" r="1.8" />
                 </svg>
               </div>
-              <div className="logo-text">Frete Fácil<span>PRO · ENTREGAS</span></div>
+              <div className="logo-text">
+                Frete Fácil<span>PRO · ENTREGAS</span>
+              </div>
             </a>
-            
+
             <div className={`nav-links ${mobileMenuOpen ? "open" : ""}`} id="navLinks">
-              <a href="#recursos" onClick={() => setMobileMenuOpen(false)}>Recursos</a>
-              <a href="#como-funciona" onClick={() => setMobileMenuOpen(false)}>Como funciona</a>
-              <a href="#planos" onClick={() => setMobileMenuOpen(false)}>Planos</a>
-              <a href="#faq" onClick={() => setMobileMenuOpen(false)}>Dúvidas</a>
-              <a href="/auth" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); navigate({ to: "/auth" }); }} className="btn btn-ghost" style={{ border: "1px solid rgba(255,255,255,0.15)", padding: "10px 20px" }}>Acessar Sistema</a>
-              <a href={contactWhatsapp} target="_blank" rel="noopener noreferrer" className="btn btn-amber">Assinar Plano PRO</a>
+              <a href="#recursos" onClick={() => setMobileMenuOpen(false)}>
+                Recursos
+              </a>
+              <a href="#como-funciona" onClick={() => setMobileMenuOpen(false)}>
+                Como funciona
+              </a>
+              <a href="#planos" onClick={() => setMobileMenuOpen(false)}>
+                Planos
+              </a>
+              <a href="#faq" onClick={() => setMobileMenuOpen(false)}>
+                Dúvidas
+              </a>
+              <a
+                href="/auth"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setMobileMenuOpen(false);
+                  navigate({ to: "/auth" });
+                }}
+                className="btn btn-ghost"
+                style={{ border: "1px solid rgba(255,255,255,0.15)", padding: "10px 20px" }}
+              >
+                Acessar Sistema
+              </a>
+              <a
+                href={contactWhatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-amber"
+              >
+                Assinar Plano PRO
+              </a>
             </div>
 
-            <button className={`nav-toggle ${mobileMenuOpen ? "open" : ""}`} id="navToggle" aria-label="Abrir menu" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-              <span></span><span></span><span></span>
+            <button
+              className={`nav-toggle ${mobileMenuOpen ? "open" : ""}`}
+              id="navToggle"
+              aria-label="Abrir menu"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              <span></span>
+              <span></span>
+              <span></span>
             </button>
           </div>
         </nav>
 
         {/* ==================== HERO ==================== */}
         <header className="hero">
-          <svg className="route-svg" viewBox="0 0 1440 700" preserveAspectRatio="none" aria-hidden="true">
-            <path className="route-path" d="M-40,560 C240,470 320,640 560,540 S900,320 1120,400 S1380,300 1500,340" />
+          <svg
+            className="route-svg"
+            viewBox="0 0 1440 700"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            <path
+              className="route-path"
+              d="M-40,560 C240,470 320,640 560,540 S900,320 1120,400 S1380,300 1500,340"
+            />
           </svg>
           <div className="container hero-grid">
             <div>
               <span className="eyebrow">Gestão de entregas · materiais de construção</span>
-              <h1>Da loja ao canteiro, <em>cada entrega</em> sob controle.</h1>
+              <h1>
+                Da loja ao canteiro, <em>cada entrega</em> sob controle.
+              </h1>
               <p className="hero-sub">
-                Chega de canhoto perdido e telefone tocando. O Frete Fácil PRO organiza
-                entregas, motoristas e frota em um só painel — com comprovante por foto,
-                funcionamento offline e visão em tempo real.
+                Chega de canhoto perdido e telefone tocando. O Frete Fácil PRO organiza entregas,
+                motoristas e frota em um só painel — com comprovante por foto, funcionamento offline
+                e visão em tempo real.
               </p>
               <div className="hero-ctas">
-                <a href={contactWhatsapp} target="_blank" rel="noopener noreferrer" className="btn btn-amber">
+                <a
+                  href={contactWhatsapp}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-amber"
+                >
                   Assinar Plano PRO
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                  >
                     <path d="M5 12h14M13 6l6 6-6 6" />
                   </svg>
                 </a>
-                <a href="#como-funciona" className="btn btn-ghost">Ver como funciona</a>
+                <a href="#como-funciona" className="btn btn-ghost">
+                  Ver como funciona
+                </a>
               </div>
               <div className="hero-proof">
                 <div className="proof-item">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#12B76A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#12B76A"
+                    stroke-width="2.2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <path d="M20 6L9 17l-5-5" />
                   </svg>
                   Ativação imediata
                 </div>
                 <div className="proof-item">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#12B76A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#12B76A"
+                    stroke-width="2.2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <path d="M20 6L9 17l-5-5" />
                   </svg>
                   Configuração em minutos
                 </div>
                 <div className="proof-item">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#12B76A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#12B76A"
+                    stroke-width="2.2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <path d="M20 6L9 17l-5-5" />
                   </svg>
                   Funciona sem internet
@@ -1474,23 +1584,47 @@ function LandingPage() {
             <div className="hero-visual">
               {/* badge flutuante 1 */}
               <div className="float-badge fb-1">
-                <div class="fb-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#12B76A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <div className="fb-icon">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#12B76A"
+                    stroke-width="2.2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <path d="M20 6L9 17l-5-5" />
                   </svg>
                 </div>
-                <div><b>Entrega concluída</b><span>Foto + assinatura salvas</span></div>
+                <div>
+                  <b>Entrega concluída</b>
+                  <span>Foto + assinatura salvas</span>
+                </div>
               </div>
-              
+
               {/* badge flutuante 2 */}
               <div className="float-badge fb-2">
-                <div class="fb-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F08C00" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <div className="fb-icon">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#F08C00"
+                    stroke-width="2.2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <rect x="3" y="4" width="18" height="14" rx="2" />
                     <path d="M7 20h10M9 9h6M9 13h4" />
                   </svg>
                 </div>
-                <div><b>Controle de Frota</b><span>Manutenção e pneus</span></div>
+                <div>
+                  <b>Controle de Frota</b>
+                  <span>Manutenção e pneus</span>
+                </div>
               </div>
 
               {/* mockup do app */}
@@ -1500,24 +1634,42 @@ function LandingPage() {
                     <div className="greeting">Bom dia, Carlos 👋</div>
                     <div className="title">Entregas de hoje</div>
                     <div className="phone-stats">
-                      <div className="pstat"><b>8</b><span>Pendentes</span></div>
-                      <div className="pstat"><b>3</b><span>Em rota</span></div>
-                      <div className="pstat"><b>14</b><span>Entregues</span></div>
+                      <div className="pstat">
+                        <b>8</b>
+                        <span>Pendentes</span>
+                      </div>
+                      <div className="pstat">
+                        <b>3</b>
+                        <span>Em rota</span>
+                      </div>
+                      <div className="pstat">
+                        <b>14</b>
+                        <span>Entregues</span>
+                      </div>
                     </div>
                   </div>
                   <div className="phone-body">
                     <div className="dcard">
-                      <div className="dcard-head"><b>Constr. Bela Vista</b><span className="cod">#2841</span></div>
+                      <div className="dcard-head">
+                        <b>Constr. Bela Vista</b>
+                        <span className="cod">#2841</span>
+                      </div>
                       <p>40 sacos de cimento · 2 ton de areia</p>
                       <span className="chip rota">Em rota</span>
                     </div>
                     <div className="dcard">
-                      <div className="dcard-head"><b>Obra Jardim Europa</b><span class="cod">#2842</span></div>
+                      <div className="dcard-head">
+                        <b>Obra Jardim Europa</b>
+                        <span className="cod">#2842</span>
+                      </div>
                       <p>Cerâmica 60x60 · argamassa AC-III</p>
                       <span className="chip pendente">Pendente</span>
                     </div>
                     <div className="dcard">
-                      <div className="dcard-head"><b>Residencial Aurora</b><span class="cod">#2839</span></div>
+                      <div className="dcard-head">
+                        <b>Residencial Aurora</b>
+                        <span className="cod">#2839</span>
+                      </div>
                       <p>Tijolos 8 furos · vergalhão 10mm</p>
                       <span className="chip entregue">Entregue</span>
                     </div>
@@ -1531,10 +1683,22 @@ function LandingPage() {
         {/* ==================== STRIP ==================== */}
         <div className="strip">
           <div className="container strip-inner">
-            <div className="strip-item"><b>100%</b><span>das entregas com comprovação digital</span></div>
-            <div className="strip-item"><b>3</b><span>perfis de acesso: gestor, balcão e motorista</span></div>
-            <div className="strip-item"><b>0</b><span>papel: adeus pranchetas e canhotos</span></div>
-            <div className="strip-item"><b>24/7</b><span>funciona offline e sincroniza sozinho</span></div>
+            <div className="strip-item">
+              <b>100%</b>
+              <span>das entregas com comprovação digital</span>
+            </div>
+            <div className="strip-item">
+              <b>3</b>
+              <span>perfis de acesso: gestor, balcão e motorista</span>
+            </div>
+            <div className="strip-item">
+              <b>0</b>
+              <span>papel: adeus pranchetas e canhotos</span>
+            </div>
+            <div className="strip-item">
+              <b>24/7</b>
+              <span>funciona offline e sincroniza sozinho</span>
+            </div>
           </div>
         </div>
 
@@ -1544,37 +1708,76 @@ function LandingPage() {
             <div className="section-head reveal">
               <span className="eyebrow">O problema de todo dia</span>
               <h2>Você reconhece essa rotina?</h2>
-              <p>Quem tem loja de material de construção sabe: a entrega é onde a operação vira caos — e onde o cliente forma a opinião sobre a sua loja.</p>
+              <p>
+                Quem tem loja de material de construção sabe: a entrega é onde a operação vira caos
+                — e onde o cliente forma a opinião sobre a sua loja.
+              </p>
             </div>
             <div className="pain-grid">
               <div className="pain-card reveal">
                 <div className="p-icon">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E5484D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#E5484D"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                     <path d="M14 2v6h6M9 15l6-6M15 15l-6-6" />
                   </svg>
                 </div>
                 <h3>Canhoto que some</h3>
-                <p>O cliente jura que não recebeu, o papel sumiu na caçamba e a loja fica sem prova. Toda discussão de entrega vira prejuízo ou desgaste.</p>
+                <p>
+                  O cliente jura que não recebeu, o papel sumiu na caçamba e a loja fica sem prova.
+                  Toda discussão de entrega vira prejuízo ou desgaste.
+                </p>
               </div>
               <div className="pain-card reveal">
-                <div class="p-icon">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E5484D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <div className="p-icon">
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#E5484D"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.34 1.79.63 2.65a2 2 0 0 1-.45 2.11L8 9.91a16 16 0 0 0 6 6l1.43-1.29a2 2 0 0 1 2.11-.45c.86.29 1.75.51 2.65.63A2 2 0 0 1 22 16.92z" />
                   </svg>
                 </div>
                 <h3>Telefone que não para</h3>
-                <p>"Onde está minha entrega?" O balcão vira central de atendimento, o motorista não atende e ninguém sabe responder o cliente com certeza.</p>
+                <p>
+                  "Onde está minha entrega?" O balcão vira central de atendimento, o motorista não
+                  atende e ninguém sabe responder o cliente com certeza.
+                </p>
               </div>
               <div className="pain-card reveal">
-                <div class="p-icon">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E5484D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <div className="p-icon">
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#E5484D"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <circle cx="12" cy="12" r="10" />
                     <path d="M12 6v6l4 2" />
                   </svg>
                 </div>
                 <h3>Frota no escuro</h3>
-                <p>Combustível, pneu, manutenção: os custos do caminhão aparecem só no fim do mês — e sempre maiores do que você imaginava.</p>
+                <p>
+                  Combustível, pneu, manutenção: os custos do caminhão aparecem só no fim do mês — e
+                  sempre maiores do que você imaginava.
+                </p>
               </div>
             </div>
           </div>
@@ -1586,12 +1789,22 @@ function LandingPage() {
             <div className="section-head reveal">
               <span className="eyebrow">A solução completa</span>
               <h2>Tudo o que a sua operação de entrega precisa</h2>
-              <p>Do pedido no balcão à assinatura no canteiro, cada etapa registrada — sem papel, sem planilha, sem adivinhação.</p>
+              <p>
+                Do pedido no balcão à assinatura no canteiro, cada etapa registrada — sem papel, sem
+                planilha, sem adivinhação.
+              </p>
             </div>
             <div className="feat-grid">
               <div className="feat-card reveal">
                 <div className="feat-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#FFB020"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <path d="M1 8h12v9H1z" />
                     <path d="M13 11h4l3 3v3h-7" />
                     <circle cx="6" cy="19" r="1.8" />
@@ -1599,62 +1812,115 @@ function LandingPage() {
                   </svg>
                 </div>
                 <h3>Fluxo de entrega em tempo real</h3>
-                <p>Cada entrega passa por status claros — pendente, em rota, entregue — visíveis para o balcão e para o gestor no mesmo instante.</p>
+                <p>
+                  Cada entrega passa por status claros — pendente, em rota, entregue — visíveis para
+                  o balcão e para o gestor no mesmo instante.
+                </p>
                 <span className="feat-tag">Tempo real</span>
               </div>
               <div className="feat-card reveal">
                 <div className="feat-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#FFB020"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                     <circle cx="12" cy="13" r="4" />
                   </svg>
                 </div>
                 <h3>Comprovação por foto e assinatura</h3>
-                <p>O motorista registra foto da entrega e assinatura do cliente direto no celular. A prova fica salva para sempre, ligada ao pedido.</p>
-                <span class="feat-tag">Fim do canhoto</span>
+                <p>
+                  O motorista registra foto da entrega e assinatura do cliente direto no celular. A
+                  prova fica salva para sempre, ligada ao pedido.
+                </p>
+                <span className="feat-tag">Fim do canhoto</span>
               </div>
               <div className="feat-card reveal">
                 <div className="feat-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#FFB020"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <rect x="3" y="4" width="18" height="14" rx="2" />
                     <path d="M7 20h10M9 9h6M9 13h4" />
                   </svg>
                 </div>
                 <h3>Abastecimento simplificado</h3>
-                <p>Monitore médias de consumo de combustível, lançando de forma rápida os abastecimentos diretamente no sistema em rota.</p>
-                <span class="feat-tag">Combustível</span>
+                <p>
+                  Monitore médias de consumo de combustível, lançando de forma rápida os
+                  abastecimentos diretamente no sistema em rota.
+                </p>
+                <span className="feat-tag">Combustível</span>
               </div>
               <div className="feat-card reveal">
                 <div className="feat-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#FFB020"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <circle cx="12" cy="12" r="9" />
                     <circle cx="12" cy="12" r="3.5" />
                     <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
                   </svg>
                 </div>
                 <h3>Gestão de pneus e sulcos</h3>
-                <p>Controle rodízio, quilometragem, aferições de sulco (em milímetros) e vida útil dos pneus da frota. Evite desgastes prematuros.</p>
-                <span class="feat-tag">Frota</span>
+                <p>
+                  Controle rodízio, quilometragem, aferições de sulco (em milímetros) e vida útil
+                  dos pneus da frota. Evite desgastes prematuros.
+                </p>
+                <span className="feat-tag">Frota</span>
               </div>
               <div className="feat-card reveal">
                 <div className="feat-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#FFB020"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                   </svg>
                 </div>
                 <h3>Custo real por veículo</h3>
-                <p>Combustível, manutenção e despesas lançadas na hora. Você enxerga quanto cada caminhão custa de verdade, todo mês.</p>
-                <span class="feat-tag">Financeiro</span>
+                <p>
+                  Combustível, manutenção e despesas lançadas na hora. Você enxerga quanto cada
+                  caminhão custa de verdade, todo mês.
+                </p>
+                <span className="feat-tag">Financeiro</span>
               </div>
               <div className="feat-card reveal">
                 <div className="feat-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#FFB020"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <path d="M1.42 9a16 16 0 0 1 21.16 0M5 12.55a11 11 0 0 1 14.08 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01" />
                   </svg>
                 </div>
                 <h3>Funciona sem internet</h3>
-                <p>No canteiro sem sinal? O app continua funcionando e sincroniza tudo sozinho quando a conexão volta. Nenhum registro se perde.</p>
-                <span class="feat-tag">Offline-first</span>
+                <p>
+                  No canteiro sem sinal? O app continua funcionando e sincroniza tudo sozinho quando
+                  a conexão volta. Nenhum registro se perde.
+                </p>
+                <span className="feat-tag">Offline-first</span>
               </div>
             </div>
           </div>
@@ -1666,22 +1932,39 @@ function LandingPage() {
             <div className="section-head reveal">
               <span className="eyebrow">Como funciona</span>
               <h2>Três passos. Zero papel.</h2>
-              <p>O Frete Fácil PRO acompanha a entrega do jeito que ela acontece de verdade na sua loja.</p>
+              <p>
+                O Frete Fácil PRO acompanha a entrega do jeito que ela acontece de verdade na sua
+                loja.
+              </p>
             </div>
             <div className="flow-steps">
               <div className="flow-step reveal">
                 <span className="flow-num">PASSO 01</span>
                 <h3>O balcão registra</h3>
-                <p>Fechou a venda? Em segundos a entrega está no sistema, com endereço, itens e veículo definidos. Sem prancheta, sem bloquinho.</p>
-                <div className="flow-status"><span className="chip pendente">Pendente</span></div>
+                <p>
+                  Fechou a venda? Em segundos a entrega está no sistema, com endereço, itens e
+                  veículo definidos. Sem prancheta, sem bloquinho.
+                </p>
+                <div className="flow-status">
+                  <span className="chip pendente">Pendente</span>
+                </div>
               </div>
               <div className="flow-step reveal">
                 <span className="flow-num">PASSO 02</span>
                 <h3>O motorista recebe no celular</h3>
-                <p>A rota do dia aparece no app do motorista. Ele inicia a entrega com um toque e a loja acompanha tudo em tempo real.</p>
+                <p>
+                  A rota do dia aparece no app do motorista. Ele inicia a entrega com um toque e a
+                  loja acompanha tudo em tempo real.
+                </p>
                 <div className="flow-status">
                   <span className="chip pendente">Pendente</span>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#fff"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                  >
                     <path d="M5 12h14M13 6l6 6-6 6" />
                   </svg>
                   <span className="chip rota">Em rota</span>
@@ -1690,10 +1973,19 @@ function LandingPage() {
               <div className="flow-step reveal">
                 <span className="flow-num">PASSO 03</span>
                 <h3>O cliente confirma no canteiro</h3>
-                <p>Foto do material entregue e assinatura na tela. A comprovação fica salva no pedido, disponível para consulta a qualquer momento.</p>
+                <p>
+                  Foto do material entregue e assinatura na tela. A comprovação fica salva no
+                  pedido, disponível para consulta a qualquer momento.
+                </p>
                 <div className="flow-status">
                   <span className="chip rota">Em rota</span>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#fff"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                  >
                     <path d="M5 12h14M13 6l6 6-6 6" />
                   </svg>
                   <span className="chip entregue">Entregue ✓</span>
@@ -1708,20 +2000,37 @@ function LandingPage() {
           <div className="container">
             <div className="case-box reveal">
               <div>
-                <p className="case-quote">Antes, toda semana tinha discussão por causa de entrega sem comprovante. Hoje o cliente pergunta e eu respondo na hora, com foto e assinatura na tela.</p>
+                <p className="case-quote">
+                  Antes, toda semana tinha discussão por causa de entrega sem comprovante. Hoje o
+                  cliente pergunta e eu respondo na hora, com foto e assinatura na tela.
+                </p>
                 <div className="case-author">
                   <div className="case-avatar">CR</div>
                   <div>
                     <b>CR Materiais para Construção</b>
-                    <span>Luzimangues · Tocantins — primeira operação rodando com Frete Fácil PRO</span>
+                    <span>
+                      Luzimangues · Tocantins — primeira operação rodando com Frete Fácil PRO
+                    </span>
                   </div>
                 </div>
               </div>
               <div className="case-stats">
-                <div className="cs-item"><b>-90%</b><span>de ligações \"cadê minha entrega?\"</span></div>
-                <div className="cs-item"><b>100%</b><span>das entregas com foto e assinatura</span></div>
-                <div className="cs-item"><b>1 tela</b><span>para toda a operação do dia</span></div>
-                <div className="cs-item"><b>R$ 0</b><span>gastos com bloco de canhoto</span></div>
+                <div className="cs-item">
+                  <b>-90%</b>
+                  <span>de ligações \"cadê minha entrega?\"</span>
+                </div>
+                <div className="cs-item">
+                  <b>100%</b>
+                  <span>das entregas com foto e assinatura</span>
+                </div>
+                <div className="cs-item">
+                  <b>1 tela</b>
+                  <span>para toda a operação do dia</span>
+                </div>
+                <div className="cs-item">
+                  <b>R$ 0</b>
+                  <span>gastos com bloco de canhoto</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1730,65 +2039,122 @@ function LandingPage() {
         {/* ==================== PLANOS ==================== */}
         <section className="section" id="planos">
           <div className="container">
-            <div className="section-head reveal" style={{ marginInline: "auto", textAlign: "center", maxWidth: "600px" }}>
-              <span className="eyebrow" style={{ justifyContent: "center" }}>Plano e preço</span>
+            <div
+              className="section-head reveal"
+              style={{ marginInline: "auto", textAlign: "center", maxWidth: "600px" }}
+            >
+              <span className="eyebrow" style={{ justifyContent: "center" }}>
+                Plano e preço
+              </span>
               <h2>O plano completo para a sua operação</h2>
-              <p>Adote o Frete Fácil PRO com tudo liberado e simplifique o controle das suas entregas hoje mesmo.</p>
+              <p>
+                Adote o Frete Fácil PRO com tudo liberado e simplifique o controle das suas entregas
+                hoje mesmo.
+              </p>
             </div>
-            
+
             <div className="price-grid">
               <div className="price-card featured reveal">
                 <span className="badge-pop">Plano Comercial Único</span>
                 <div className="plan-name">Plano PRO</div>
-                <p className="plan-desc">Acesso completo para toda a sua equipe de balcão e estrada.</p>
-                
+                <p className="plan-desc">
+                  Acesso completo para toda a sua equipe de balcão e estrada.
+                </p>
+
                 <div className="plan-price">
                   <span className="cur">R$</span>
                   <span className="val">149,90</span>
                   <span className="per">/mês</span>
                 </div>
                 <p className="plan-note">Sem taxa de adesão · Cancele quando quiser</p>
-                
+
                 <ul className="plan-list">
                   <li>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#FFB020"
+                      stroke-width="2.4"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
                       <path d="M20 6L9 17l-5-5" />
                     </svg>
                     Motoristas e veículos ilimitados
                   </li>
                   <li>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#FFB020"
+                      stroke-width="2.4"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
                       <path d="M20 6L9 17l-5-5" />
                     </svg>
                     Comprovação digital por foto e assinatura
                   </li>
                   <li>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#FFB020"
+                      stroke-width="2.4"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
                       <path d="M20 6L9 17l-5-5" />
                     </svg>
                     Funcionamento offline com sincronização automática
                   </li>
                   <li>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#FFB020"
+                      stroke-width="2.4"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
                       <path d="M20 6L9 17l-5-5" />
                     </svg>
                     Gestão de pneus, sulcos e manutenções da frota
                   </li>
                   <li>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#FFB020"
+                      stroke-width="2.4"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
                       <path d="M20 6L9 17l-5-5" />
                     </svg>
                     Lançamento de despesas e custos reais dos veículos
                   </li>
                   <li>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#FFB020" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#FFB020"
+                      stroke-width="2.4"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
                       <path d="M20 6L9 17l-5-5" />
                     </svg>
                     Suporte humanizado direto via WhatsApp
                   </li>
                 </ul>
-                
-                <a href={contactWhatsapp} target="_blank" rel="noopener noreferrer" className="btn btn-amber">
+
+                <a
+                  href={contactWhatsapp}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-amber"
+                >
                   Assinar Plano PRO
                 </a>
               </div>
@@ -1799,30 +2165,53 @@ function LandingPage() {
         {/* ==================== FAQ ==================== */}
         <section className="section" id="faq" style={{ paddingTop: 0 }}>
           <div className="container">
-            <div className="section-head reveal" style={{ marginInline: "auto", textAlign: "center" }}>
-              <span className="eyebrow" style={{ justifyContent: "center" }}>Perguntas frequentes</span>
+            <div
+              className="section-head reveal"
+              style={{ marginInline: "auto", textAlign: "center" }}
+            >
+              <span className="eyebrow" style={{ justifyContent: "center" }}>
+                Perguntas frequentes
+              </span>
               <h2>Ficou alguma dúvida?</h2>
             </div>
             <div className="faq-list">
               <details className="faq-item reveal">
                 <summary>Preciso instalar algum programa?</summary>
-                <div class="faq-body">Não. O Frete Fácil PRO funciona direto no navegador do computador e pode ser instalado como aplicativo no celular do motorista com um toque — sem loja de aplicativos, sem complicação.</div>
+                <div className="faq-body">
+                  Não. O Frete Fácil PRO funciona direto no navegador do computador e pode ser
+                  instalado como aplicativo no celular do motorista com um toque — sem loja de
+                  aplicativos, sem complicação.
+                </div>
               </details>
               <details className="faq-item reveal">
                 <summary>E se o motorista ficar sem internet na rota?</summary>
-                <div class="faq-body">O app continua funcionando normalmente. O motorista registra a entrega, tira foto e coleta assinatura mesmo sem sinal. Quando a conexão volta, tudo sincroniza sozinho — nada se perde.</div>
+                <div className="faq-body">
+                  O app continua funcionando normalmente. O motorista registra a entrega, tira foto
+                  e coleta assinatura mesmo sem sinal. Quando a conexão volta, tudo sincroniza
+                  sozinho — nada se perde.
+                </div>
               </details>
               <details className="faq-item reveal">
                 <summary>O motorista consegue ver dados da loja?</summary>
-                <div class="faq-body">Não. Cada perfil vê apenas o que precisa: o motorista vê só as entregas dele; o balcão registra e acompanha; o gestor enxerga a operação inteira, incluindo custos e relatórios.</div>
+                <div className="faq-body">
+                  Não. Cada perfil vê apenas o que precisa: o motorista vê só as entregas dele; o
+                  balcão registra e acompanha; o gestor enxerga a operação inteira, incluindo custos
+                  e relatórios.
+                </div>
               </details>
               <details className="faq-item reveal">
                 <summary>Meus dados ficam seguros?</summary>
-                <div class="faq-body">Sim. Os dados ficam em nuvem com criptografia e isolamento por empresa: as informações da sua loja são acessíveis apenas pelos usuários que você autorizar.</div>
+                <div className="faq-body">
+                  Sim. Os dados ficam em nuvem com criptografia e isolamento por empresa: as
+                  informações da sua loja são acessíveis apenas pelos usuários que você autorizar.
+                </div>
               </details>
               <details className="faq-item reveal">
                 <summary>Consigo cancelar quando quiser?</summary>
-                <div class="faq-body">Sim. Não há fidelidade nem multa no Plano PRO. Você pode cancelar a qualquer momento e exportar seus dados antes de sair.</div>
+                <div className="faq-body">
+                  Sim. Não há fidelidade nem multa no Plano PRO. Você pode cancelar a qualquer
+                  momento e exportar seus dados antes de sair.
+                </div>
               </details>
             </div>
           </div>
@@ -1832,17 +2221,42 @@ function LandingPage() {
         <section className="cta-final">
           <div className="container reveal">
             <h2>Sua próxima entrega já pode sair com o Frete Fácil PRO.</h2>
-            <p>Assine hoje mesmo por apenas R$ 149,90 ao mês e revolucione o fluxo de expedição do seu negócio.</p>
+            <p>
+              Assine hoje mesmo por apenas R$ 149,90 ao mês e revolucione o fluxo de expedição do
+              seu negócio.
+            </p>
             <div className="hero-ctas">
-              <a href={contactWhatsapp} target="_blank" rel="noopener noreferrer" className="btn btn-amber">
+              <a
+                href={contactWhatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-amber"
+              >
                 Assinar Plano PRO
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                >
                   <path d="M5 12h14M13 6l6 6-6 6" />
                 </svg>
               </a>
-              <a href={contactWhatsapp} target="_blank" rel="noopener noreferrer" className="btn btn-ghost">Falar no WhatsApp</a>
+              <a
+                href={contactWhatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-ghost"
+              >
+                Falar no WhatsApp
+              </a>
             </div>
-            <span className="cta-note">SEM ADESÃO · SEM FIDELIDADE · SUPORTE DIRETO COM DESENVOLVEDOR</span>
+            <span className="cta-note">
+              SEM ADESÃO · SEM FIDELIDADE · SUPORTE DIRETO COM DESENVOLVEDOR
+            </span>
           </div>
         </section>
 
@@ -1853,53 +2267,86 @@ function LandingPage() {
               <div className="footer-brand">
                 <a href="#" className="logo">
                   <div className="logo-mark">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#081226" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#081226"
+                      stroke-width="2.2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
                       <path d="M1 8h12v9H1z" />
                       <path d="M13 11h4l3 3v3h-7" />
                       <circle cx="6" cy="19" r="1.8" />
                       <circle cx="17" cy="19" r="1.8" />
                     </svg>
                   </div>
-                  <div className="logo-text">Frete Fácil<span>PRO · ENTREGAS</span></div>
+                  <div className="logo-text">
+                    Frete Fácil<span>PRO · ENTREGAS</span>
+                  </div>
                 </a>
-                <p>Gestão de entregas feita para lojas de materiais de construção. Do balcão ao canteiro, tudo sob controle.</p>
+                <p>
+                  Gestão de entregas feita para lojas de materiais de construção. Do balcão ao
+                  canteiro, tudo sob controle.
+                </p>
               </div>
-              
+
               <div className="footer-col">
                 <h4>Produto</h4>
                 <ul>
-                  <li><a href="#recursos">Recursos</a></li>
-                  <li><a href="#como-funciona">Como funciona</a></li>
-                  <li><a href="#planos">Planos</a></li>
-                  <li><a href="#faq">Dúvidas</a></li>
+                  <li>
+                    <a href="#recursos">Recursos</a>
+                  </li>
+                  <li>
+                    <a href="#como-funciona">Como funciona</a>
+                  </li>
+                  <li>
+                    <a href="#planos">Planos</a>
+                  </li>
+                  <li>
+                    <a href="#faq">Dúvidas</a>
+                  </li>
                 </ul>
               </div>
-              
+
               <div className="footer-col">
                 <h4>Contato</h4>
                 <ul>
-                  <li><a href="https://wa.me/5563984446555">WhatsApp Comercial</a></li>
-                  <li><a href="mailto:comercial@fretefacilpro.com.br">comercial@fretefacilpro.com.br</a></li>
-                  <li style={{ marginTop: "10px", fontSize: "0.8rem", color: "#FFB020" }}>Suporte Rodrigo: (63) 98444-6555</li>
+                  <li>
+                    <a href="https://wa.me/5563984446555">WhatsApp Comercial</a>
+                  </li>
+                  <li>
+                    <a href="mailto:comercial@fretefacilpro.com.br">
+                      comercial@fretefacilpro.com.br
+                    </a>
+                  </li>
+                  <li style={{ marginTop: "10px", fontSize: "0.8rem", color: "#FFB020" }}>
+                    Suporte Rodrigo: (63) 98444-6555
+                  </li>
                 </ul>
               </div>
-              
+
               <div className="footer-col">
                 <h4>Legal</h4>
                 <ul>
-                  <li><a href="#">Política de privacidade</a></li>
-                  <li><a href="#">Termos de uso</a></li>
+                  <li>
+                    <a href="#">Política de privacidade</a>
+                  </li>
+                  <li>
+                    <a href="#">Termos de uso</a>
+                  </li>
                 </ul>
               </div>
             </div>
-            
+
             <div className="footer-bottom">
-              <span>© {new Date().getFullYear()} Frete Fácil PRO. Todos os direitos reservados.</span>
+              <span>
+                © {new Date().getFullYear()} Frete Fácil PRO. Todos os direitos reservados.
+              </span>
               <span>fretefacilpro.vercel.app</span>
             </div>
           </div>
         </footer>
-
       </div>
     </>
   );

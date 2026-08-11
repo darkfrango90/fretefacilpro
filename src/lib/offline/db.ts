@@ -1,12 +1,12 @@
 import Dexie, { type Table } from "dexie";
 
 export type OutboxType =
-  | "entrega"           // cadastro de venda (status pendente) - legado também
+  | "entrega" // cadastro de venda (status pendente) - legado também
   | "abastecimento"
   | "despesa"
   | "pneu_instalacao"
   | "pneu_remocao"
-  | "iniciar_entrega"   // motorista pega venda pendente -> em_rota
+  | "iniciar_entrega" // motorista pega venda pendente -> em_rota
   | "finalizar_entrega"; // motorista finaliza entrega em_rota -> entregue
 
 export interface OutboxPhoto {
@@ -64,6 +64,12 @@ class OfflineDB extends Dexie {
     });
     this.version(3).stores({
       outbox: "id, type, created_at",
+      sync_history: "++id, started_at",
+      permissoes_cache: "id, motorista_id",
+    });
+    this.version(4).stores({
+      outbox:
+        "id, type, motorista_id, empresa_id, [motorista_id+type], [empresa_id+motorista_id], created_at",
       sync_history: "++id, started_at",
       permissoes_cache: "id, motorista_id",
     });

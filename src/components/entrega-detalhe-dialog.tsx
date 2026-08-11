@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +13,7 @@ import {
 import { Loader2, MapPin, User } from "lucide-react";
 
 const SELECT_DETAIL =
-  "id, numero, endereco, km_inicial, km_final, iniciada_em, finalizada_em, criada_em, quantidade, valor_praticado, valor_frete, preco_base_no_momento, status, observacoes, forma_pagamento, foto_odometro_final_url, foto_material_url, assinatura_url, foto_material_gps_lat, foto_material_gps_lng, motorista_venda_id, motorista_entrega_id, cliente:clientes(nome), material:materiais(nome, unidade), veiculo:veiculos(placa)";
+  "id, numero, endereco, km_inicial, km_final, km_inicial_ia_confianca, km_final_ia_confianca, iniciada_em, finalizada_em, criada_em, quantidade, valor_praticado, valor_frete, preco_base_no_momento, status, observacoes, forma_pagamento, foto_odometro_inicial_url, foto_odometro_final_url, foto_material_url, assinatura_url, foto_material_gps_lat, foto_material_gps_lng, motorista_venda_id, motorista_entrega_id, cliente:clientes(nome), material:materiais(nome, unidade), veiculo:veiculos(placa)";
 
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   pendente: { label: "Pendente", cls: "" },
@@ -34,8 +36,20 @@ function Row({ label, value }: { label: string; value: any }) {
   );
 }
 
-export function EntregaDetalheDialog({ id, onClose }: { id: string | null; onClose: () => void }) {
-  const { data: item, isLoading, error } = useQuery({
+export function EntregaDetalheDialog({
+  id,
+  onClose,
+  mostrarFinalizar = false,
+}: {
+  id: string | null;
+  onClose: () => void;
+  mostrarFinalizar?: boolean;
+}) {
+  const {
+    data: item,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["entrega-admin-detalhe", id],
     enabled: !!id,
     staleTime: 30_000,
@@ -84,11 +98,13 @@ export function EntregaDetalheDialog({ id, onClose }: { id: string | null; onClo
       <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {item?.numero != null && <span className="text-muted-foreground mr-1">#{item.numero}</span>}
+            {item?.numero != null && (
+              <span className="text-muted-foreground mr-1">#{item.numero}</span>
+            )}
             {item?.cliente?.nome ?? "Entrega"}
           </DialogTitle>
           <DialogDescription>
-            {isLoading ? "Carregando detalhes..." : st?.label ?? ""}
+            {isLoading ? "Carregando detalhes..." : (st?.label ?? "")}
           </DialogDescription>
         </DialogHeader>
 
@@ -120,7 +136,9 @@ export function EntregaDetalheDialog({ id, onClose }: { id: string | null; onClo
                     <span className="inline-flex items-start gap-1 justify-end">
                       <MapPin className="h-3 w-3 mt-0.5 shrink-0" /> {item.endereco}
                     </span>
-                  ) : "—"
+                  ) : (
+                    "—"
+                  )
                 }
               />
               <Row label="Valor praticado" value={fmtBRL(item.valor_praticado)} />
@@ -136,7 +154,11 @@ export function EntregaDetalheDialog({ id, onClose }: { id: string | null; onClo
                     <span className="inline-flex items-center gap-1 justify-end">
                       <User className="h-3 w-3" /> {nomeVenda}
                     </span>
-                  ) : item.motorista_venda_id ? "..." : "—"
+                  ) : item.motorista_venda_id ? (
+                    "..."
+                  ) : (
+                    "—"
+                  )
                 }
               />
               <Row
@@ -146,11 +168,21 @@ export function EntregaDetalheDialog({ id, onClose }: { id: string | null; onClo
                     <span className="inline-flex items-center gap-1 justify-end">
                       <User className="h-3 w-3" /> {nomeEntrega}
                     </span>
-                  ) : item.motorista_entrega_id ? "..." : "—"
+                  ) : item.motorista_entrega_id ? (
+                    "..."
+                  ) : (
+                    "—"
+                  )
                 }
               />
               <Row label="KM inicial" value={item.km_inicial} />
+              {item.km_inicial_ia_confianca && (
+                <Row label="Confiança IA (início)" value={item.km_inicial_ia_confianca} />
+              )}
               <Row label="KM final" value={item.km_final} />
+              {item.km_final_ia_confianca && (
+                <Row label="Confiança IA (fim)" value={item.km_final_ia_confianca} />
+              )}
               {item.km_inicial != null && item.km_final != null && (
                 <Row
                   label="KM percorridos"
@@ -167,7 +199,9 @@ export function EntregaDetalheDialog({ id, onClose }: { id: string | null; onClo
               />
               <Row
                 label="Finalizada em"
-                value={item.finalizada_em ? new Date(item.finalizada_em).toLocaleString("pt-BR") : "—"}
+                value={
+                  item.finalizada_em ? new Date(item.finalizada_em).toLocaleString("pt-BR") : "—"
+                }
               />
               {item.foto_material_gps_lat != null && (
                 <Row
@@ -178,12 +212,29 @@ export function EntregaDetalheDialog({ id, onClose }: { id: string | null; onClo
               {item.observacoes && <Row label="Observações" value={item.observacoes} />}
             </div>
 
-            {item.status === "entregue" && (
+            {(item.foto_odometro_inicial_url || item.status === "entregue") && (
               <div className="grid grid-cols-2 gap-2 pt-2">
-                <FotoBox label="Odômetro final" bucket="odometros" path={item.foto_odometro_final_url} />
+                <FotoBox
+                  label="Odômetro inicial"
+                  bucket="odometros"
+                  path={item.foto_odometro_inicial_url}
+                />
+                <FotoBox
+                  label="Odômetro final"
+                  bucket="odometros"
+                  path={item.foto_odometro_final_url}
+                />
                 <FotoBox label="Material" bucket="entregas" path={item.foto_material_url} />
                 <FotoBox label="Assinatura" bucket="assinaturas" path={item.assinatura_url} />
               </div>
+            )}
+
+            {mostrarFinalizar && item.status === "em_rota" && (
+              <Link to="/entrega/$id/finalizar" params={{ id: item.id }} onClick={onClose}>
+                <Button variant="action" className="mt-2 w-full">
+                  Finalizar entrega
+                </Button>
+              </Link>
             )}
           </>
         )}
@@ -208,7 +259,9 @@ function FotoBox({
     enabled: !!cleanPath && !isHttp,
     staleTime: 50 * 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase.storage.from(bucket).createSignedUrl(cleanPath!, 60 * 60);
+      const { data, error } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(cleanPath!, 60 * 60);
       if (error) throw error;
       return data.signedUrl;
     },

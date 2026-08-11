@@ -8,11 +8,11 @@ export const nativePlatform = () => Capacitor.getPlatform(); // 'ios' | 'android
  * com fallback para <input type=file capture> no navegador.
  * Retorna um File pronto para upload ao Supabase Storage.
  */
-export async function capturarFoto(): Promise<File | null> {
+export async function capturarFoto(options: { qualidade?: number } = {}): Promise<File | null> {
   if (isNative()) {
     const { Camera, CameraResultType, CameraSource } = await import("@capacitor/camera");
     const photo = await Camera.getPhoto({
-      quality: 75,
+      quality: options.qualidade ?? 75,
       allowEditing: false,
       resultType: CameraResultType.Base64,
       source: CameraSource.Camera,

@@ -9,12 +9,15 @@ export async function enqueue(item: Omit<OutboxItem, "created_at" | "attempts">)
   notifyChanged();
 }
 
-export async function listPending(): Promise<OutboxItem[]> {
-  return getDB().outbox.orderBy("created_at").toArray();
+export async function listPending(motoristaId?: string, empresaId?: string): Promise<OutboxItem[]> {
+  const items = motoristaId
+    ? await getDB().outbox.where("motorista_id").equals(motoristaId).sortBy("created_at")
+    : await getDB().outbox.orderBy("created_at").toArray();
+  return empresaId ? items.filter((item) => item.empresa_id === empresaId) : items;
 }
 
-export async function countPending(): Promise<number> {
-  return getDB().outbox.count();
+export async function countPending(motoristaId?: string, empresaId?: string): Promise<number> {
+  return (await listPending(motoristaId, empresaId)).length;
 }
 
 export async function removePending(id: string) {
@@ -41,8 +44,15 @@ export async function addHistory(entry: Omit<SyncHistoryItem, "id">) {
   notifyChanged();
 }
 
-export async function pendingByType(type: "entrega" | "abastecimento") {
-  return getDB().outbox.where("type").equals(type).toArray();
+export async function pendingByType(
+  type: "entrega" | "abastecimento",
+  motoristaId?: string,
+  empresaId?: string,
+) {
+  const items = motoristaId
+    ? await getDB().outbox.where("[motorista_id+type]").equals([motoristaId, type]).toArray()
+    : await getDB().outbox.where("type").equals(type).toArray();
+  return empresaId ? items.filter((item) => item.empresa_id === empresaId) : items;
 }
 
 // --- helpers de foto ---

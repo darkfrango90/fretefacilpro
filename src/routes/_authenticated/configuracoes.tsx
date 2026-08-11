@@ -15,6 +15,7 @@ import {
   Receipt,
   CircleDot,
   Fuel,
+  Download,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
@@ -45,25 +46,68 @@ function AdminConfig() {
         <Item to="/materiais" icon={<Package className="h-5 w-5" />} label="Materiais" />
       </Section>
 
+      <Section title="Aplicativo">
+        <Item
+          to="/atualizacao"
+          icon={<Download className="h-5 w-5" />}
+          label="Atualização"
+          hint="Verificar e instalar novas versões"
+        />
+      </Section>
+
       <Section title="Pessoas">
-        <Item to="/motoristas" icon={<UserCog className="h-5 w-5" />} label="Motoristas" hint="Cadastrar, desativar, reativar" />
-        <Item to="/permissoes" icon={<ShieldCheck className="h-5 w-5" />} label="Permissões" hint="Padrões da empresa e por motorista" />
+        <Item
+          to="/motoristas"
+          icon={<UserCog className="h-5 w-5" />}
+          label="Motoristas"
+          hint="Cadastrar, desativar, reativar"
+        />
+        <Item
+          to="/permissoes"
+          icon={<ShieldCheck className="h-5 w-5" />}
+          label="Permissões"
+          hint="Padrões da empresa e por motorista"
+        />
       </Section>
 
       <Section title="Operação">
         <Item to="/entregas" icon={<ClipboardList className="h-5 w-5" />} label="Entregas" />
-        <Item to="/financeiro" icon={<Wallet className="h-5 w-5" />} label="Financeiro" hint="Confirmar recebimentos das vendas" />
-        <Item to="/relatorios" icon={<LineChart className="h-5 w-5" />} label="Relatórios" hint="Métricas e indicadores da empresa" />
+        <Item
+          to="/financeiro"
+          icon={<Wallet className="h-5 w-5" />}
+          label="Financeiro"
+          hint="Confirmar recebimentos das vendas"
+        />
+        <Item
+          to="/relatorios"
+          icon={<LineChart className="h-5 w-5" />}
+          label="Relatórios"
+          hint="Métricas e indicadores da empresa"
+        />
       </Section>
 
       <Section title="Veículo">
-        <Item to="/abastecimento" icon={<Fuel className="h-5 w-5" />} label="Abastecimento" hint="Registrar abastecimento com cupom" />
-        <Item to="/despesas" icon={<Receipt className="h-5 w-5" />} label="Despesas" hint="Lançar e conferir despesas operacionais" />
-        <Item to="/pneus" icon={<CircleDot className="h-5 w-5" />} label="Pneus" hint="Instalar, trocar e acompanhar pneus" />
+        <Item
+          to="/abastecimento"
+          icon={<Fuel className="h-5 w-5" />}
+          label="Abastecimento"
+          hint="Registrar abastecimento com cupom"
+        />
+        <Item
+          to="/despesas"
+          icon={<Receipt className="h-5 w-5" />}
+          label="Despesas"
+          hint="Lançar e conferir despesas operacionais"
+        />
+        <Item
+          to="/pneus"
+          icon={<CircleDot className="h-5 w-5" />}
+          label="Pneus"
+          hint="Instalar, trocar e acompanhar pneus"
+        />
       </Section>
 
       <Section title="Combustível">
-
         <Item
           to="/afericoes"
           icon={<Droplets className="h-5 w-5" />}
@@ -103,6 +147,15 @@ function MotoristaConfig() {
           icon={<LineChart className="h-5 w-5" />}
           label="Relatórios"
           hint="Minhas entregas por período"
+        />
+      </Section>
+
+      <Section title="Aplicativo">
+        <Item
+          to="/atualizacao"
+          icon={<Download className="h-5 w-5" />}
+          label="Atualização"
+          hint="Verificar e instalar novas versões"
         />
       </Section>
     </div>

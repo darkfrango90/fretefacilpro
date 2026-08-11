@@ -6,8 +6,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useOnline, usePendingCount, useSyncStatus } from "@/hooks/use-offline";
 import { listPending, removePending } from "@/lib/offline/queue";
 import type { OutboxItem } from "@/lib/offline/db";
-import { Wifi, WifiOff, RefreshCw, ClipboardList, Fuel, History, AlertOctagon, Trash2 } from "lucide-react";
+import {
+  Wifi,
+  WifiOff,
+  RefreshCw,
+  ClipboardList,
+  Fuel,
+  History,
+  AlertOctagon,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
+import { useProfile } from "@/hooks/use-session";
 
 export const Route = createFileRoute("/_authenticated/sincronizacao")({
   component: SyncPage,
@@ -19,21 +29,27 @@ function fmtDate(ts: number | null) {
 }
 
 function SyncPage() {
+  const { data: profile } = useProfile();
+  const userId = profile?.profile.id;
+  const empresaId = profile?.profile.empresa_id;
   const online = useOnline();
   const pending = usePendingCount();
   const { busy, lastAt, run } = useSyncStatus();
   const [items, setItems] = useState<OutboxItem[]>([]);
 
   useEffect(() => {
-    listPending().then(setItems);
-    const refresh = () => listPending().then(setItems);
+    const refresh = () => {
+      if (!userId || !empresaId) return setItems([]);
+      return listPending(userId, empresaId).then(setItems);
+    };
+    refresh();
     window.addEventListener("offline-outbox-changed", refresh);
     window.addEventListener("offline-sync-finished", refresh);
     return () => {
       window.removeEventListener("offline-outbox-changed", refresh);
       window.removeEventListener("offline-sync-finished", refresh);
     };
-  }, []);
+  }, [userId, empresaId]);
 
   async function onSync() {
     if (!online) return toast.error("Sem conexão. Tente novamente quando estiver online.");
@@ -51,9 +67,13 @@ function SyncPage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             {online ? (
-              <><Wifi className="h-4 w-4 text-emerald-500" /> Online</>
+              <>
+                <Wifi className="h-4 w-4 text-emerald-500" /> Online
+              </>
             ) : (
-              <><WifiOff className="h-4 w-4 text-amber-500" /> Offline</>
+              <>
+                <WifiOff className="h-4 w-4 text-amber-500" /> Offline
+              </>
             )}
           </CardTitle>
         </CardHeader>
@@ -102,13 +122,17 @@ function SyncPage() {
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium capitalize flex items-center gap-2">
                   {it.type}
-                  {it.recusado && <span className="text-[10px] uppercase text-destructive">Recusada</span>}
+                  {it.recusado && (
+                    <span className="text-[10px] uppercase text-destructive">Recusada</span>
+                  )}
                 </div>
                 <div className="text-xs text-muted-foreground">
                   Criado em {fmtDate(it.created_at)}
                 </div>
                 {it.last_error && (
-                  <div className={`text-xs mt-1 ${it.recusado ? "text-destructive" : "text-amber-600"}`}>
+                  <div
+                    className={`text-xs mt-1 ${it.recusado ? "text-destructive" : "text-amber-600"}`}
+                  >
                     {it.recusado ? "Rejeitado: " : `${it.attempts} tentativa(s) · `}
                     {it.last_error}
                   </div>
@@ -116,7 +140,8 @@ function SyncPage() {
               </div>
               {it.recusado && (
                 <Button
-                  size="icon" variant="ghost"
+                  size="icon"
+                  variant="ghost"
                   onClick={async () => {
                     await removePending(it.id);
                     setItems((cur) => cur.filter((x) => x.id !== it.id));

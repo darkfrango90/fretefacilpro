@@ -387,6 +387,7 @@ export type Database = {
           foto_material_gps_lat: number | null
           foto_material_gps_lng: number | null
           foto_material_url: string | null
+          foto_odometro_inicial_url: string | null
           foto_odometro_final_url: string | null
           gps_fim_em: string | null
           gps_fim_lat: number | null
@@ -398,7 +399,9 @@ export type Database = {
           iniciada_em: string | null
           jornada_id: string | null
           km_final: number | null
+          km_final_ia_confianca: string | null
           km_inicial: number | null
+          km_inicial_ia_confianca: string | null
           lat: number | null
           lng: number | null
           material_id: string
@@ -435,6 +438,7 @@ export type Database = {
           foto_material_gps_lat?: number | null
           foto_material_gps_lng?: number | null
           foto_material_url?: string | null
+          foto_odometro_inicial_url?: string | null
           foto_odometro_final_url?: string | null
           gps_fim_em?: string | null
           gps_fim_lat?: number | null
@@ -446,7 +450,9 @@ export type Database = {
           iniciada_em?: string | null
           jornada_id?: string | null
           km_final?: number | null
+          km_final_ia_confianca?: string | null
           km_inicial?: number | null
+          km_inicial_ia_confianca?: string | null
           lat?: number | null
           lng?: number | null
           material_id: string
@@ -483,6 +489,7 @@ export type Database = {
           foto_material_gps_lat?: number | null
           foto_material_gps_lng?: number | null
           foto_material_url?: string | null
+          foto_odometro_inicial_url?: string | null
           foto_odometro_final_url?: string | null
           gps_fim_em?: string | null
           gps_fim_lat?: number | null
@@ -494,7 +501,9 @@ export type Database = {
           iniciada_em?: string | null
           jornada_id?: string | null
           km_final?: number | null
+          km_final_ia_confianca?: string | null
           km_inicial?: number | null
+          km_inicial_ia_confianca?: string | null
           lat?: number | null
           lng?: number | null
           material_id?: string
@@ -965,6 +974,7 @@ export type Database = {
           empresa_id: string
           id: string
           placa: string
+          tipo: string
         }
         Insert: {
           ativo?: boolean
@@ -973,6 +983,7 @@ export type Database = {
           empresa_id: string
           id?: string
           placa: string
+          tipo?: string
         }
         Update: {
           ativo?: boolean
@@ -981,6 +992,7 @@ export type Database = {
           empresa_id?: string
           id?: string
           placa?: string
+          tipo?: string
         }
         Relationships: [
           {

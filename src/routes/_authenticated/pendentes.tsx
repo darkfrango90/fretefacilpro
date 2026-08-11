@@ -8,8 +8,20 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,9 +35,12 @@ import {
 import { toast } from "sonner";
 import { MapPin, Truck, PackageCheck, RefreshCw, Trash2, Pencil } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { enqueue, listPending } from "@/lib/offline/queue";
+import { enqueue, fileToPhoto, listPending } from "@/lib/offline/queue";
 import { syncNow } from "@/lib/offline/sync";
 import { SwipeToAction } from "@/components/swipe-to-action";
+import { readOfflineCache, writeOfflineCache } from "@/lib/offline/cache";
+import { OdometroOcrField } from "@/components/odometro-ocr-field";
+import type { ConfiancaOdometro } from "@/lib/ocr-odometro";
 
 export const Route = createFileRoute("/_authenticated/pendentes")({
   component: Pendentes,
@@ -35,10 +50,14 @@ function Pendentes() {
   const { data: prof } = useProfile();
   const { perms } = usePermissoes();
   const empresaId = prof?.profile.empresa_id;
+  const userId = prof?.profile.id;
   const isAdmin = !!prof?.roles.includes("admin") || !!prof?.roles.includes("master");
   const podeExcluir = isAdmin || perms.pode_cancelar_entrega;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const pendentesCacheKey =
+    empresaId && userId ? `entregas:pendentes:${empresaId}:${isAdmin ? "admin" : userId}` : null;
+  const veiculosCacheKey = empresaId ? `veiculos:ativos:${empresaId}` : null;
 
   const [iniciandoIds, setIniciandoIds] = useState<string[]>([]);
 
@@ -47,7 +66,8 @@ function Pendentes() {
     let alive = true;
     const refresh = async () => {
       try {
-        const all = await listPending();
+        if (!userId || !empresaId) return setIniciandoIds([]);
+        const all = await listPending(userId, empresaId);
         const ids = all
           .filter((i) => i.type === "iniciar_entrega" && !i.recusado)
           .map((i) => i.payload.entrega_id as string);
@@ -62,20 +82,37 @@ function Pendentes() {
       window.removeEventListener("offline-outbox-changed", refresh);
       window.removeEventListener("offline-sync-finished", refresh);
     };
-  }, []);
+  }, [userId, empresaId]);
 
-  const { data: rows, refetch, isLoading } = useQuery({
-    queryKey: ["pendentes", empresaId],
-    enabled: !!empresaId,
+  const {
+    data: rows,
+    refetch,
+    isLoading,
+  } = useQuery({
+    queryKey: ["pendentes", empresaId, isAdmin ? "admin" : userId],
+    enabled: !!empresaId && !!userId,
+    retry: false,
+    networkMode: "offlineFirst",
+    initialData: () => readOfflineCache<any[]>(pendentesCacheKey),
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      let query = (supabase as any)
         .from("entregas")
-        .select("id, valor_praticado, valor_frete, quantidade, endereco, observacoes, criada_em, motorista_id, cliente:clientes(nome), material:materiais(nome, unidade)")
+        .select(
+          "id, valor_praticado, valor_frete, quantidade, endereco, observacoes, criada_em, motorista_id, cliente:clientes(nome), material:materiais(nome, unidade)",
+        )
         .eq("status", "pendente")
         .order("criada_em", { ascending: true })
         .limit(100);
+      if (!isAdmin) {
+        query = query.or(
+          `motorista_venda_id.eq.${userId},and(motorista_venda_id.is.null,motorista_id.eq.${userId})`,
+        );
+      }
+      const { data, error } = await query;
       if (error) throw error;
-      return data ?? [];
+      const result = data ?? [];
+      writeOfflineCache(pendentesCacheKey, result);
+      return result;
     },
   });
 
@@ -83,27 +120,48 @@ function Pendentes() {
   const [sel, setSel] = useState<any>(null);
   const [veiculoId, setVeiculoId] = useState("");
   const [kmInicial, setKmInicial] = useState("");
+  const [fotoOdomInicial, setFotoOdomInicial] = useState<File | null>(null);
+  const [confiancaKmInicial, setConfiancaKmInicial] = useState<ConfiancaOdometro | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const { data: veiculos } = useQuery({
     queryKey: ["veiculos-list", empresaId],
     enabled: !!empresaId,
-    queryFn: async () => (await (supabase as any).from("veiculos").select("id, placa").eq("ativo", true).order("placa")).data ?? [],
+    retry: false,
+    networkMode: "offlineFirst",
+    initialData: () => readOfflineCache<any[]>(veiculosCacheKey),
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("veiculos")
+        .select("id, placa")
+        .eq("ativo", true)
+        .order("placa");
+      if (error) throw error;
+      const result = data ?? [];
+      writeOfflineCache(veiculosCacheKey, result);
+      return result;
+    },
   });
 
   function abrir(r: any) {
     setSel(r);
     setVeiculoId("");
     setKmInicial("");
+    setFotoOdomInicial(null);
+    setConfiancaKmInicial(null);
     setOpen(true);
   }
 
   async function iniciar() {
     if (!sel) return;
     if (!veiculoId) return toast.error("Selecione o veículo");
+    if (!fotoOdomInicial) return toast.error("Tire uma foto do painel do veículo");
     if (!kmInicial) return toast.error("Informe o KM inicial");
+    const km = Number(kmInicial);
+    if (!Number.isInteger(km) || km < 0) return toast.error("KM inicial inválido");
     setSubmitting(true);
     try {
+      const foto = await fileToPhoto("foto_odometro_inicial_url", "odometros", fotoOdomInicial);
       await enqueue({
         id: crypto.randomUUID(),
         type: "iniciar_entrega",
@@ -112,9 +170,10 @@ function Pendentes() {
         payload: {
           entrega_id: sel.id,
           veiculo_id: veiculoId,
-          km_inicial: Number(kmInicial),
+          km_inicial: km,
+          km_inicial_ia_confianca: confiancaKmInicial,
         },
-        photos: [],
+        photos: [foto],
       });
       setOpen(false);
       if (navigator.onLine) {
@@ -171,7 +230,8 @@ function Pendentes() {
     const valorPraticado = Number(editar.valor_praticado);
     const valorFrete = Number(editar.valor_frete || 0);
     if (!Number.isFinite(quantidade) || quantidade <= 0) return toast.error("Quantidade inválida");
-    if (!Number.isFinite(valorPraticado) || valorPraticado < 0) return toast.error("Valor inválido");
+    if (!Number.isFinite(valorPraticado) || valorPraticado < 0)
+      return toast.error("Valor inválido");
     if (!Number.isFinite(valorFrete) || valorFrete < 0) return toast.error("Frete inválido");
 
     setSalvando(true);
@@ -189,7 +249,8 @@ function Pendentes() {
       });
       if (error) return toast.error(error.message);
       if (data?.erro) {
-        if (data.erro === "SEM_PERMISSAO") return toast.error("Sem permissão para editar esta venda");
+        if (data.erro === "SEM_PERMISSAO")
+          return toast.error("Sem permissão para editar esta venda");
         if (data.erro === "ENTREGA_NAO_ENCONTRADA")
           return toast.error("Você só pode editar vendas pendentes criadas por você");
         return toast.error(String(data.erro).replace("PERMISSAO_NEGADA: ", ""));
@@ -216,10 +277,7 @@ function Pendentes() {
       }
       toast.success("Venda removida");
       setConfirmarExcluirId(null);
-      await Promise.all([
-        refetch(),
-        queryClient.invalidateQueries({ queryKey: ["entregas"] }),
-      ]);
+      await Promise.all([refetch(), queryClient.invalidateQueries({ queryKey: ["entregas"] })]);
     } finally {
       setExcluindo(false);
     }
@@ -231,20 +289,18 @@ function Pendentes() {
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-bold flex items-center gap-2">
-          <PackageCheck className="h-5 w-5" /> Pendentes de entrega
+          <PackageCheck className="h-5 w-5" />
+          {isAdmin ? "Pendentes de entrega" : "Minhas vendas pendentes"}
         </h1>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => refetch()}
-          disabled={isLoading}
-        >
+        <Button size="sm" variant="outline" onClick={() => refetch()} disabled={isLoading}>
           <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? "animate-spin" : ""}`} />
           Atualizar
         </Button>
       </div>
       <p className="text-xs text-muted-foreground -mt-2">
-        Pool compartilhado. Quem pegar primeiro, faz a entrega.
+        {isAdmin
+          ? "Visão administrativa das vendas que aguardam entrega."
+          : "Somente as vendas cadastradas por você são exibidas."}
         {podeExcluir && " Arraste um card para o lado para excluir."}
       </p>
 
@@ -269,7 +325,11 @@ function Pendentes() {
                   </div>
                 </div>
                 <div className="text-right text-sm font-semibold whitespace-nowrap">
-                  R$ {(Number(r.valor_praticado) * Number(r.quantidade || 1) + Number(r.valor_frete || 0)).toFixed(2)}
+                  R${" "}
+                  {(
+                    Number(r.valor_praticado) * Number(r.quantidade || 1) +
+                    Number(r.valor_frete || 0)
+                  ).toFixed(2)}
                 </div>
               </div>
               {r.endereco && (
@@ -305,7 +365,7 @@ function Pendentes() {
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Iniciar entrega</DialogTitle>
           </DialogHeader>
@@ -313,22 +373,31 @@ function Pendentes() {
             <div>
               <Label>Veículo *</Label>
               <Select value={veiculoId} onValueChange={setVeiculoId}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
                 <SelectContent>
                   {(veiculos ?? []).map((v: any) => (
-                    <SelectItem key={v.id} value={v.id}>{v.placa}</SelectItem>
+                    <SelectItem key={v.id} value={v.id}>
+                      {v.placa}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label>KM inicial *</Label>
-              <Input type="number" inputMode="numeric" value={kmInicial}
-                onChange={(e) => setKmInicial(e.target.value)} />
-            </div>
+            <OdometroOcrField
+              label="KM inicial"
+              value={kmInicial}
+              onValueChange={setKmInicial}
+              photo={fotoOdomInicial}
+              onPhotoChange={setFotoOdomInicial}
+              onReadingChange={(reading) => setConfiancaKmInicial(reading?.confianca ?? null)}
+            />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
             <Button variant="action" onClick={iniciar} disabled={submitting}>
               {submitting ? "Iniciando..." : "Confirmar"}
             </Button>
@@ -389,7 +458,12 @@ function Pendentes() {
                 <Button variant="outline" className="flex-1" onClick={() => setEditar(null)}>
                   Cancelar
                 </Button>
-                <Button variant="action" className="flex-1" onClick={salvarEdicao} disabled={salvando}>
+                <Button
+                  variant="action"
+                  className="flex-1"
+                  onClick={salvarEdicao}
+                  disabled={salvando}
+                >
                   {salvando ? "Salvando..." : "Salvar"}
                 </Button>
               </div>
@@ -398,7 +472,10 @@ function Pendentes() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={!!confirmarExcluirId} onOpenChange={(o) => !o && setConfirmarExcluirId(null)}>
+      <AlertDialog
+        open={!!confirmarExcluirId}
+        onOpenChange={(o) => !o && setConfirmarExcluirId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir venda pendente?</AlertDialogTitle>

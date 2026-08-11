@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { countPending, onChanged } from "@/lib/offline/queue";
 import { getLastSyncAt, isSyncing, syncNow } from "@/lib/offline/sync";
+import { useProfile } from "@/hooks/use-session";
 
 export function useOnline() {
   const [online, setOnline] = useState<boolean>(
@@ -21,10 +22,19 @@ export function useOnline() {
 
 export function usePendingCount() {
   const [count, setCount] = useState(0);
+  const { data: profile } = useProfile();
+  const motoristaId = profile?.profile.id;
+  const empresaId = profile?.profile.empresa_id;
 
   const refresh = useCallback(() => {
-    countPending().then(setCount).catch(() => setCount(0));
-  }, []);
+    if (!motoristaId || !empresaId) {
+      setCount(0);
+      return;
+    }
+    countPending(motoristaId, empresaId)
+      .then(setCount)
+      .catch(() => setCount(0));
+  }, [motoristaId, empresaId]);
 
   useEffect(() => {
     refresh();

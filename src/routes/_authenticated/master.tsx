@@ -113,8 +113,7 @@ function statusEmpresa(e: Empresa): { key: Status; label: string; tone: string }
   if (d <= 7) return { key: "vencendo", label: `Vence em ${d}d`, tone: "bg-amber-500" };
   return { key: "ativa", label: "Ativa", tone: "bg-emerald-600" };
 }
-const fmtData = (d: string) =>
-  new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
+const fmtData = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("pt-BR");
 
 function MasterPanel() {
   const qc = useQueryClient();
@@ -140,7 +139,7 @@ function MasterPanel() {
     queryFn: async () => {
       const ids = empresas.map((e) => e.id);
       const [users, ent, abast] = await Promise.all([
-        (supabase as any).from("profiles").select("empresa_id").in("empresa_id", ids),
+        (supabase as any).from("profiles").select("empresa_id, ativo").in("empresa_id", ids),
         (supabase as any).from("entregas").select("empresa_id, criada_em").in("empresa_id", ids),
         (supabase as any)
           .from("abastecimentos")
@@ -153,7 +152,10 @@ function MasterPanel() {
           return acc;
         }, {});
       return {
-        users: count(users.data ?? []) as Record<string, number>,
+        users: count((users.data ?? []).filter((u: any) => u.ativo !== false)) as Record<
+          string,
+          number
+        >,
         entregas: count(ent.data ?? []) as Record<string, number>,
         abastecimentos: count(abast.data ?? []) as Record<string, number>,
         entregasRows: (ent.data ?? []) as { empresa_id: string; criada_em: string }[],
@@ -463,10 +465,26 @@ function MasterPanel() {
               <CardTitle className="text-base">Saúde da carteira</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-              <Health label="Ativas" value={kpis.ativas} icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />} />
-              <Health label="Vencendo em ≤7 dias" value={kpis.vencendo} icon={<AlertTriangle className="h-4 w-4 text-amber-500" />} />
-              <Health label="Vencidas" value={kpis.vencidas} icon={<XCircle className="h-4 w-4 text-red-600" />} />
-              <Health label="Inativas" value={kpis.inativas} icon={<Pause className="h-4 w-4 text-zinc-500" />} />
+              <Health
+                label="Ativas"
+                value={kpis.ativas}
+                icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />}
+              />
+              <Health
+                label="Vencendo em ≤7 dias"
+                value={kpis.vencendo}
+                icon={<AlertTriangle className="h-4 w-4 text-amber-500" />}
+              />
+              <Health
+                label="Vencidas"
+                value={kpis.vencidas}
+                icon={<XCircle className="h-4 w-4 text-red-600" />}
+              />
+              <Health
+                label="Inativas"
+                value={kpis.inativas}
+                icon={<Pause className="h-4 w-4 text-zinc-500" />}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -528,7 +546,13 @@ function Kpi({
   );
 }
 
-function AcoesEmpresa({ empresa, qc }: { empresa: Empresa; qc: ReturnType<typeof useQueryClient> }) {
+function AcoesEmpresa({
+  empresa,
+  qc,
+}: {
+  empresa: Empresa;
+  qc: ReturnType<typeof useQueryClient>;
+}) {
   const [confirmDel, setConfirmDel] = useState(false);
   const [nomeConfirm, setNomeConfirm] = useState("");
 
@@ -549,10 +573,7 @@ function AcoesEmpresa({ empresa, qc }: { empresa: Empresa; qc: ReturnType<typeof
 
   const delMut = useMutation({
     mutationFn: async () => {
-      const { error } = await (supabase as any)
-        .from("empresas")
-        .delete()
-        .eq("id", empresa.id);
+      const { error } = await (supabase as any).from("empresas").delete().eq("id", empresa.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -570,7 +591,10 @@ function AcoesEmpresa({ empresa, qc }: { empresa: Empresa; qc: ReturnType<typeof
   });
 
   const renovar = () => {
-    const novaData = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+    const hoje = new Date(`${HOJE()}T00:00:00`);
+    const vencimentoAtual = new Date(`${empresa.data_vencimento}T00:00:00`);
+    const base = vencimentoAtual > hoje ? vencimentoAtual : hoje;
+    const novaData = new Date(base.getTime() + 30 * 86400000).toISOString().slice(0, 10);
     mut.mutate({ data_vencimento: novaData });
   };
 
@@ -610,7 +634,13 @@ function AcoesEmpresa({ empresa, qc }: { empresa: Empresa; qc: ReturnType<typeof
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={confirmDel} onOpenChange={(o) => { setConfirmDel(o); if (!o) setNomeConfirm(""); }}>
+      <AlertDialog
+        open={confirmDel}
+        onOpenChange={(o) => {
+          setConfirmDel(o);
+          if (!o) setNomeConfirm("");
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
@@ -622,11 +652,10 @@ function AcoesEmpresa({ empresa, qc }: { empresa: Empresa; qc: ReturnType<typeof
                 <p>
                   Esta ação é <strong>permanente</strong> e irá excluir a empresa{" "}
                   <strong>{empresa.nome}</strong>. Dados vinculados (usuários, entregas,
-                  abastecimentos, veículos, clientes, etc.) impedirão a exclusão — nesse caso, prefira <em>Suspender</em>.
+                  abastecimentos, veículos, clientes, etc.) impedirão a exclusão — nesse caso,
+                  prefira <em>Suspender</em>.
                 </p>
-                <p className="text-sm">
-                  Para confirmar, digite o nome da empresa abaixo:
-                </p>
+                <p className="text-sm">Para confirmar, digite o nome da empresa abaixo:</p>
                 <Input
                   value={nomeConfirm}
                   onChange={(e) => setNomeConfirm(e.target.value)}
@@ -664,25 +693,22 @@ function NovaEmpresaDialog({ onCreated }: { onCreated: () => void }) {
     const fd = new FormData(e.currentTarget);
     setLoading(true);
     const { data: session } = await supabase.auth.getSession();
-    const res = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/criar-empresa`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.session?.access_token}`,
-        },
-        body: JSON.stringify({
-          nome: fd.get("nome"),
-          data_vencimento: fd.get("data_vencimento"),
-          limite_usuarios: Number(fd.get("limite_usuarios")),
-          plano: fd.get("plano") || null,
-          admin_email: fd.get("admin_email"),
-          admin_senha: fd.get("admin_senha"),
-          admin_nome: fd.get("admin_nome"),
-        }),
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/criar-empresa`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.session?.access_token}`,
       },
-    );
+      body: JSON.stringify({
+        nome: fd.get("nome"),
+        data_vencimento: fd.get("data_vencimento"),
+        limite_usuarios: Number(fd.get("limite_usuarios")),
+        plano: fd.get("plano") || null,
+        admin_email: fd.get("admin_email"),
+        admin_senha: fd.get("admin_senha"),
+        admin_nome: fd.get("admin_nome"),
+      }),
+    });
     setLoading(false);
     const body = await res.json();
     if (!res.ok) return toast.error(body?.erro ?? "Falha ao criar empresa");
@@ -736,13 +762,7 @@ function NovaEmpresaDialog({ onCreated }: { onCreated: () => void }) {
   );
 }
 
-function EditarEmpresaDialog({
-  empresa,
-  onSaved,
-}: {
-  empresa: Empresa;
-  onSaved: () => void;
-}) {
+function EditarEmpresaDialog({ empresa, onSaved }: { empresa: Empresa; onSaved: () => void }) {
   const [open, setOpen] = useState(false);
   const mut = useMutation({
     mutationFn: async (payload: Partial<Empresa>) => {

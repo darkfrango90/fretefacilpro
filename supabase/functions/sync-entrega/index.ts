@@ -45,6 +45,16 @@ async function getProfile(admin: any, userId: string) {
   return data;
 }
 
+function numeroValido(value: unknown, minimo = 0): value is number {
+  const numero = Number(value);
+  return Number.isFinite(numero) && numero >= minimo;
+}
+
+function caminhoDoUsuario(path: unknown, empresaId: string, userId: string): boolean {
+  if (path == null || path === "") return true;
+  return String(path).startsWith(`${empresaId}/${userId}/`);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   if (req.method !== "POST") return json({ erro: "Método não permitido" }, 405);
@@ -60,7 +70,9 @@ Deno.serve(async (req) => {
     const { data: userData, error: userError } = await userClient.auth.getUser();
     if (userError || !userData?.user) return json({ erro: "Sessão inválida" }, 401);
 
-    const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+    const admin = createClient(url, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
     const profile = await getProfile(admin, userData.user.id);
 
     const body = await req.json();
@@ -72,16 +84,103 @@ Deno.serve(async (req) => {
       if (!localId) return businessError("ID_LOCAL_OBRIGATORIO");
 
       const [{ data: cliente }, { data: material }] = await Promise.all([
-        admin.from("clientes").select("id").eq("id", payload.cliente_id).eq("empresa_id", profile.empresa_id).maybeSingle(),
-        admin.from("materiais").select("id").eq("id", payload.material_id).eq("empresa_id", profile.empresa_id).maybeSingle(),
+        admin
+          .from("clientes")
+          .select("id, cpf_cnpj, telefone")
+          .eq("id", payload.cliente_id)
+          .eq("empresa_id", profile.empresa_id)
+          .maybeSingle(),
+        admin
+          .from("materiais")
+          .select("id, nome, preco_base")
+          .eq("id", payload.material_id)
+          .eq("empresa_id", profile.empresa_id)
+          .eq("ativo", true)
+          .maybeSingle(),
       ]);
       if (!cliente) return businessError("CLIENTE_INVALIDO");
       if (!material) return businessError("MATERIAL_INVALIDO");
 
-      const formasValidas = ["dinheiro","pix","deposito","permuta","boleto","carteira"];
+      const isAdminOuMaster = await podeGerenciarEntrega(
+        admin,
+        userData.user.id,
+        profile.empresa_id,
+        {},
+      );
+      const { data: perms } = isAdminOuMaster
+        ? { data: null }
+        : await admin.rpc("get_permissoes_efetivas", { _motorista_id: userData.user.id });
+
+      const precoBase = Number(material.preco_base ?? 0);
+      const somenteFrete =
+        String(material.nome ?? "")
+          .trim()
+          .toLocaleUpperCase("pt-BR") === "FRETE";
+      const valorPraticado = somenteFrete ? 0 : Number(payload.valor_praticado);
+      const quantidade = somenteFrete ? 1 : Number(payload.quantidade ?? 1);
+      const valorFrete = Number(payload.valor_frete ?? 0);
+      const observacoes = String(payload.observacoes ?? "").trim();
+      if (
+        !numeroValido(valorPraticado) ||
+        !numeroValido(quantidade, Number.EPSILON) ||
+        !numeroValido(valorFrete)
+      ) {
+        return businessError("VALORES_INVALIDOS");
+      }
+      if (somenteFrete && valorFrete <= 0) {
+        return businessError("FRETE_OBRIGATORIO");
+      }
+      if (perms) {
+        if (perms.cpf_cnpj_obrigatorio === true && !cliente.cpf_cnpj) {
+          return businessError("PERMISSAO_NEGADA: CPF/CNPJ do cliente é obrigatório");
+        }
+        if (perms.telefone_obrigatorio === true && !cliente.telefone) {
+          return businessError("PERMISSAO_NEGADA: telefone do cliente é obrigatório");
+        }
+        if (
+          !somenteFrete &&
+          perms.pode_alterar_valor_produto === false &&
+          valorPraticado !== precoBase
+        ) {
+          return businessError("PERMISSAO_NEGADA: motorista não pode alterar o valor do produto");
+        }
+        if (!somenteFrete && precoBase > 0 && valorPraticado < precoBase) {
+          const desconto = ((precoBase - valorPraticado) / precoBase) * 100;
+          if (desconto > Number(perms.desconto_maximo_percent ?? 0)) {
+            return businessError("PERMISSAO_NEGADA: desconto acima do permitido");
+          }
+        }
+        if (perms.pode_alterar_frete === false && valorFrete > 0) {
+          return businessError("PERMISSAO_NEGADA: motorista não pode alterar o frete");
+        }
+        if (perms.frete_maximo != null && valorFrete > Number(perms.frete_maximo)) {
+          return businessError("PERMISSAO_NEGADA: frete acima do máximo permitido");
+        }
+        if (
+          Array.isArray(perms.materiais_permitidos) &&
+          perms.materiais_permitidos.length > 0 &&
+          !perms.materiais_permitidos.includes(payload.material_id)
+        ) {
+          return businessError("PERMISSAO_NEGADA: material não permitido");
+        }
+        const totalVenda = valorPraticado * quantidade + valorFrete;
+        if (perms.valor_venda_minimo != null && totalVenda < Number(perms.valor_venda_minimo)) {
+          return businessError("PERMISSAO_NEGADA: venda abaixo do mínimo permitido");
+        }
+        if (perms.valor_venda_maximo != null && totalVenda > Number(perms.valor_venda_maximo)) {
+          return businessError("PERMISSAO_NEGADA: venda acima do máximo permitido");
+        }
+        if (perms.observacao_obrigatoria === true && !observacoes) {
+          return businessError("PERMISSAO_NEGADA: observação obrigatória");
+        }
+      }
+
+      const formasValidas = ["dinheiro", "pix", "deposito", "permuta", "boleto", "carteira"];
       const forma = String(payload.forma_pagamento ?? "").toLowerCase();
       if (!formasValidas.includes(forma)) return businessError("FORMA_PAGAMENTO_INVALIDA");
-      const statusPag = ["boleto","permuta","carteira"].includes(forma) ? "pendente" : "a_confirmar";
+      const statusPag = ["boleto", "permuta", "carteira"].includes(forma)
+        ? "pendente"
+        : "a_confirmar";
 
       const row = {
         id: localId,
@@ -92,14 +191,14 @@ Deno.serve(async (req) => {
         veiculo_id: null,
         cliente_id: payload.cliente_id,
         material_id: payload.material_id,
-        preco_base_no_momento: Number(payload.preco_base_no_momento ?? 0),
-        valor_praticado: Number(payload.valor_praticado ?? 0),
-        quantidade: Number(payload.quantidade ?? 1),
-        valor_frete: Number(payload.valor_frete ?? 0),
+        preco_base_no_momento: somenteFrete ? 0 : precoBase,
+        valor_praticado: valorPraticado,
+        quantidade,
+        valor_frete: valorFrete,
         endereco: payload.endereco ?? null,
         lat: payload.lat ?? null,
         lng: payload.lng ?? null,
-        observacoes: payload.observacoes ?? null,
+        observacoes: observacoes || null,
         forma_pagamento: forma,
         status_pagamento: statusPag,
         status: "pendente",
@@ -114,6 +213,20 @@ Deno.serve(async (req) => {
       const veiculoId = String(body?.veiculo_id ?? "");
       const kmInicial = Number(body?.km_inicial ?? 0);
       if (!entregaId || !veiculoId) return businessError("DADOS_OBRIGATORIOS");
+      if (!numeroValido(kmInicial) || !Number.isInteger(kmInicial)) {
+        return businessError("KM_INICIAL_INVALIDO");
+      }
+      if (!body.foto_odometro_inicial_url) {
+        return businessError("FOTO_ODOMETRO_INICIAL_OBRIGATORIA");
+      }
+      if (!caminhoDoUsuario(body.foto_odometro_inicial_url, profile.empresa_id, userData.user.id)) {
+        return businessError("CAMINHO_ARQUIVO_INVALIDO");
+      }
+      const confiancaInicial = ["alta", "media", "baixa"].includes(
+        String(body.km_inicial_ia_confianca),
+      )
+        ? String(body.km_inicial_ia_confianca)
+        : null;
 
       const { data: veiculo } = await admin
         .from("veiculos")
@@ -124,21 +237,34 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (!veiculo) return businessError("VEICULO_INVALIDO");
 
-      const { data: updated, error } = await admin
+      const isAdminOuMaster = await podeGerenciarEntrega(
+        admin,
+        userData.user.id,
+        profile.empresa_id,
+        {},
+      );
+
+      let query = admin
         .from("entregas")
         .update({
           status: "em_rota",
           motorista_entrega_id: userData.user.id,
           veiculo_id: veiculoId,
           km_inicial: kmInicial,
+          foto_odometro_inicial_url: body.foto_odometro_inicial_url,
+          km_inicial_ia_confianca: confiancaInicial,
           iniciada_em: new Date().toISOString(),
         })
         .eq("id", entregaId)
         .eq("empresa_id", profile.empresa_id)
         .eq("status", "pendente")
-        .is("motorista_entrega_id", null)
-        .select("id")
-        .maybeSingle();
+        .is("motorista_entrega_id", null);
+      if (!isAdminOuMaster) {
+        query = query.or(
+          `motorista_venda_id.eq.${userData.user.id},and(motorista_venda_id.is.null,motorista_id.eq.${userData.user.id})`,
+        );
+      }
+      const { data: updated, error } = await query.select("id").maybeSingle();
       if (error) throw error;
       if (!updated) return businessError("ENTREGA_JA_INICIADA");
       return json({ ok: true });
@@ -150,14 +276,24 @@ Deno.serve(async (req) => {
 
       // Admin/master pode cancelar pendentes e entregues; motorista com
       // pode_cancelar_entrega, apenas pendentes.
-      const isAdminOuMaster = await podeGerenciarEntrega(admin, userData.user.id, profile.empresa_id, {});
+      const isAdminOuMaster = await podeGerenciarEntrega(
+        admin,
+        userData.user.id,
+        profile.empresa_id,
+        {},
+      );
       let statusPermitidos: string[];
       if (isAdminOuMaster) {
-        statusPermitidos = ["pendente", "entregue"];
+        statusPermitidos = ["pendente", "em_rota", "entregue"];
       } else {
-        const podeCancelar = await podeGerenciarEntrega(admin, userData.user.id, profile.empresa_id, {
-          checarPermissaoCancelar: true,
-        });
+        const podeCancelar = await podeGerenciarEntrega(
+          admin,
+          userData.user.id,
+          profile.empresa_id,
+          {
+            checarPermissaoCancelar: true,
+          },
+        );
         if (!podeCancelar) return businessError("SEM_PERMISSAO");
         statusPermitidos = ["pendente"];
       }
@@ -175,11 +311,63 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    if (action === "finalizar_entrega_admin") {
+      const entregaId = String(body?.entrega_id ?? "");
+      if (!entregaId) return businessError("ENTREGA_OBRIGATORIA");
+
+      const isAdminOuMaster = await podeGerenciarEntrega(
+        admin,
+        userData.user.id,
+        profile.empresa_id,
+        {},
+      );
+      if (!isAdminOuMaster) return businessError("SEM_PERMISSAO");
+
+      const { data: entregaAtual, error: buscaError } = await admin
+        .from("entregas")
+        .select("id, status, observacoes")
+        .eq("id", entregaId)
+        .eq("empresa_id", profile.empresa_id)
+        .in("status", ["pendente", "em_rota"])
+        .maybeSingle();
+      if (buscaError) throw buscaError;
+      if (!entregaAtual) return businessError("ENTREGA_NAO_ENCONTRADA");
+
+      const observacaoAdmin = "Venda concluída pelo administrador";
+      const observacoesAnteriores = String(entregaAtual.observacoes ?? "").trim();
+      const observacoes = observacoesAnteriores
+        ? `${observacoesAnteriores}\n${observacaoAdmin}`
+        : observacaoAdmin;
+
+      // Usa o client autenticado para que RLS e o bypass administrativo do
+      // trigger de validação sejam avaliados com o usuário que fez a ação.
+      const { data: updated, error } = await userClient
+        .from("entregas")
+        .update({
+          status: "entregue",
+          finalizada_em: new Date().toISOString(),
+          observacoes,
+        })
+        .eq("id", entregaId)
+        .eq("empresa_id", profile.empresa_id)
+        .in("status", ["pendente", "em_rota"])
+        .select("id")
+        .maybeSingle();
+      if (error) throw error;
+      if (!updated) return businessError("ENTREGA_NAO_ENCONTRADA");
+      return json({ ok: true });
+    }
+
     if (action === "editar_entrega") {
       const entregaId = String(body?.entrega_id ?? "");
       if (!entregaId) return businessError("ENTREGA_OBRIGATORIA");
 
-      const isAdminOuMaster = await podeGerenciarEntrega(admin, userData.user.id, profile.empresa_id, {});
+      const isAdminOuMaster = await podeGerenciarEntrega(
+        admin,
+        userData.user.id,
+        profile.empresa_id,
+        {},
+      );
 
       const patch: Record<string, unknown> = {};
       if (body.quantidade != null) {
@@ -198,7 +386,8 @@ Deno.serve(async (req) => {
         patch.valor_frete = v;
       }
       if (body.endereco !== undefined) patch.endereco = String(body.endereco ?? "").trim() || null;
-      if (body.observacoes !== undefined) patch.observacoes = String(body.observacoes ?? "").trim() || null;
+      if (body.observacoes !== undefined)
+        patch.observacoes = String(body.observacoes ?? "").trim() || null;
       if (Object.keys(patch).length === 0) return businessError("NADA_PARA_ATUALIZAR");
 
       // Atualiza com o client do usuário (não service role): admin fica
@@ -227,7 +416,12 @@ Deno.serve(async (req) => {
       const entregaId = String(body?.entrega_id ?? "");
       if (!entregaId) return businessError("ENTREGA_OBRIGATORIA");
 
-      const isAdminOuMaster = await podeGerenciarEntrega(admin, userData.user.id, profile.empresa_id, {});
+      const isAdminOuMaster = await podeGerenciarEntrega(
+        admin,
+        userData.user.id,
+        profile.empresa_id,
+        {},
+      );
 
       let query = admin
         .from("entregas")
@@ -236,6 +430,8 @@ Deno.serve(async (req) => {
           motorista_entrega_id: null,
           veiculo_id: null,
           km_inicial: null,
+          foto_odometro_inicial_url: null,
+          km_inicial_ia_confianca: null,
           iniciada_em: null,
         })
         .eq("id", entregaId)
@@ -254,10 +450,55 @@ Deno.serve(async (req) => {
       const entregaId = String(body?.entrega_id ?? "");
       if (!entregaId) return businessError("ENTREGA_OBRIGATORIA");
 
+      const { data: entregaAtual } = await admin
+        .from("entregas")
+        .select("id, km_inicial, status")
+        .eq("id", entregaId)
+        .eq("empresa_id", profile.empresa_id)
+        .eq("motorista_entrega_id", userData.user.id)
+        .maybeSingle();
+      if (!entregaAtual) return businessError("ENTREGA_NAO_ENCONTRADA");
+
+      const kmFinal = Number(body.km_final);
+      if (
+        !numeroValido(kmFinal) ||
+        !Number.isInteger(kmFinal) ||
+        (entregaAtual.km_inicial != null && kmFinal < Number(entregaAtual.km_inicial))
+      ) {
+        return businessError("KM_FINAL_INVALIDO");
+      }
+      if (!body.foto_material_url) return businessError("FOTO_MATERIAL_OBRIGATORIA");
+      const confiancaFinal = ["alta", "media", "baixa"].includes(String(body.km_final_ia_confianca))
+        ? String(body.km_final_ia_confianca)
+        : null;
+
+      const { data: perms } = await admin.rpc("get_permissoes_efetivas", {
+        _motorista_id: userData.user.id,
+      });
+      if (perms?.foto_odometro_obrigatoria === true && !body.foto_odometro_final_url) {
+        return businessError("FOTO_ODOMETRO_OBRIGATORIA");
+      }
+      if (
+        perms?.gps_obrigatorio === true &&
+        (body.foto_material_gps_lat == null || body.foto_material_gps_lng == null)
+      ) {
+        return businessError("GPS_OBRIGATORIO");
+      }
+      for (const path of [
+        body.foto_odometro_final_url,
+        body.foto_material_url,
+        body.assinatura_url,
+      ]) {
+        if (!caminhoDoUsuario(path, profile.empresa_id, userData.user.id)) {
+          return businessError("CAMINHO_ARQUIVO_INVALIDO");
+        }
+      }
+
       const { data: updated, error } = await admin
         .from("entregas")
         .update({
-          km_final: Number(body.km_final ?? 0),
+          km_final: kmFinal,
+          km_final_ia_confianca: confiancaFinal,
           foto_odometro_final_url: body.foto_odometro_final_url ?? null,
           foto_material_url: body.foto_material_url ?? null,
           assinatura_url: body.assinatura_url ?? null,

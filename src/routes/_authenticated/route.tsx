@@ -1,4 +1,11 @@
-import { createFileRoute, Outlet, redirect, Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Outlet,
+  redirect,
+  Link,
+  useNavigate,
+  useRouterState,
+} from "@tanstack/react-router";
 import React, { useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { OfflineProvider } from "@/components/offline/offline-provider";
 import { SyncStatus } from "@/components/offline/sync-status";
 import { Logo } from "@/components/logo";
+import { checkForUpdate } from "@/lib/app-update";
 
 const OFFLINE_VALIDATION_KEY = "auth:last_online_validation";
 const MAX_OFFLINE_DAYS = 15;
@@ -40,7 +48,9 @@ export const Route = createFileRoute("/_authenticated")({
     const online = typeof navigator !== "undefined" ? navigator.onLine : true;
     if (!online) {
       if (!lastValidated) {
-        try { localStorage.setItem(OFFLINE_VALIDATION_KEY, String(Date.now())); } catch {}
+        try {
+          localStorage.setItem(OFFLINE_VALIDATION_KEY, String(Date.now()));
+        } catch {}
         lastValidated = Date.now();
       }
       if (Date.now() - lastValidated > MAX_OFFLINE_MS) {
@@ -52,7 +62,6 @@ export const Route = createFileRoute("/_authenticated")({
   },
   component: AuthedLayout,
 });
-
 
 type NavItem = { to: string; icon: React.ReactNode; label: string };
 
@@ -77,13 +86,35 @@ const MASTER_NAV: NavItem[] = [
   { to: "/master", icon: <Building2 className="h-5 w-5" />, label: "Empresas" },
 ];
 
-
 function AuthedLayout() {
   const { data, isLoading, refetch: refetchProfile } = useProfile();
   const navigate = useNavigate();
   const path = useRouterState({ select: (state) => state.location.pathname });
   const isMaster = !!data?.roles.includes("master");
   const isAdmin = !!data?.roles.includes("admin");
+
+  useEffect(() => {
+    if (!navigator.onLine) return;
+    let cancelado = false;
+    void checkForUpdate()
+      .then((result) => {
+        if (cancelado || !result.current.native || !result.available) return;
+        const key = `update:notified:${result.manifest.version}`;
+        if (sessionStorage.getItem(key)) return;
+        sessionStorage.setItem(key, "1");
+        toast.info(`Nova versão ${result.manifest.version} disponível`, {
+          action: {
+            label: "Ver atualização",
+            onClick: () => navigate({ to: "/atualizacao" }),
+          },
+          duration: 12_000,
+        });
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelado = true;
+    };
+  }, [navigate]);
 
   useEffect(() => {
     let cancelado = false;
@@ -96,7 +127,9 @@ function AuthedLayout() {
         navigate({ to: "/auth", replace: true });
         return;
       }
-      try { localStorage.setItem(OFFLINE_VALIDATION_KEY, String(Date.now())); } catch {}
+      try {
+        localStorage.setItem(OFFLINE_VALIDATION_KEY, String(Date.now()));
+      } catch {}
       void refetchProfile();
     };
     void revalidar();
@@ -153,7 +186,6 @@ function AuthedLayout() {
     }
   }, [masterForaDaArea, navigate]);
 
-
   if (isLoading || masterForaDaArea) {
     return (
       <div className="min-h-screen grid place-items-center text-muted-foreground">
@@ -182,7 +214,6 @@ function AuthedLayout() {
 
   const items = isMaster ? MASTER_NAV : isAdmin ? ADMIN_NAV : MOTORISTA_NAV;
 
-
   async function handleLogout() {
     await supabase.auth.signOut();
     navigate({ to: "/auth" });
@@ -194,13 +225,13 @@ function AuthedLayout() {
         <div className="p-5 border-b flex items-center justify-between">
           <Logo variant="horizontal" size="md" />
         </div>
-        
+
         <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto">
           {items.map((item) => (
             <SidebarNavBtn key={item.to} {...item} />
           ))}
         </nav>
-        
+
         <div className="p-4 border-t bg-muted/40 space-y-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="h-9 w-9 rounded-full bg-primary/10 text-primary font-heading font-bold text-sm grid place-items-center shrink-0">
@@ -216,7 +247,7 @@ function AuthedLayout() {
             </div>
             <SyncStatus />
           </div>
-          
+
           <Button
             variant="ghost"
             size="sm"
@@ -274,9 +305,9 @@ function SidebarNavBtn({ to, icon, label }: NavItem) {
       className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground [&.active]:bg-primary [&.active]:text-primary-foreground hover:bg-muted/70 hover:text-foreground transition-all duration-200"
       activeOptions={{ exact: true }}
     >
-      {({ isActive }) => (
+      {({ isActive }: { isActive: boolean }) => (
         <>
-          <div className={`transition-colors ${isActive ? 'text-inherit' : 'text-[#F57C00]'}`}>
+          <div className={`transition-colors ${isActive ? "text-inherit" : "text-[#F57C00]"}`}>
             {icon}
           </div>
           <span className="truncate">{label}</span>
@@ -293,12 +324,20 @@ function NavBtn({ to, icon, label }: NavItem) {
       className="flex flex-col items-center justify-center gap-1 py-1 text-[10px] font-medium text-muted-foreground [&.active]:text-primary [&.active]:font-semibold transition-all duration-200 active:scale-95"
       activeOptions={{ exact: true }}
     >
-      {({ isActive }) => (
+      {({ isActive }: { isActive: boolean }) => (
         <>
-          <div className={`p-1.5 rounded-xl transition-all duration-200 ${isActive ? 'bg-primary/10 text-[#F57C00] scale-110 shadow-sm' : 'text-muted-foreground hover:bg-muted/30'}`}>
-            {React.cloneElement(icon as React.ReactElement, { className: "h-5 w-5 stroke-[2]" })}
+          <div
+            className={`p-1.5 rounded-xl transition-all duration-200 ${isActive ? "bg-primary/10 text-[#F57C00] scale-110 shadow-sm" : "text-muted-foreground hover:bg-muted/30"}`}
+          >
+            {React.cloneElement(icon as React.ReactElement<{ className?: string }>, {
+              className: "h-5 w-5 stroke-[2]",
+            })}
           </div>
-          <span className={`text-[9px] tracking-wide transition-colors ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>{label}</span>
+          <span
+            className={`text-[9px] tracking-wide transition-colors ${isActive ? "text-primary" : "text-muted-foreground"}`}
+          >
+            {label}
+          </span>
         </>
       )}
     </Link>

@@ -2,11 +2,14 @@ import { defineConfig } from "vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import tsConfigPaths from "vite-tsconfig-paths";
 import { VitePWA } from "vite-plugin-pwa";
 import { cp, readdir, rm } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+
+const appPackage = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")) as {
+  version: string;
+};
 
 /**
  * Vite-plugin-pwa writes sw.js + workbox-*.js into Vite's resolved outDir (dist/),
@@ -37,8 +40,13 @@ function relocateSwToClientPlugin() {
 }
 
 export default defineConfig({
+  define: {
+    "import.meta.env.VITE_APP_WEB_VERSION": JSON.stringify(appPackage.version),
+  },
+  resolve: {
+    tsconfigPaths: true,
+  },
   plugins: [
-    tsConfigPaths(),
     tanstackStart({
       server: { entry: "src/server.ts" },
     }),
@@ -97,8 +105,7 @@ export default defineConfig({
           },
           {
             urlPattern: ({ url }) =>
-              url.hostname.endsWith(".supabase.co") ||
-              url.hostname.endsWith(".supabase.in"),
+              url.hostname.endsWith(".supabase.co") || url.hostname.endsWith(".supabase.in"),
             handler: "NetworkOnly",
             method: "GET",
           },
@@ -114,8 +121,7 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: ({ request, sameOrigin }) =>
-              sameOrigin && request.destination === "font",
+            urlPattern: ({ request, sameOrigin }) => sameOrigin && request.destination === "font",
             handler: "CacheFirst",
             options: {
               cacheName: "fonts",
@@ -136,8 +142,7 @@ export default defineConfig({
             options: { cacheName: "google-fonts-css" },
           },
           {
-            urlPattern: ({ request, sameOrigin }) =>
-              sameOrigin && request.destination === "image",
+            urlPattern: ({ request, sameOrigin }) => sameOrigin && request.destination === "image",
             handler: "StaleWhileRevalidate",
             options: {
               cacheName: "images",

@@ -1,0 +1,11 @@
+{
+  "nativeVersion": "1.6",
+  "required": false,
+  "notes": [
+    "Histórico de abastecimentos do motorista.",
+    "Vendas e entregas isoladas por motorista.",
+    "Pesquisa rápida de clientes com rolagem.",
+    "Edição de motoristas e acesso direto às permissões.",
+    "Atualizações futuras disponíveis dentro do aplicativo."
+  ]
+}

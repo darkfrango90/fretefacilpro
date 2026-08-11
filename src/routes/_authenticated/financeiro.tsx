@@ -48,27 +48,34 @@ function Page() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("entregas")
-        .select(`
+        .select(
+          `
           id, numero, status, status_pagamento, forma_pagamento,
           valor_praticado, valor_frete, quantidade,
           criada_em, finalizada_em, pagamento_confirmado_em,
           motorista_venda_id, motorista_entrega_id,
           cliente_id, clientes(nome),
           material_id, materiais(nome, unidade)
-        `)
+        `,
+        )
         .eq("empresa_id", empresaId)
+        .neq("status", "cancelada")
         .not("forma_pagamento", "is", null)
         .order("criada_em", { ascending: false })
         .limit(500);
       if (error) throw error;
       const lista = data ?? [];
       const motoristaIds = Array.from(
-        new Set(lista.flatMap((e: any) => [e.motorista_venda_id, e.motorista_entrega_id]).filter(Boolean))
+        new Set(
+          lista.flatMap((e: any) => [e.motorista_venda_id, e.motorista_entrega_id]).filter(Boolean),
+        ),
       );
       let nomes = new Map<string, string>();
       if (motoristaIds.length) {
         const { data: profs } = await (supabase as any)
-          .from("profiles").select("id, nome").in("id", motoristaIds);
+          .from("profiles")
+          .select("id, nome")
+          .in("id", motoristaIds);
         nomes = new Map((profs ?? []).map((p: any) => [p.id, p.nome]));
       }
       return lista.map((e: any) => ({
@@ -88,7 +95,8 @@ function Page() {
         pagamento_confirmado_em: new Date().toISOString(),
         pagamento_confirmado_por: prof.profile.id,
       })
-      .eq("id", id);
+      .eq("id", id)
+      .neq("status", "cancelada");
     if (error) return toast.error(error.message);
     toast.success("Pagamento confirmado");
     qc.invalidateQueries({ queryKey: ["financeiro", empresaId] });
@@ -96,9 +104,14 @@ function Page() {
 
   async function reverter(id: string) {
     const { data: cur } = await (supabase as any)
-      .from("entregas").select("forma_pagamento").eq("id", id).maybeSingle();
+      .from("entregas")
+      .select("forma_pagamento")
+      .eq("id", id)
+      .maybeSingle();
     const forma = cur?.forma_pagamento;
-    const novoStatus = ["boleto","permuta","carteira"].includes(forma) ? "pendente" : "a_confirmar";
+    const novoStatus = ["boleto", "permuta", "carteira"].includes(forma)
+      ? "pendente"
+      : "a_confirmar";
     const { error } = await (supabase as any)
       .from("entregas")
       .update({
@@ -124,15 +137,28 @@ function Page() {
         <h1 className="text-xl font-bold flex items-center gap-2">
           <Wallet className="h-5 w-5" /> Financeiro
         </h1>
-        <p className="text-xs text-muted-foreground">
-          Confirme os recebimentos das vendas.
-        </p>
+        <p className="text-xs text-muted-foreground">Confirme os recebimentos das vendas.</p>
       </div>
 
       <div className="grid grid-cols-3 gap-2">
-        <SummaryCard label="A confirmar" value={brl(sum(aConfirmar))} qty={aConfirmar.length} tone="warn" />
-        <SummaryCard label="Pendentes" value={brl(sum(pendentes))} qty={pendentes.length} tone="info" />
-        <SummaryCard label="Recebidas" value={brl(sum(confirmados))} qty={confirmados.length} tone="ok" />
+        <SummaryCard
+          label="A confirmar"
+          value={brl(sum(aConfirmar))}
+          qty={aConfirmar.length}
+          tone="warn"
+        />
+        <SummaryCard
+          label="Pendentes"
+          value={brl(sum(pendentes))}
+          qty={pendentes.length}
+          tone="info"
+        />
+        <SummaryCard
+          label="Recebidas"
+          value={brl(sum(confirmados))}
+          qty={confirmados.length}
+          tone="ok"
+        />
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
@@ -148,7 +174,12 @@ function Page() {
             <Empty msg="Nenhuma venda aguardando confirmação." />
           )}
           {aConfirmar.map((e: any) => (
-            <EntregaCard key={e.id} e={e} actionLabel="Confirmar recebimento" onAction={() => confirmar(e.id)} />
+            <EntregaCard
+              key={e.id}
+              e={e}
+              actionLabel="Confirmar recebimento"
+              onAction={() => confirmar(e.id)}
+            />
           ))}
         </TabsContent>
 
@@ -157,7 +188,12 @@ function Page() {
             <Empty msg="Nenhuma venda pendente de recebimento." />
           )}
           {pendentes.map((e: any) => (
-            <EntregaCard key={e.id} e={e} actionLabel="Marcar como recebido" onAction={() => confirmar(e.id)} />
+            <EntregaCard
+              key={e.id}
+              e={e}
+              actionLabel="Marcar como recebido"
+              onAction={() => confirmar(e.id)}
+            />
           ))}
         </TabsContent>
 
@@ -166,7 +202,13 @@ function Page() {
             <Empty msg="Nenhum recebimento confirmado ainda." />
           )}
           {confirmados.map((e: any) => (
-            <EntregaCard key={e.id} e={e} actionLabel="Reverter" onAction={() => reverter(e.id)} variant="ghost" />
+            <EntregaCard
+              key={e.id}
+              e={e}
+              actionLabel="Reverter"
+              onAction={() => reverter(e.id)}
+              variant="ghost"
+            />
           ))}
         </TabsContent>
       </Tabs>
@@ -174,8 +216,19 @@ function Page() {
   );
 }
 
-function SummaryCard({ label, value, qty, tone }: { label: string; value: string; qty: number; tone: "warn"|"info"|"ok" }) {
-  const color = tone === "warn" ? "text-amber-600" : tone === "info" ? "text-sky-600" : "text-emerald-600";
+function SummaryCard({
+  label,
+  value,
+  qty,
+  tone,
+}: {
+  label: string;
+  value: string;
+  qty: number;
+  tone: "warn" | "info" | "ok";
+}) {
+  const color =
+    tone === "warn" ? "text-amber-600" : tone === "info" ? "text-sky-600" : "text-emerald-600";
   const Icon = tone === "ok" ? CheckCircle2 : tone === "info" ? Clock : BanknoteIcon;
   return (
     <Card>
@@ -191,8 +244,16 @@ function SummaryCard({ label, value, qty, tone }: { label: string; value: string
 }
 
 function EntregaCard({
-  e, actionLabel, onAction, variant = "default",
-}: { e: any; actionLabel: string; onAction: () => void; variant?: "default" | "ghost" }) {
+  e,
+  actionLabel,
+  onAction,
+  variant = "default",
+}: {
+  e: any;
+  actionLabel: string;
+  onAction: () => void;
+  variant?: "default" | "ghost";
+}) {
   const total = totalEntrega(e);
   const motorista = e.motorista_entrega_nome || e.motorista_venda_nome || "—";
   return (
@@ -216,14 +277,23 @@ function EntregaCard({
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2 text-[11px] text-muted-foreground">
-          <div>Motorista: <span className="text-foreground">{motorista}</span></div>
-          <div>Status entrega: <span className="text-foreground">{e.status}</span></div>
+          <div>
+            Motorista: <span className="text-foreground">{motorista}</span>
+          </div>
+          <div>
+            Status entrega: <span className="text-foreground">{e.status}</span>
+          </div>
           <div>Criada: {new Date(e.criada_em).toLocaleDateString("pt-BR")}</div>
           {e.pagamento_confirmado_em && (
             <div>Confirmado: {new Date(e.pagamento_confirmado_em).toLocaleDateString("pt-BR")}</div>
           )}
         </div>
-        <Button size="sm" variant={variant === "ghost" ? "outline" : "default"} className="w-full" onClick={onAction}>
+        <Button
+          size="sm"
+          variant={variant === "ghost" ? "outline" : "default"}
+          className="w-full"
+          onClick={onAction}
+        >
           {actionLabel}
         </Button>
       </CardContent>

@@ -19,6 +19,7 @@ const CLIENT_DIR = join(ROOT, "dist", "client");
 const ASSETS_DIR = join(CLIENT_DIR, "assets");
 const MODE = process.env.MODE || process.env.NODE_ENV || "production";
 const ENV = loadEnv(MODE, ROOT, "");
+const PACKAGE = JSON.parse(await readFile(join(ROOT, "package.json"), "utf8"));
 
 if (!existsSync(CLIENT_DIR)) {
   console.error("[csr-shell] dist/client not found — run `vite build` first.");
@@ -57,6 +58,7 @@ function buildDefine() {
     DEV: MODE !== "production",
     SSR: false,
     BASE_URL: "/",
+    VITE_APP_WEB_VERSION: PACKAGE.version,
   };
 
   for (const [k, v] of Object.entries(loadedEnv)) {
@@ -86,8 +88,12 @@ function buildDefine() {
 }
 
 console.log(`[csr-shell] modo Vite: ${MODE}`);
-console.log(`[csr-shell] VITE_SUPABASE_URL: ${ENV.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL ? "definida" : "AUSENTE"}`);
-console.log(`[csr-shell] VITE_SUPABASE_PUBLISHABLE_KEY: ${ENV.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY ? "definida" : "AUSENTE"}`);
+console.log(
+  `[csr-shell] VITE_SUPABASE_URL: ${ENV.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL ? "definida" : "AUSENTE"}`,
+);
+console.log(
+  `[csr-shell] VITE_SUPABASE_PUBLISHABLE_KEY: ${ENV.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY ? "definida" : "AUSENTE"}`,
+);
 
 // Bundle the CSR entry.
 const result = await build({
@@ -100,7 +106,14 @@ const result = await build({
   write: false,
   outfile: join(ROOT, "dist/client/assets/entry-csr.js"),
   jsx: "automatic",
-  loader: { ".ts": "ts", ".tsx": "tsx", ".png": "dataurl", ".svg": "dataurl", ".jpg": "dataurl", ".jpeg": "dataurl" },
+  loader: {
+    ".ts": "ts",
+    ".tsx": "tsx",
+    ".png": "dataurl",
+    ".svg": "dataurl",
+    ".jpg": "dataurl",
+    ".jpeg": "dataurl",
+  },
   define: buildDefine(),
   tsconfig: join(ROOT, "tsconfig.json"),
   plugins: [stubCssPlugin],
@@ -192,7 +205,9 @@ if (existsSync(swPath)) {
     await writeFile(swPath, patched);
     console.log(`[csr-shell] precache patched with offline.html + ${csrFileName}`);
   } else {
-    console.warn("[csr-shell] could not patch sw.js precacheAndRoute — offline.html may not be cached");
+    console.warn(
+      "[csr-shell] could not patch sw.js precacheAndRoute — offline.html may not be cached",
+    );
   }
 }
 

@@ -1,11 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 
+interface SwipeAction {
+  label: string;
+  icon: React.ReactNode;
+  className?: string;
+  onAction: () => void | Promise<void>;
+}
+
 interface SwipeToActionProps {
   children: React.ReactNode;
-  actionLabel: string;
-  actionIcon: React.ReactNode;
+  actionLabel?: string;
+  actionIcon?: React.ReactNode;
   actionClassName?: string;
-  onAction: () => void | Promise<void>;
+  onAction?: () => void | Promise<void>;
+  swipeRightAction?: SwipeAction;
+  swipeLeftAction?: SwipeAction;
   disabled?: boolean;
 }
 
@@ -18,6 +27,8 @@ export function SwipeToAction({
   actionIcon,
   actionClassName = "bg-destructive text-destructive-foreground",
   onAction,
+  swipeRightAction,
+  swipeLeftAction,
   disabled,
 }: SwipeToActionProps) {
   const [dragX, setDragX] = useState(0);
@@ -28,6 +39,18 @@ export function SwipeToAction({
   const acted = useRef(false);
   const wasDragged = useRef(false);
   const surfaceRef = useRef<HTMLDivElement>(null);
+
+  function getAction(direction: "right" | "left"): SwipeAction | undefined {
+    const directional = direction === "right" ? swipeRightAction : swipeLeftAction;
+    if (directional) return directional;
+    if (!onAction || !actionLabel) return undefined;
+    return {
+      label: actionLabel,
+      icon: actionIcon,
+      className: actionClassName,
+      onAction,
+    };
+  }
 
   function begin(x: number, y: number) {
     if (disabled) return;
@@ -69,9 +92,10 @@ export function SwipeToAction({
     const finalX = dragXRef.current;
     dragXRef.current = 0;
     setDragX(0);
-    if (wasX && Math.abs(finalX) >= THRESHOLD && !acted.current) {
+    const action = getAction(finalX >= 0 ? "right" : "left");
+    if (wasX && Math.abs(finalX) >= THRESHOLD && action && !acted.current) {
       acted.current = true;
-      await onAction();
+      await action.onAction();
     }
   }
 
@@ -131,18 +155,22 @@ export function SwipeToAction({
 
   const revealFraction = Math.min(1, Math.abs(dragX) / THRESHOLD);
   const side = dragX < 0 ? "right" : "left";
+  const activeAction = getAction(dragX >= 0 ? "right" : "left");
 
   return (
     <div className="relative overflow-hidden rounded-xl">
       <div
-        className={`absolute inset-y-0 flex items-center gap-1.5 px-4 text-sm font-medium ${actionClassName} ${
+        className={`absolute inset-y-0 flex items-center gap-1.5 px-4 text-sm font-medium ${activeAction?.className ?? actionClassName} ${
           side === "right" ? "right-0 justify-end" : "left-0 justify-start"
         }`}
-        style={{ width: MAX_DRAG + 40, opacity: dragX === 0 ? 0 : revealFraction }}
-        aria-hidden={dragX === 0}
+        style={{
+          width: MAX_DRAG + 40,
+          opacity: dragX === 0 || !activeAction ? 0 : revealFraction,
+        }}
+        aria-hidden={dragX === 0 || !activeAction}
       >
-        {actionIcon}
-        {revealFraction > 0.5 && <span>{actionLabel}</span>}
+        {activeAction?.icon}
+        {revealFraction > 0.5 && activeAction ? <span>{activeAction.label}</span> : null}
       </div>
       <div
         ref={surfaceRef}

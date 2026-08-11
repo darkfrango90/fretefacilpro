@@ -24,13 +24,13 @@ import { Route as AuthenticatedMotoristasRouteImport } from './routes/_authentic
 import { Route as AuthenticatedMinhasEntregasRouteImport } from './routes/_authenticated/minhas-entregas'
 import { Route as AuthenticatedMateriaisRouteImport } from './routes/_authenticated/materiais'
 import { Route as AuthenticatedMasterRouteImport } from './routes/_authenticated/master'
-import { Route as AuthenticatedImportTempRouteImport } from './routes/_authenticated/import-temp'
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedEntregasRouteImport } from './routes/_authenticated/entregas'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedConsumoPrecisoRouteImport } from './routes/_authenticated/consumo-preciso'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedClientesRouteImport } from './routes/_authenticated/clientes'
+import { Route as AuthenticatedAtualizacaoRouteImport } from './routes/_authenticated/atualizacao'
 import { Route as AuthenticatedAfericoesRouteImport } from './routes/_authenticated/afericoes'
 import { Route as AuthenticatedAcessoExpiradoRouteImport } from './routes/_authenticated/acesso-expirado'
 import { Route as AuthenticatedAbastecimentoRouteImport } from './routes/_authenticated/abastecimento'
@@ -122,11 +122,6 @@ const AuthenticatedMasterRoute = AuthenticatedMasterRouteImport.update({
   path: '/master',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedImportTempRoute = AuthenticatedImportTempRouteImport.update({
-  id: '/import-temp',
-  path: '/import-temp',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedFinanceiroRoute = AuthenticatedFinanceiroRouteImport.update({
   id: '/financeiro',
   path: '/financeiro',
@@ -159,6 +154,12 @@ const AuthenticatedClientesRoute = AuthenticatedClientesRouteImport.update({
   path: '/clientes',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAtualizacaoRoute =
+  AuthenticatedAtualizacaoRouteImport.update({
+    id: '/atualizacao',
+    path: '/atualizacao',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAfericoesRoute = AuthenticatedAfericoesRouteImport.update({
   id: '/afericoes',
   path: '/afericoes',
@@ -236,13 +237,13 @@ export interface FileRoutesByFullPath {
   '/abastecimento': typeof AuthenticatedAbastecimentoRoute
   '/acesso-expirado': typeof AuthenticatedAcessoExpiradoRoute
   '/afericoes': typeof AuthenticatedAfericoesRoute
+  '/atualizacao': typeof AuthenticatedAtualizacaoRoute
   '/clientes': typeof AuthenticatedClientesRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/consumo-preciso': typeof AuthenticatedConsumoPrecisoRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/entregas': typeof AuthenticatedEntregasRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
-  '/import-temp': typeof AuthenticatedImportTempRoute
   '/master': typeof AuthenticatedMasterRoute
   '/materiais': typeof AuthenticatedMateriaisRoute
   '/minhas-entregas': typeof AuthenticatedMinhasEntregasRoute
@@ -271,13 +272,13 @@ export interface FileRoutesByTo {
   '/abastecimento': typeof AuthenticatedAbastecimentoRoute
   '/acesso-expirado': typeof AuthenticatedAcessoExpiradoRoute
   '/afericoes': typeof AuthenticatedAfericoesRoute
+  '/atualizacao': typeof AuthenticatedAtualizacaoRoute
   '/clientes': typeof AuthenticatedClientesRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/consumo-preciso': typeof AuthenticatedConsumoPrecisoRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/entregas': typeof AuthenticatedEntregasRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
-  '/import-temp': typeof AuthenticatedImportTempRoute
   '/master': typeof AuthenticatedMasterRoute
   '/materiais': typeof AuthenticatedMateriaisRoute
   '/minhas-entregas': typeof AuthenticatedMinhasEntregasRoute
@@ -308,13 +309,13 @@ export interface FileRoutesById {
   '/_authenticated/abastecimento': typeof AuthenticatedAbastecimentoRoute
   '/_authenticated/acesso-expirado': typeof AuthenticatedAcessoExpiradoRoute
   '/_authenticated/afericoes': typeof AuthenticatedAfericoesRoute
+  '/_authenticated/atualizacao': typeof AuthenticatedAtualizacaoRoute
   '/_authenticated/clientes': typeof AuthenticatedClientesRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/consumo-preciso': typeof AuthenticatedConsumoPrecisoRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/entregas': typeof AuthenticatedEntregasRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
-  '/_authenticated/import-temp': typeof AuthenticatedImportTempRoute
   '/_authenticated/master': typeof AuthenticatedMasterRoute
   '/_authenticated/materiais': typeof AuthenticatedMateriaisRoute
   '/_authenticated/minhas-entregas': typeof AuthenticatedMinhasEntregasRoute
@@ -345,13 +346,13 @@ export interface FileRouteTypes {
     | '/abastecimento'
     | '/acesso-expirado'
     | '/afericoes'
+    | '/atualizacao'
     | '/clientes'
     | '/configuracoes'
     | '/consumo-preciso'
     | '/dashboard'
     | '/entregas'
     | '/financeiro'
-    | '/import-temp'
     | '/master'
     | '/materiais'
     | '/minhas-entregas'
@@ -380,13 +381,13 @@ export interface FileRouteTypes {
     | '/abastecimento'
     | '/acesso-expirado'
     | '/afericoes'
+    | '/atualizacao'
     | '/clientes'
     | '/configuracoes'
     | '/consumo-preciso'
     | '/dashboard'
     | '/entregas'
     | '/financeiro'
-    | '/import-temp'
     | '/master'
     | '/materiais'
     | '/minhas-entregas'
@@ -416,13 +417,13 @@ export interface FileRouteTypes {
     | '/_authenticated/abastecimento'
     | '/_authenticated/acesso-expirado'
     | '/_authenticated/afericoes'
+    | '/_authenticated/atualizacao'
     | '/_authenticated/clientes'
     | '/_authenticated/configuracoes'
     | '/_authenticated/consumo-preciso'
     | '/_authenticated/dashboard'
     | '/_authenticated/entregas'
     | '/_authenticated/financeiro'
-    | '/_authenticated/import-temp'
     | '/_authenticated/master'
     | '/_authenticated/materiais'
     | '/_authenticated/minhas-entregas'
@@ -559,13 +560,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMasterRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/import-temp': {
-      id: '/_authenticated/import-temp'
-      path: '/import-temp'
-      fullPath: '/import-temp'
-      preLoaderRoute: typeof AuthenticatedImportTempRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/financeiro': {
       id: '/_authenticated/financeiro'
       path: '/financeiro'
@@ -606,6 +600,13 @@ declare module '@tanstack/react-router' {
       path: '/clientes'
       fullPath: '/clientes'
       preLoaderRoute: typeof AuthenticatedClientesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/atualizacao': {
+      id: '/_authenticated/atualizacao'
+      path: '/atualizacao'
+      fullPath: '/atualizacao'
+      preLoaderRoute: typeof AuthenticatedAtualizacaoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/afericoes': {
@@ -714,13 +715,13 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAbastecimentoRoute: typeof AuthenticatedAbastecimentoRoute
   AuthenticatedAcessoExpiradoRoute: typeof AuthenticatedAcessoExpiradoRoute
   AuthenticatedAfericoesRoute: typeof AuthenticatedAfericoesRoute
+  AuthenticatedAtualizacaoRoute: typeof AuthenticatedAtualizacaoRoute
   AuthenticatedClientesRoute: typeof AuthenticatedClientesRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedConsumoPrecisoRoute: typeof AuthenticatedConsumoPrecisoRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEntregasRoute: typeof AuthenticatedEntregasRoute
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
-  AuthenticatedImportTempRoute: typeof AuthenticatedImportTempRoute
   AuthenticatedMasterRoute: typeof AuthenticatedMasterRoute
   AuthenticatedMateriaisRoute: typeof AuthenticatedMateriaisRoute
   AuthenticatedMinhasEntregasRoute: typeof AuthenticatedMinhasEntregasRoute
@@ -747,13 +748,13 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAbastecimentoRoute: AuthenticatedAbastecimentoRoute,
   AuthenticatedAcessoExpiradoRoute: AuthenticatedAcessoExpiradoRoute,
   AuthenticatedAfericoesRoute: AuthenticatedAfericoesRoute,
+  AuthenticatedAtualizacaoRoute: AuthenticatedAtualizacaoRoute,
   AuthenticatedClientesRoute: AuthenticatedClientesRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedConsumoPrecisoRoute: AuthenticatedConsumoPrecisoRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEntregasRoute: AuthenticatedEntregasRoute,
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
-  AuthenticatedImportTempRoute: AuthenticatedImportTempRoute,
   AuthenticatedMasterRoute: AuthenticatedMasterRoute,
   AuthenticatedMateriaisRoute: AuthenticatedMateriaisRoute,
   AuthenticatedMinhasEntregasRoute: AuthenticatedMinhasEntregasRoute,

@@ -1,65 +1,97 @@
-# Gerar APK/AAB com Capacitor — Frete Fácil PRO
+# Android com Capacitor — Frete Fácil PRO
 
-O projeto já está preparado para empacotamento nativo via Capacitor. A compilação do APK/AAB precisa rodar **fora do Lovable**, numa máquina com Android Studio instalado.
+O projeto Android já existe em `android/` e o aplicativo usa o build local de `dist/capacitor`. Não há `server.url` no `capacitor.config.ts`; portanto, a versão instalada continua abrindo e trabalhando offline. Atualizações de HTML, CSS e JavaScript podem ser baixadas depois pela própria interface.
 
-## Pré-requisitos (na sua máquina)
-- Node.js 20+ e Bun
-- Android Studio (com Android SDK + JDK 17)
-- Conta Google Play Console ($25 — pagamento único)
+## Configuração atual
 
-## Passo a passo
+- App ID: `app.lovable.fretefacil`
+- Nome: `Frete Fácil PRO`
+- `versionCode`: `7`
+- `versionName`: `1.6`
+- Versão web/OTA inicial: `1.6.0`
+- Conteúdo web do APK: `dist/capacitor`
+- Tráfego HTTP misto: desabilitado
+- Backup Android: desabilitado
+- Permissões: internet, câmera e localização aproximada/precisa
+
+O service worker da PWA é removido/desregistrado quando a aplicação detecta o runtime nativo. No APK, o shell web já está embarcado e as operações offline usam IndexedDB/Dexie.
+
+## Pré-requisitos
+
+- Node.js 20 ou superior e Bun
+- Android Studio, Android SDK e JDK 17
+- Keystore segura para assinar a versão de produção
+- Conta Google Play Console para publicação
+
+## Gerar e validar o projeto
 
 ```bash
-# 1) Clone o projeto via "Export to GitHub" no Lovable e instale
-git clone <seu-repo> && cd <seu-repo>
 bun install
-
-# 2) Build web (gera /dist)
+bun run check
 bun run build
+bun run android:sync
+```
 
-# 3) Adicione a plataforma Android (primeira vez apenas)
-npx cap add android
+Não execute `npx cap add android`: a plataforma já foi adicionada ao repositório.
 
-# 4) Sincronize os assets web com o projeto nativo
-npx cap sync android
+Para abrir o projeto nativo:
 
-# 5) Abre no Android Studio
+```bash
 npx cap open android
 ```
 
-No Android Studio:
-- **Build > Generate Signed Bundle / APK** → escolha **Android App Bundle (.aab)**
-- Crie/use sua keystore (guarde com cuidado, é exigida em toda atualização)
-- O AAB final fica em `android/app/build/outputs/bundle/release/`
+No Android Studio, use **Build > Generate Signed Bundle / APK** e selecione **Android App Bundle (.aab)**. O bundle é gerado em `android/app/build/outputs/bundle/release/`.
 
-## Modo dev x produção
+Para distribuição direta por APK, salve o novo artefato assinado em `android/app/release/app-release.apk`. Antes da assinatura, esse caminho ainda pode conter a versão anterior; confirme sempre `versionCode`, `versionName` e certificado após gerar o arquivo.
 
-Em `capacitor.config.ts`:
-- **Desenvolvimento** (atual): `server.url` aponta para o preview Lovable → permite hot reload no celular
-- **Produção (publicar na Play Store)**: **remova** o bloco `server` antes de rodar `bun run build && npx cap sync`. Assim o app usa os arquivos de `/dist` embarcados, funciona offline e não depende do Lovable.
+Para um APK de depuração pela linha de comando, a partir da raiz:
 
-## Recursos nativos já integrados
-
-O arquivo `src/lib/native.ts` expõe helpers que usam plugins nativos quando rodando no APK, com **fallback automático para a web**:
-- `capturarFoto()` — câmera nativa (Capacitor Camera) ou `<input type=file>`
-- `obterCoordenadas()` — GPS nativo (Capacitor Geolocation) ou Web API
-
-## Permissões Android
-Após `cap add android`, edite `android/app/src/main/AndroidManifest.xml` e garanta:
-```xml
-<uses-permission android:name="android.permission.INTERNET" />
-<uses-permission android:name="android.permission.CAMERA" />
-<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+```bash
+cd android
+./gradlew assembleDebug
 ```
+
+No PowerShell, use `./gradlew.bat assembleDebug`.
+
+## Recursos nativos
+
+`src/lib/native.ts` centraliza os recursos com fallback web:
+
+- `capturarFoto()`: câmera pelo Capacitor ou seleção de arquivo no navegador;
+- `obterCoordenadas()`: geolocalização pelo Capacitor ou Web Geolocation API.
+
+As permissões estão declaradas em `android/app/src/main/AndroidManifest.xml`. O Android ainda solicita a autorização do usuário em tempo de execução.
 
 ## Ícone e splash
-Use `@capacitor/assets` para gerar ícones a partir de um PNG 1024x1024 com a logo do **Frete Fácil PRO**:
+
+Os recursos nativos ficam em `android/app/src/main/res`. Para regenerá-los, coloque imagens-base em `assets/icon.png` e `assets/splash.png` e execute:
+
 ```bash
-bun add -d @capacitor/assets
-mkdir -p assets
-# Baixe a logo oficial do CDN para usar como ícone base
-curl -L "https://fretefacilpro.com.br/__l5e/assets-v1/c5a45567-3d57-406c-ba99-0a35b6dea519/frete-facil-pro-logo.png" -o assets/icon.png
-cp assets/icon.png assets/splash.png
 npx capacitor-assets generate --android --iconBackgroundColor "#1B2A4A" --splashBackgroundColor "#1B2A4A"
+npx cap sync android
 ```
+
+Guarde a keystore fora do repositório e mantenha cópia de segurança: a mesma chave é necessária para todas as atualizações na Play Store.
+
+## Atualizações dentro do aplicativo (OTA)
+
+A versão 1.6 inclui `@capgo/capacitor-updater` em modo manual e auto-hospedado. O usuário acessa **Configurações > Atualização**, verifica a versão, baixa o pacote, acompanha o progresso e confirma **Instalar e reiniciar**.
+
+O build cria saídas separadas:
+
+- `dist/capacitor`: pacote limpo incorporado ao APK;
+- `dist/client`: site publicado na Vercel;
+- `dist/client/updates/latest.json`: manifesto da versão mais recente;
+- `dist/client/updates/fretefacil-X.Y.Z.zip`: pacote OTA com `index.html` na raiz.
+
+O manifesto informa a versão nativa compatível, tamanho, notas e SHA-256. O aplicativo rejeita formato inválido, versão nativa incompatível e ZIP com checksum diferente. `notifyAppReady()` confirma que a nova interface abriu; se isso não ocorrer no prazo configurado, o plugin restaura o pacote funcional anterior.
+
+Para publicar uma nova atualização somente de interface:
+
+1. altere `version` no `package.json`, por exemplo de `1.6.0` para `1.6.1`;
+2. atualize as notas em `ota-release.json` sem mudar `nativeVersion`;
+3. execute `bun run check` e `bun run build`;
+4. publique o projeto pelo Git/Vercel conectado;
+5. confirme no domínio `/updates/latest.json` o novo número e checksum.
+
+Se houver alteração em plugin Capacitor, permissões, Manifest, Gradle ou outro código nativo, gere novo APK com `versionCode`/`versionName` maiores e atualize `nativeVersion` em `ota-release.json`. OTA serve apenas para HTML, CSS e JavaScript.

@@ -1,10 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import {
-  addHistory,
-  listPending,
-  markAttempt,
-  removePending,
-} from "./queue";
+import { addHistory, listPending, markAttempt, removePending } from "./queue";
 import { getDB, type OutboxItem } from "./db";
 import { refreshPermissoesCache } from "@/hooks/use-permissoes";
 
@@ -60,7 +55,10 @@ async function getSyncIdentity(): Promise<SyncIdentity> {
   return { userId: userData.user.id, empresaId: profile.empresa_id };
 }
 
-async function syncEntrega(action: "criar_venda" | "iniciar_entrega" | "finalizar_entrega", body: Record<string, any>) {
+async function syncEntrega(
+  action: "criar_venda" | "iniciar_entrega" | "finalizar_entrega",
+  body: Record<string, any>,
+) {
   const { data, error } = await supabase.functions.invoke("sync-entrega", {
     body: { action, ...body },
   });
@@ -71,12 +69,11 @@ async function syncEntrega(action: "criar_venda" | "iniciar_entrega" | "finaliza
 
 async function pushOne(item: OutboxItem, identity: SyncIdentity): Promise<void> {
   if (item.type === "iniciar_entrega") {
-    const { entrega_id, veiculo_id, km_inicial } = item.payload;
-    await syncEntrega("iniciar_entrega", {
-      entrega_id,
-      veiculo_id,
-      km_inicial,
-    });
+    const payload: Record<string, any> = { ...item.payload };
+    for (let i = 0; i < item.photos.length; i++) {
+      payload[item.photos[i].field] = await uploadOnePhoto(item, i);
+    }
+    await syncEntrega("iniciar_entrega", payload);
     return;
   }
 
@@ -119,7 +116,9 @@ async function pushOne(item: OutboxItem, identity: SyncIdentity): Promise<void> 
     return;
   }
   if (item.type === "despesa") {
-    const { error } = await (supabase as any).from("despesas").upsert(payload, { onConflict: "id" });
+    const { error } = await (supabase as any)
+      .from("despesas")
+      .upsert(payload, { onConflict: "id" });
     if (error) throw error;
     return;
   }
@@ -132,7 +131,8 @@ async function pushOne(item: OutboxItem, identity: SyncIdentity): Promise<void> 
         lancado_por: identity.userId,
         categoria: "pneu",
         veiculo_id: payload.veiculo_id,
-        descricao: `Pneu ${payload.marca ?? ""} ${payload.tipo ?? ""} - posição ${payload.posicao ?? ""}`.trim(),
+        descricao:
+          `Pneu ${payload.marca ?? ""} ${payload.tipo ?? ""} - posição ${payload.posicao ?? ""}`.trim(),
         valor: Number(payload.valor),
         data: payload.data_instalacao,
         km_veiculo: payload.km_instalacao ?? null,
@@ -140,7 +140,8 @@ async function pushOne(item: OutboxItem, identity: SyncIdentity): Promise<void> 
         status: "a_conferir",
       };
       const { error: errD } = await (supabase as any)
-        .from("despesas").upsert(despesaPayload, { onConflict: "id" });
+        .from("despesas")
+        .upsert(despesaPayload, { onConflict: "id" });
       if (errD) throw errD;
     }
     const { error } = await (supabase as any).from("pneus").upsert(payload, { onConflict: "id" });
@@ -153,7 +154,9 @@ async function pushOne(item: OutboxItem, identity: SyncIdentity): Promise<void> 
     if (error) throw error;
     return;
   }
-  const { error } = await (supabase as any).from("abastecimentos").upsert(payload, { onConflict: "id" });
+  const { error } = await (supabase as any)
+    .from("abastecimentos")
+    .upsert(payload, { onConflict: "id" });
   if (error) throw error;
 }
 
@@ -165,7 +168,9 @@ export interface SyncResult {
 }
 
 function isRecusaDefinitiva(msg: string): boolean {
-  return /PERMISSAO_NEGADA|ENTREGA_JA_INICIADA/i.test(msg);
+  return /PERMISSAO_NEGADA|ENTREGA_JA_INICIADA|CAMINHO_ARQUIVO_INVALIDO|KM_(INICIAL|FINAL)_INVALIDO|FOTO_ODOMETRO_INICIAL_OBRIGATORIA/i.test(
+    msg,
+  );
 }
 
 export async function syncNow(opts: { silent?: boolean } = {}): Promise<SyncResult> {
@@ -183,13 +188,17 @@ async function runSync(opts: { silent?: boolean } = {}): Promise<SyncResult> {
   let recusados = 0;
   let firstError: string | null = null;
   try {
+    const identity = await getSyncIdentity();
+    if (!identity) {
+      return { sent: 0, failed: 0, total: 0, recusados: 0 };
+    }
     try {
-      const { data } = await supabase.auth.getUser();
-      if (data?.user) await refreshPermissoesCache(data.user.id);
+      await refreshPermissoesCache(identity.userId);
     } catch {}
 
-    const identity = await getSyncIdentity();
-    const items = (await listPending()).filter((i) => !i.recusado);
+    const items = (await listPending(identity.userId, identity.empresaId)).filter(
+      (i) => !i.recusado,
+    );
     for (const item of items) {
       try {
         await pushOne(item, identity);

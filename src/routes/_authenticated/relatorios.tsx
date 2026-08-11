@@ -63,7 +63,18 @@ function Page() {
   }, [periodo, dataIni, dataFim]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["relatorios", empresaId, periodo, sinceIso, untilIso, pagamento, materialId, motoristaId, clienteId, numero],
+    queryKey: [
+      "relatorios",
+      empresaId,
+      periodo,
+      sinceIso,
+      untilIso,
+      pagamento,
+      materialId,
+      motoristaId,
+      clienteId,
+      numero,
+    ],
     enabled: !!empresaId,
     queryFn: async () => {
       let qEnt = (supabase as any)
@@ -74,14 +85,20 @@ function Page() {
       let qAb = (supabase as any)
         .from("abastecimentos")
         .select("valor_total, litros, km_atual, veiculo_id, data_hora");
+      let qDesp = (supabase as any)
+        .from("despesas")
+        .select("valor, data")
+        .eq("status", "conferida");
 
       if (sinceIso) {
         qEnt = qEnt.gte("criada_em", sinceIso);
         qAb = qAb.gte("data_hora", sinceIso);
+        qDesp = qDesp.gte("data", sinceIso.slice(0, 10));
       }
       if (untilIso) {
         qEnt = qEnt.lte("criada_em", untilIso);
         qAb = qAb.lte("data_hora", untilIso);
+        qDesp = qDesp.lte("data", untilIso.slice(0, 10));
       }
       if (pagamento !== "todos") qEnt = qEnt.eq("forma_pagamento", pagamento);
       if (materialId !== "todos") qEnt = qEnt.eq("material_id", materialId);
@@ -96,18 +113,26 @@ function Page() {
         if (!isNaN(n)) qEnt = qEnt.eq("numero", n);
       }
 
-      const [entR, abR, profR, vR, matR, cliR] = await Promise.all([
+      const [entR, abR, despR, profR, vR, matR, cliR] = await Promise.all([
         qEnt,
         qAb,
+        qDesp,
         (supabase as any).from("profiles").select("id, nome").eq("empresa_id", empresaId),
-        (supabase as any).from("veiculos").select("id, placa, descricao").eq("empresa_id", empresaId),
+        (supabase as any)
+          .from("veiculos")
+          .select("id, placa, descricao")
+          .eq("empresa_id", empresaId),
         (supabase as any).from("materiais").select("id, nome, unidade").eq("empresa_id", empresaId),
         (supabase as any).from("clientes").select("id, nome").eq("empresa_id", empresaId),
       ]);
 
       const ents = entR.data ?? [];
+      const vendasValidas = ents.filter((e: any) => e.status !== "cancelada");
       const abs = abR.data ?? [];
-      const nameProfile = new Map<string, string>((profR.data ?? []).map((p: any) => [p.id, p.nome]));
+      const despesas = despR.data ?? [];
+      const nameProfile = new Map<string, string>(
+        (profR.data ?? []).map((p: any) => [p.id, p.nome]),
+      );
       const labelVeic = new Map<string, string>(
         (vR.data ?? []).map((v: any) => [v.id, v.placa + (v.descricao ? ` · ${v.descricao}` : "")]),
       );
@@ -119,18 +144,25 @@ function Page() {
       const canceladas = ents.filter((e: any) => e.status === "cancelada").length;
       const emRota = ents.filter((e: any) => e.status === "em_rota").length;
       const pendentes = ents.filter((e: any) => e.status === "pendente").length;
-      const receitaProduto = ents.reduce(
+      const receitaProduto = vendasValidas.reduce(
         (s: number, e: any) => s + Number(e.valor_praticado || 0) * Number(e.quantidade || 1),
         0,
       );
-      const receitaFrete = ents.reduce((s: number, e: any) => s + Number(e.valor_frete || 0), 0);
+      const receitaFrete = vendasValidas.reduce(
+        (s: number, e: any) => s + Number(e.valor_frete || 0),
+        0,
+      );
       const totalReceita = receitaProduto + receitaFrete;
-      const ticketMedio = total > 0 ? totalReceita / total : 0;
+      const ticketMedio = vendasValidas.length > 0 ? totalReceita / vendasValidas.length : 0;
       const taxaConversao = total > 0 ? (finalizadas / total) * 100 : 0;
 
       const gastoCombustivel = abs.reduce((s: number, a: any) => s + Number(a.valor_total || 0), 0);
       const litrosTotais = abs.reduce((s: number, a: any) => s + Number(a.litros || 0), 0);
-      const margemBruta = totalReceita - gastoCombustivel;
+      const despesasOperacionais = despesas.reduce(
+        (s: number, d: any) => s + Number(d.valor || 0),
+        0,
+      );
+      const saldoOperacional = totalReceita - gastoCombustivel - despesasOperacionais;
 
       const porMot = new Map<string, { qtd: number; receita: number }>();
       for (const e of ents) {
@@ -139,7 +171,8 @@ function Page() {
         if (!id) continue;
         const cur = porMot.get(id) ?? { qtd: 0, receita: 0 };
         cur.qtd += 1;
-        cur.receita += Number(e.valor_praticado || 0) * Number(e.quantidade || 1) + Number(e.valor_frete || 0);
+        cur.receita +=
+          Number(e.valor_praticado || 0) * Number(e.quantidade || 1) + Number(e.valor_frete || 0);
         porMot.set(id, cur);
       }
       const rankingMotoristas = Array.from(porMot.entries())
@@ -147,10 +180,11 @@ function Page() {
         .sort((a, b) => b.qtd - a.qtd);
 
       const porCli = new Map<string, { qtd: number; receita: number }>();
-      for (const e of ents) {
+      for (const e of vendasValidas) {
         const cur = porCli.get(e.cliente_id) ?? { qtd: 0, receita: 0 };
         cur.qtd += 1;
-        cur.receita += Number(e.valor_praticado || 0) * Number(e.quantidade || 1) + Number(e.valor_frete || 0);
+        cur.receita +=
+          Number(e.valor_praticado || 0) * Number(e.quantidade || 1) + Number(e.valor_frete || 0);
         porCli.set(e.cliente_id, cur);
       }
       const topClientes = Array.from(porCli.entries())
@@ -159,7 +193,7 @@ function Page() {
         .slice(0, 10);
 
       const porMat = new Map<string, { qtd: number; receita: number }>();
-      for (const e of ents) {
+      for (const e of vendasValidas) {
         const cur = porMat.get(e.material_id) ?? { qtd: 0, receita: 0 };
         cur.qtd += Number(e.quantidade || 1);
         cur.receita += Number(e.valor_praticado || 0) * Number(e.quantidade || 1);
@@ -170,11 +204,12 @@ function Page() {
         .sort((a, b) => b.receita - a.receita);
 
       const porPag = new Map<string, { qtd: number; receita: number }>();
-      for (const e of ents) {
+      for (const e of vendasValidas) {
         const k = e.forma_pagamento || "—";
         const cur = porPag.get(k) ?? { qtd: 0, receita: 0 };
         cur.qtd += 1;
-        cur.receita += Number(e.valor_praticado || 0) * Number(e.quantidade || 1) + Number(e.valor_frete || 0);
+        cur.receita +=
+          Number(e.valor_praticado || 0) * Number(e.quantidade || 1) + Number(e.valor_frete || 0);
         porPag.set(k, cur);
       }
       const porPagamento = Array.from(porPag.entries())
@@ -206,7 +241,8 @@ function Page() {
       }
       const consumoVeiculos = Array.from(porVeic.entries())
         .map(([id, v]) => {
-          const kmRodado = v.kmMax > 0 && v.kmMin !== Number.POSITIVE_INFINITY ? v.kmMax - v.kmMin : 0;
+          const kmRodado =
+            v.kmMax > 0 && v.kmMin !== Number.POSITIVE_INFINITY ? v.kmMax - v.kmMin : 0;
           return {
             id,
             label: labelVeic.get(id) ?? "—",
@@ -221,11 +257,12 @@ function Page() {
         .sort((a, b) => b.kmRodado - a.kmRodado);
 
       const porDia = new Map<string, { qtd: number; receita: number }>();
-      for (const e of ents) {
+      for (const e of vendasValidas) {
         const d = (e.criada_em as string).slice(0, 10);
         const cur = porDia.get(d) ?? { qtd: 0, receita: 0 };
         cur.qtd += 1;
-        cur.receita += Number(e.valor_praticado || 0) * Number(e.quantidade || 1) + Number(e.valor_frete || 0);
+        cur.receita +=
+          Number(e.valor_praticado || 0) * Number(e.quantidade || 1) + Number(e.valor_frete || 0);
         porDia.set(d, cur);
       }
       const serieDiaria = Array.from(porDia.entries())
@@ -241,13 +278,10 @@ function Page() {
           cliente: nameCli.get(e.cliente_id) ?? "—",
           material: nameMat.get(e.material_id) ?? "—",
           motorista:
-            nameProfile.get(e.motorista_entrega_id) ??
-            nameProfile.get(e.motorista_venda_id) ??
-            "—",
+            nameProfile.get(e.motorista_entrega_id) ?? nameProfile.get(e.motorista_venda_id) ?? "—",
           forma_pagamento: e.forma_pagamento,
           total:
-            Number(e.valor_praticado || 0) * Number(e.quantidade || 1) +
-            Number(e.valor_frete || 0),
+            Number(e.valor_praticado || 0) * Number(e.quantidade || 1) + Number(e.valor_frete || 0),
         }))
         .sort((a: any, b: any) => (a.criada_em < b.criada_em ? 1 : -1));
 
@@ -264,7 +298,8 @@ function Page() {
         taxaConversao,
         gastoCombustivel,
         litrosTotais,
-        margemBruta,
+        despesasOperacionais,
+        saldoOperacional,
         rankingMotoristas,
         topClientes,
         topMateriais,
@@ -307,7 +342,8 @@ function Page() {
     lines.push(`Receita total,${data.totalReceita.toFixed(2)}`);
     lines.push(`Ticket médio,${data.ticketMedio.toFixed(2)}`);
     lines.push(`Combustível,${data.gastoCombustivel.toFixed(2)}`);
-    lines.push(`Margem bruta,${data.margemBruta.toFixed(2)}`);
+    lines.push(`Despesas conferidas,${data.despesasOperacionais.toFixed(2)}`);
+    lines.push(`Saldo operacional,${data.saldoOperacional.toFixed(2)}`);
     lines.push("");
     lines.push("Nº,Data,Cliente,Material,Motorista,Pagamento,Status,Total");
     for (const v of data.vendas) {
@@ -317,16 +353,19 @@ function Page() {
     }
     lines.push("");
     lines.push("Motorista,Entregas,Receita");
-    for (const m of data.rankingMotoristas) lines.push(`${csv(m.nome)},${m.qtd},${m.receita.toFixed(2)}`);
+    for (const m of data.rankingMotoristas)
+      lines.push(`${csv(m.nome)},${m.qtd},${m.receita.toFixed(2)}`);
     lines.push("");
     lines.push("Cliente,Pedidos,Receita");
     for (const c of data.topClientes) lines.push(`${csv(c.nome)},${c.qtd},${c.receita.toFixed(2)}`);
     lines.push("");
     lines.push("Material,Quantidade,Receita");
-    for (const m of data.topMateriais) lines.push(`${csv(m.nome)},${m.qtd},${m.receita.toFixed(2)}`);
+    for (const m of data.topMateriais)
+      lines.push(`${csv(m.nome)},${m.qtd},${m.receita.toFixed(2)}`);
     lines.push("");
     lines.push("Pagamento,Vendas,Receita");
-    for (const p of data.porPagamento) lines.push(`${csv(p.nome)},${p.qtd},${p.receita.toFixed(2)}`);
+    for (const p of data.porPagamento)
+      lines.push(`${csv(p.nome)},${p.qtd},${p.receita.toFixed(2)}`);
 
     const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -412,11 +451,15 @@ function Page() {
             <div>
               <Label className="text-xs">Forma de pagamento</Label>
               <Select value={pagamento} onValueChange={setPagamento}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todas</SelectItem>
                   {PAGAMENTOS.map((p) => (
-                    <SelectItem key={p.v} value={p.v}>{p.l}</SelectItem>
+                    <SelectItem key={p.v} value={p.v}>
+                      {p.l}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -424,11 +467,15 @@ function Page() {
             <div>
               <Label className="text-xs">Material</Label>
               <Select value={materialId} onValueChange={setMaterialId}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos</SelectItem>
                   {(data?.listaMateriais ?? []).map((m: any) => (
-                    <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.nome}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -436,11 +483,15 @@ function Page() {
             <div>
               <Label className="text-xs">Motorista</Label>
               <Select value={motoristaId} onValueChange={setMotoristaId}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos</SelectItem>
                   {(data?.listaMotoristas ?? []).map((p: any) => (
-                    <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.nome}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -448,11 +499,15 @@ function Page() {
             <div className="sm:col-span-2">
               <Label className="text-xs">Cliente</Label>
               <Select value={clienteId} onValueChange={setClienteId}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos</SelectItem>
                   {(data?.listaClientes ?? []).map((c: any) => (
-                    <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.nome}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -478,7 +533,8 @@ function Page() {
             <Mini label="Receita frete" value={brl(data.receitaFrete)} />
             <Mini label="Combustível" value={brl(data.gastoCombustivel)} />
             <Mini label="Litros" value={`${data.litrosTotais.toFixed(0)} L`} />
-            <Mini label="Margem bruta" value={brl(data.margemBruta)} />
+            <Mini label="Despesas conferidas" value={brl(data.despesasOperacionais)} />
+            <Mini label="Saldo operacional" value={brl(data.saldoOperacional)} />
           </div>
 
           <Section title={`Vendas (${data.vendas.length})`}>
@@ -491,11 +547,14 @@ function Page() {
                 className="w-full text-left border rounded-lg p-2 text-sm hover:bg-accent active:opacity-70"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <div className="font-semibold">#{v.numero ?? "—"} · {v.cliente}</div>
+                  <div className="font-semibold">
+                    #{v.numero ?? "—"} · {v.cliente}
+                  </div>
                   <div className="font-bold">{brl(v.total)}</div>
                 </div>
                 <div className="text-xs text-muted-foreground truncate">
-                  {fmtData(v.criada_em)} · {v.material} · {v.motorista} · {v.forma_pagamento ?? "—"} · {v.status}
+                  {fmtData(v.criada_em)} · {v.material} · {v.motorista} · {v.forma_pagamento ?? "—"}{" "}
+                  · {v.status}
                 </div>
               </button>
             ))}
@@ -509,21 +568,39 @@ function Page() {
           <Section title="Por forma de pagamento">
             {data.porPagamento.length === 0 && <Empty />}
             {data.porPagamento.map((p: any, i: number) => (
-              <Row key={p.id} idx={i + 1} title={p.nome} sub={`${p.qtd} vendas`} value={brl(p.receita)} />
+              <Row
+                key={p.id}
+                idx={i + 1}
+                title={p.nome}
+                sub={`${p.qtd} vendas`}
+                value={brl(p.receita)}
+              />
             ))}
           </Section>
 
           <Section title="Ranking de motoristas">
             {data.rankingMotoristas.length === 0 && <Empty />}
             {data.rankingMotoristas.map((m: any, i: number) => (
-              <Row key={m.id} idx={i + 1} title={m.nome} sub={`${m.qtd} entregas`} value={brl(m.receita)} />
+              <Row
+                key={m.id}
+                idx={i + 1}
+                title={m.nome}
+                sub={`${m.qtd} entregas`}
+                value={brl(m.receita)}
+              />
             ))}
           </Section>
 
           <Section title="Top clientes">
             {data.topClientes.length === 0 && <Empty />}
             {data.topClientes.map((c: any, i: number) => (
-              <Row key={c.id} idx={i + 1} title={c.nome} sub={`${c.qtd} pedidos`} value={brl(c.receita)} />
+              <Row
+                key={c.id}
+                idx={i + 1}
+                title={c.nome}
+                sub={`${c.qtd} pedidos`}
+                value={brl(c.receita)}
+              />
             ))}
           </Section>
 
@@ -547,15 +624,21 @@ function Page() {
                 <div className="font-medium truncate">{v.label}</div>
                 <div className="grid grid-cols-4 gap-2 text-xs text-muted-foreground mt-1">
                   <div>
-                    <div className="text-foreground font-semibold">{v.kmRodado.toLocaleString("pt-BR")}</div>
+                    <div className="text-foreground font-semibold">
+                      {v.kmRodado.toLocaleString("pt-BR")}
+                    </div>
                     km
                   </div>
                   <div>
-                    <div className="text-foreground font-semibold">{v.kmL ? v.kmL.toFixed(2) : "—"}</div>
+                    <div className="text-foreground font-semibold">
+                      {v.kmL ? v.kmL.toFixed(2) : "—"}
+                    </div>
                     km/L
                   </div>
                   <div>
-                    <div className="text-foreground font-semibold">{v.rsKm ? brl(v.rsKm) : "—"}</div>
+                    <div className="text-foreground font-semibold">
+                      {v.rsKm ? brl(v.rsKm) : "—"}
+                    </div>
                     R$/km
                   </div>
                   <div>
@@ -570,7 +653,12 @@ function Page() {
           <Section title="Vendas por dia">
             {data.serieDiaria.length === 0 && <Empty />}
             {data.serieDiaria.map((d: any) => (
-              <Row key={d.dia} title={fmtDia(d.dia)} sub={`${d.qtd} vendas`} value={brl(d.receita)} />
+              <Row
+                key={d.dia}
+                title={fmtDia(d.dia)}
+                sub={`${d.qtd} vendas`}
+                value={brl(d.receita)}
+              />
             ))}
           </Section>
         </>
@@ -601,7 +689,17 @@ function Mini({ label, value }: { label: string; value: any }) {
   );
 }
 
-function Row({ idx, title, sub, value }: { idx?: number; title: string; sub?: string; value?: string }) {
+function Row({
+  idx,
+  title,
+  sub,
+  value,
+}: {
+  idx?: number;
+  title: string;
+  sub?: string;
+  value?: string;
+}) {
   return (
     <div className="flex items-center justify-between gap-2 text-sm">
       <div className="flex items-center gap-2 min-w-0">
@@ -632,7 +730,13 @@ function fmtDia(iso: string) {
 
 function fmtData(iso: string) {
   const d = new Date(iso);
-  return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function csv(s: string) {

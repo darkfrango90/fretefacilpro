@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/use-session";
 import { usePermissoes } from "@/hooks/use-permissoes";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -14,6 +13,9 @@ import { capturarFoto, obterCoordenadas } from "@/lib/native";
 import { enqueue, fileToPhoto } from "@/lib/offline/queue";
 import { syncNow } from "@/lib/offline/sync";
 import { SignaturePad } from "@/components/signature-pad";
+import { readOfflineCache } from "@/lib/offline/cache";
+import { OdometroOcrField } from "@/components/odometro-ocr-field";
+import type { ConfiancaOdometro } from "@/lib/ocr-odometro";
 
 export const Route = createFileRoute("/_authenticated/entrega/$id/finalizar")({
   component: Finalizar,
@@ -25,13 +27,21 @@ function Finalizar() {
   const { perms } = usePermissoes();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const cachedEmRota = prof?.profile.id
+    ? readOfflineCache<any[]>(`entregas:em-rota:${prof.profile.id}`)
+    : undefined;
 
   const { data: entrega, isLoading } = useQuery({
     queryKey: ["entrega-finalizar", id],
+    retry: false,
+    networkMode: "offlineFirst",
+    initialData: () => cachedEmRota?.find((item) => item.id === id),
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("entregas")
-        .select("id, km_inicial, status, cliente:clientes(nome), material:materiais(nome, unidade), quantidade")
+        .select(
+          "id, km_inicial, status, cliente:clientes(nome), material:materiais(nome, unidade), quantidade",
+        )
         .eq("id", id)
         .maybeSingle();
       if (error) throw error;
@@ -44,6 +54,7 @@ function Finalizar() {
   // step 1
   const [kmFinal, setKmFinal] = useState("");
   const [fotoOdom, setFotoOdom] = useState<File | null>(null);
+  const [confiancaKmFinal, setConfiancaKmFinal] = useState<ConfiancaOdometro | null>(null);
 
   // step 2
   const [fotoMat, setFotoMat] = useState<File | null>(null);
@@ -58,15 +69,6 @@ function Finalizar() {
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Carregando...</p>;
   if (!entrega) return <p className="text-sm text-destructive">Entrega não encontrada.</p>;
-
-  async function tirarFotoOdom() {
-    try {
-      const f = await capturarFoto();
-      if (f) setFotoOdom(f);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Não foi possível acessar a câmera.");
-    }
-  }
 
   async function tirarFotoMat() {
     try {
@@ -85,17 +87,21 @@ function Finalizar() {
   }
 
   function avancarStep1() {
-    if (perms.foto_odometro_obrigatoria && !fotoOdom) return toast.error("Foto do odômetro é obrigatória");
+    if (perms.foto_odometro_obrigatoria && !fotoOdom)
+      return toast.error("Foto do odômetro é obrigatória");
     if (!kmFinal) return toast.error("Informe o KM final");
+    if (!Number.isInteger(Number(kmFinal)) || Number(kmFinal) < 0)
+      return toast.error("KM final inválido");
     if (entrega?.km_inicial != null && Number(kmFinal) < Number(entrega.km_inicial)) {
-      toast.warning("KM final menor que o inicial — verifique antes de salvar.");
+      return toast.error("KM final não pode ser menor que o KM inicial");
     }
     setStep(2);
   }
 
   function avancarStep2() {
     if (!fotoMat) return toast.error("Foto do material é obrigatória");
-    if (perms.gps_obrigatorio && !gps) return toast.error("GPS é obrigatório. Habilite a localização.");
+    if (perms.gps_obrigatorio && !gps)
+      return toast.error("GPS é obrigatório. Habilite a localização.");
     setStep(3);
   }
 
@@ -104,7 +110,8 @@ function Finalizar() {
     setSubmitting(true);
     try {
       const photos: any[] = [];
-      if (fotoOdom) photos.push(await fileToPhoto("foto_odometro_final_url", "odometros", fotoOdom));
+      if (fotoOdom)
+        photos.push(await fileToPhoto("foto_odometro_final_url", "odometros", fotoOdom));
       if (fotoMat) photos.push(await fileToPhoto("foto_material_url", "entregas", fotoMat));
       if (assinaturaBlob) {
         const f = new File([assinaturaBlob], "assinatura.png", { type: "image/png" });
@@ -113,6 +120,7 @@ function Finalizar() {
       const payload: any = {
         entrega_id: id,
         km_final: Number(kmFinal),
+        km_final_ia_confianca: confiancaKmFinal,
         foto_material_gps_lat: gps?.lat ?? null,
         foto_material_gps_lng: gps?.lng ?? null,
         foto_material_gps_em: gps?.em ?? null,
@@ -155,113 +163,134 @@ function Finalizar() {
         <h1 className="text-lg font-bold">Finalizar entrega</h1>
         <span className="text-xs text-muted-foreground">Etapa {step}/3</span>
       </div>
-      <Card><CardContent className="p-3 text-xs">
-        <div className="font-medium">{entrega.cliente?.nome}</div>
-        <div className="text-muted-foreground">
-          {entrega.material?.nome} · {entrega.quantidade} {entrega.material?.unidade}
-          {entrega.km_inicial != null && ` · KM ini: ${entrega.km_inicial}`}
-        </div>
-      </CardContent></Card>
+      <Card>
+        <CardContent className="p-3 text-xs">
+          <div className="font-medium">{entrega.cliente?.nome}</div>
+          <div className="text-muted-foreground">
+            {entrega.material?.nome} · {entrega.quantidade} {entrega.material?.unidade}
+            {entrega.km_inicial != null && ` · KM ini: ${entrega.km_inicial}`}
+          </div>
+        </CardContent>
+      </Card>
 
       {step === 1 && (
-        <Card><CardContent className="p-3 space-y-3">
-          <div className="font-semibold">1. KM final + foto do odômetro</div>
-          <div>
-            <Label>KM final do veículo *</Label>
-            <Input type="number" inputMode="numeric" value={kmFinal}
-              onChange={(e) => setKmFinal(e.target.value)} />
-            {entrega.km_inicial != null && kmFinal && Number(kmFinal) >= Number(entrega.km_inicial) && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Percorrido: {Number(kmFinal) - Number(entrega.km_inicial)} km
-              </p>
-            )}
-          </div>
-          <div>
-            <Label className="flex items-center gap-1">
-              <Camera className="h-4 w-4" /> Foto do odômetro
-              {perms.foto_odometro_obrigatoria && " *"}
-            </Label>
-            <div className="flex items-center gap-2 mt-1">
-              <Button type="button" variant="outline" size="sm" onClick={tirarFotoOdom}>
-                <Camera className="h-4 w-4 mr-1" />
-                {fotoOdom ? "Trocar foto" : "Tirar foto"}
+        <Card>
+          <CardContent className="p-3 space-y-3">
+            <div className="font-semibold">1. KM final + foto do odômetro</div>
+            <OdometroOcrField
+              label="KM final do veículo"
+              value={kmFinal}
+              onValueChange={setKmFinal}
+              photo={fotoOdom}
+              onPhotoChange={setFotoOdom}
+              photoRequired={perms.foto_odometro_obrigatoria}
+              minKm={entrega.km_inicial}
+              onReadingChange={(reading) => setConfiancaKmFinal(reading?.confianca ?? null)}
+            />
+            {entrega.km_inicial != null &&
+              kmFinal &&
+              Number(kmFinal) >= Number(entrega.km_inicial) && (
+                <p className="text-xs text-muted-foreground">
+                  Percorrido: {Number(kmFinal) - Number(entrega.km_inicial)} km
+                </p>
+              )}
+            <div className="flex justify-between pt-2">
+              <Link to="/minhas-entregas" className="text-sm text-muted-foreground self-center">
+                Cancelar
+              </Link>
+              <Button variant="action" onClick={avancarStep1}>
+                Avançar <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
-              {fotoOdom && <span className="text-xs text-muted-foreground truncate">✓ capturada</span>}
             </div>
-          </div>
-          <div className="flex justify-between pt-2">
-            <Link to="/minhas-entregas" className="text-sm text-muted-foreground self-center">Cancelar</Link>
-            <Button variant="action" onClick={avancarStep1}>
-              Avançar <ArrowRight className="h-4 w-4 ml-1" />
-            </Button>
-          </div>
-        </CardContent></Card>
+          </CardContent>
+        </Card>
       )}
 
       {step === 2 && (
-        <Card><CardContent className="p-3 space-y-3">
-          <div className="font-semibold">2. Foto do material na obra + GPS</div>
-          <div>
-            <Label className="flex items-center gap-1">
-              <Camera className="h-4 w-4" /> Foto do material *
-            </Label>
-            <div className="flex items-center gap-2 mt-1">
-              <Button type="button" variant="outline" size="sm" onClick={tirarFotoMat}>
-                <Camera className="h-4 w-4 mr-1" />
-                {fotoMat ? "Trocar foto" : "Tirar foto"}
-              </Button>
-              {fotoMat && <span className="text-xs text-muted-foreground">✓ capturada</span>}
+        <Card>
+          <CardContent className="p-3 space-y-3">
+            <div className="font-semibold">2. Foto do material na obra + GPS</div>
+            <div>
+              <Label className="flex items-center gap-1">
+                <Camera className="h-4 w-4" /> Foto do material *
+              </Label>
+              <div className="flex items-center gap-2 mt-1">
+                <Button type="button" variant="outline" size="sm" onClick={tirarFotoMat}>
+                  <Camera className="h-4 w-4 mr-1" />
+                  {fotoMat ? "Trocar foto" : "Tirar foto"}
+                </Button>
+                {fotoMat && <span className="text-xs text-muted-foreground">✓ capturada</span>}
+              </div>
             </div>
-          </div>
-          <div className="text-xs flex items-center gap-1 text-muted-foreground">
-            <MapPin className="h-3 w-3" />
-            {capturandoGps ? "Capturando GPS..." :
-              gps ? `GPS: ${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)}` :
-              perms.gps_obrigatorio ? "GPS obrigatório — habilite a localização." :
-              "GPS será capturado junto com a foto."}
-          </div>
-          <div className="flex justify-between pt-2">
-            <Button variant="outline" onClick={() => setStep(1)}>
-              <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
-            </Button>
-            <Button variant="action" onClick={avancarStep2}>
-              Avançar <ArrowRight className="h-4 w-4 ml-1" />
-            </Button>
-          </div>
-        </CardContent></Card>
+            <div className="text-xs flex items-center gap-1 text-muted-foreground">
+              <MapPin className="h-3 w-3" />
+              {capturandoGps
+                ? "Capturando GPS..."
+                : gps
+                  ? `GPS: ${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)}`
+                  : perms.gps_obrigatorio
+                    ? "GPS obrigatório — habilite a localização."
+                    : "GPS será capturado junto com a foto."}
+            </div>
+            <div className="flex justify-between pt-2">
+              <Button variant="outline" onClick={() => setStep(1)}>
+                <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
+              </Button>
+              <Button variant="action" onClick={avancarStep2}>
+                Avançar <ArrowRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {step === 3 && (
-        <Card><CardContent className="p-3 space-y-3">
-          <div className="font-semibold">3. Assinatura do cliente (opcional)</div>
-          {!clienteAusente && !assinaturaBlob && (
-            <SignaturePad
-              onConfirm={(b) => { setAssinaturaBlob(b); toast.success("Assinatura registrada"); }}
-              onSkip={() => { setClienteAusente(true); setAssinaturaBlob(null); }}
-            />
-          )}
-          {assinaturaBlob && (
-            <div className="text-xs text-muted-foreground">
-              ✓ Assinatura coletada.{" "}
-              <button type="button" className="underline" onClick={() => setAssinaturaBlob(null)}>refazer</button>
+        <Card>
+          <CardContent className="p-3 space-y-3">
+            <div className="font-semibold">3. Assinatura do cliente (opcional)</div>
+            {!clienteAusente && !assinaturaBlob && (
+              <SignaturePad
+                onConfirm={(b) => {
+                  setAssinaturaBlob(b);
+                  toast.success("Assinatura registrada");
+                }}
+                onSkip={() => {
+                  setClienteAusente(true);
+                  setAssinaturaBlob(null);
+                }}
+              />
+            )}
+            {assinaturaBlob && (
+              <div className="text-xs text-muted-foreground">
+                ✓ Assinatura coletada.{" "}
+                <button type="button" className="underline" onClick={() => setAssinaturaBlob(null)}>
+                  refazer
+                </button>
+              </div>
+            )}
+            {clienteAusente && (
+              <div className="text-xs text-muted-foreground">
+                Cliente ausente — assinatura não coletada.{" "}
+                <button
+                  type="button"
+                  className="underline"
+                  onClick={() => setClienteAusente(false)}
+                >
+                  desfazer
+                </button>
+              </div>
+            )}
+            <div className="flex justify-between pt-2">
+              <Button variant="outline" onClick={() => setStep(2)}>
+                <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
+              </Button>
+              <Button variant="action" onClick={concluir} disabled={submitting}>
+                <Check className="h-4 w-4 mr-1" />
+                {submitting ? "Concluindo..." : "Concluir entrega"}
+              </Button>
             </div>
-          )}
-          {clienteAusente && (
-            <div className="text-xs text-muted-foreground">
-              Cliente ausente — assinatura não coletada.{" "}
-              <button type="button" className="underline" onClick={() => setClienteAusente(false)}>desfazer</button>
-            </div>
-          )}
-          <div className="flex justify-between pt-2">
-            <Button variant="outline" onClick={() => setStep(2)}>
-              <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
-            </Button>
-            <Button variant="action" onClick={concluir} disabled={submitting}>
-              <Check className="h-4 w-4 mr-1" />
-              {submitting ? "Concluindo..." : "Concluir entrega"}
-            </Button>
-          </div>
-        </CardContent></Card>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
