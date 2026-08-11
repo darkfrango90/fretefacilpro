@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { isNative } from "@/lib/native";
 
 export const Route = createFileRoute("/")({
   // Se o usuário já estiver logado, redireciona direto para o painel interno
@@ -8,6 +9,9 @@ export const Route = createFileRoute("/")({
     const { data } = await supabase.auth.getSession();
     if (data.session) {
       throw redirect({ to: "/dashboard", replace: true });
+    }
+    if (isNative()) {
+      throw redirect({ to: "/auth", replace: true });
     }
   },
   head: () => ({

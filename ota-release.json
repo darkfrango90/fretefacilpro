@@ -2,8 +2,8 @@
   "nativeVersion": "1.6",
   "required": false,
   "notes": [
-    "Quilometragem de abastecimento aceita ponto, vírgula e uma casa decimal.",
-    "Correção da sincronização de abastecimentos que estavam pendentes.",
-    "Entregas concluídas pelo administrador aparecem no histórico do motorista responsável."
+    "No aplicativo Android, a entrada abre sempre no login ou diretamente no painel.",
+    "A landing page comercial permanece disponível somente no site.",
+    "Nova opção para manter a sessão conectada e lembrar o e-mail com segurança."
   ]
 }

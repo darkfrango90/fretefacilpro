@@ -489,4 +489,14 @@ APK-base não assinado:
 - versão web/OTA: `1.6.1`;
 - compatibilidade nativa mantida em `1.6`, sem necessidade de gerar outro APK.
 
+## 22. Correções OTA 1.6.2 — entrada nativa e sessão lembrada
+
+- a rota `/` identifica o ambiente Capacitor: no Android, redireciona para o painel quando há sessão e para `/auth` quando não há;
+- a landing page comercial continua pública no navegador, mas nunca é exibida dentro do APK;
+- o login ganhou a opção **Manter conectado neste aparelho**, ativada por padrão;
+- com a opção ativa, o Supabase persiste e renova a sessão e o aplicativo lembra apenas o e-mail;
+- a senha não é armazenada em texto aberto; a autenticação persistente usa o token de sessão renovável;
+- quando a opção é desativada, a sessão usa `sessionStorage` e deixa de existir ao encerrar o WebView;
+- versão web/OTA: `1.6.2`, compatível com a base Android `1.6`.
+
 Limite: OTA atualiza somente HTML, CSS e JavaScript. Mudanças em câmera, localização, permissões, plugins, Gradle ou Manifest continuam exigindo um APK nativo com versão superior. A publicação do primeiro manifesto depende do deploy Git/Vercel; o CLI Vercel local não possuía credenciais e nenhuma conta externa foi criada automaticamente.

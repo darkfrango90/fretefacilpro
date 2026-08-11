@@ -1,6 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  getRememberedEmail,
+  setRememberedEmail,
+  setRememberSession,
+  shouldRememberSession,
+  supabase,
+} from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Logo } from "@/components/logo";
@@ -13,6 +19,9 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState(() => getRememberedEmail());
+  const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(() => shouldRememberSession());
 
   // Check session redirect
   useEffect(() => {
@@ -32,15 +41,21 @@ function AuthPage() {
     e.preventDefault();
     e.stopPropagation();
     const fd = new FormData(e.currentTarget);
-    const email = String(fd.get("email") ?? "").trim();
-    const password = String(fd.get("password") ?? "");
+    const submittedEmail = String(fd.get("email") ?? "").trim();
+    const submittedPassword = String(fd.get("password") ?? "");
+    setRememberSession(remember);
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({
+      email: submittedEmail,
+      password: submittedPassword,
+    });
     setLoading(false);
     if (error) {
       toast.error(error.message);
       return;
     }
+    setRememberedEmail(remember ? submittedEmail : null);
+    setPassword("");
     window.history.replaceState({}, "", "/auth");
     navigate({ to: "/dashboard", replace: true });
   }
@@ -68,6 +83,8 @@ function AuthPage() {
                   type="email"
                   required
                   autoComplete="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
                   placeholder="voce@empresa.com"
                   style={{ WebkitAppearance: "none" }}
                   className="w-full h-11 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 placeholder-slate-400"
@@ -83,11 +100,31 @@ function AuthPage() {
                   type="password"
                   required
                   autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
                   placeholder="••••••••"
                   style={{ WebkitAppearance: "none" }}
                   className="w-full h-11 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 placeholder-slate-400"
                 />
               </div>
+              <label
+                htmlFor="li-remember"
+                className="flex cursor-pointer items-start gap-2.5 rounded-xl bg-slate-50 px-3 py-2.5 text-sm text-slate-700"
+              >
+                <input
+                  id="li-remember"
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(event) => setRemember(event.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-orange-500"
+                />
+                <span>
+                  <span className="block font-medium">Manter conectado neste aparelho</span>
+                  <span className="block text-xs text-slate-500">
+                    Você entrará automaticamente enquanto a conta continuar válida.
+                  </span>
+                </span>
+              </label>
               <Button type="submit" variant="action" size="lg" className="w-full mt-2" disabled={loading}>
                 {loading ? "Entrando..." : "Entrar"}
               </Button>

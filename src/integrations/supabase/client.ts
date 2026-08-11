@@ -2,6 +2,55 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
+const REMEMBER_SESSION_KEY = 'auth:remember-session:v1';
+const REMEMBERED_EMAIL_KEY = 'auth:remembered-email:v1';
+
+export function shouldRememberSession(): boolean {
+  if (typeof window === 'undefined') return true;
+  try {
+    return localStorage.getItem(REMEMBER_SESSION_KEY) !== 'false';
+  } catch {
+    return true;
+  }
+}
+
+export function setRememberSession(remember: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(REMEMBER_SESSION_KEY, String(remember));
+  } catch {}
+}
+
+export function getRememberedEmail(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    return localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+export function setRememberedEmail(email: string | null): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (email) localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
+    else localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+  } catch {}
+}
+
+const authStorage = {
+  getItem(key: string): string | null {
+    return (shouldRememberSession() ? localStorage : sessionStorage).getItem(key);
+  },
+  setItem(key: string, value: string): void {
+    (shouldRememberSession() ? localStorage : sessionStorage).setItem(key, value);
+  },
+  removeItem(key: string): void {
+    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
+  },
+};
+
 function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith('sb_publishable_') || value.startsWith('sb_secret_');
 }
@@ -48,7 +97,7 @@ function createSupabaseClient() {
       fetch: createSupabaseFetch(SUPABASE_PUBLISHABLE_KEY),
     },
     auth: {
-      storage: typeof window !== 'undefined' ? localStorage : undefined,
+      storage: typeof window !== 'undefined' ? authStorage : undefined,
       persistSession: true,
       autoRefreshToken: true,
     }
@@ -65,4 +114,3 @@ export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>,
     return Reflect.get(_supabase, prop, receiver);
   },
 });
-
