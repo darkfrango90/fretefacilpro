@@ -1,4 +1,10 @@
-import { getDB, type OutboxItem, type OutboxPhoto, type SyncHistoryItem } from "./db";
+import {
+  getDB,
+  type OutboxItem,
+  type OutboxPhoto,
+  type OutboxType,
+  type SyncHistoryItem,
+} from "./db";
 
 export async function enqueue(item: Omit<OutboxItem, "created_at" | "attempts">) {
   await getDB().outbox.put({
@@ -44,11 +50,7 @@ export async function addHistory(entry: Omit<SyncHistoryItem, "id">) {
   notifyChanged();
 }
 
-export async function pendingByType(
-  type: "entrega" | "abastecimento",
-  motoristaId?: string,
-  empresaId?: string,
-) {
+export async function pendingByType(type: OutboxType, motoristaId?: string, empresaId?: string) {
   const items = motoristaId
     ? await getDB().outbox.where("[motorista_id+type]").equals([motoristaId, type]).toArray()
     : await getDB().outbox.where("type").equals(type).toArray();

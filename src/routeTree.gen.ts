@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedVeiculosRouteImport } from './routes/_authenticated/veiculos'
+import { Route as AuthenticatedTrocasOleoRouteImport } from './routes/_authenticated/trocas-oleo'
 import { Route as AuthenticatedTrocarSenhaRouteImport } from './routes/_authenticated/trocar-senha'
 import { Route as AuthenticatedSincronizacaoRouteImport } from './routes/_authenticated/sincronizacao'
 import { Route as AuthenticatedRelatoriosMotoristaRouteImport } from './routes/_authenticated/relatorios-motorista'
@@ -61,6 +62,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedVeiculosRoute = AuthenticatedVeiculosRouteImport.update({
   id: '/veiculos',
   path: '/veiculos',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTrocasOleoRoute = AuthenticatedTrocasOleoRouteImport.update({
+  id: '/trocas-oleo',
+  path: '/trocas-oleo',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedTrocarSenhaRoute =
@@ -255,6 +261,7 @@ export interface FileRoutesByFullPath {
   '/relatorios-motorista': typeof AuthenticatedRelatoriosMotoristaRoute
   '/sincronizacao': typeof AuthenticatedSincronizacaoRouteWithChildren
   '/trocar-senha': typeof AuthenticatedTrocarSenhaRoute
+  '/trocas-oleo': typeof AuthenticatedTrocasOleoRoute
   '/veiculos': typeof AuthenticatedVeiculosRoute
   '/despesas/nova': typeof AuthenticatedDespesasNovaRoute
   '/pneus/instalar': typeof AuthenticatedPneusInstalarRoute
@@ -290,6 +297,7 @@ export interface FileRoutesByTo {
   '/relatorios-motorista': typeof AuthenticatedRelatoriosMotoristaRoute
   '/sincronizacao': typeof AuthenticatedSincronizacaoRouteWithChildren
   '/trocar-senha': typeof AuthenticatedTrocarSenhaRoute
+  '/trocas-oleo': typeof AuthenticatedTrocasOleoRoute
   '/veiculos': typeof AuthenticatedVeiculosRoute
   '/despesas/nova': typeof AuthenticatedDespesasNovaRoute
   '/pneus/instalar': typeof AuthenticatedPneusInstalarRoute
@@ -327,6 +335,7 @@ export interface FileRoutesById {
   '/_authenticated/relatorios-motorista': typeof AuthenticatedRelatoriosMotoristaRoute
   '/_authenticated/sincronizacao': typeof AuthenticatedSincronizacaoRouteWithChildren
   '/_authenticated/trocar-senha': typeof AuthenticatedTrocarSenhaRoute
+  '/_authenticated/trocas-oleo': typeof AuthenticatedTrocasOleoRoute
   '/_authenticated/veiculos': typeof AuthenticatedVeiculosRoute
   '/_authenticated/despesas/nova': typeof AuthenticatedDespesasNovaRoute
   '/_authenticated/pneus/instalar': typeof AuthenticatedPneusInstalarRoute
@@ -364,6 +373,7 @@ export interface FileRouteTypes {
     | '/relatorios-motorista'
     | '/sincronizacao'
     | '/trocar-senha'
+    | '/trocas-oleo'
     | '/veiculos'
     | '/despesas/nova'
     | '/pneus/instalar'
@@ -399,6 +409,7 @@ export interface FileRouteTypes {
     | '/relatorios-motorista'
     | '/sincronizacao'
     | '/trocar-senha'
+    | '/trocas-oleo'
     | '/veiculos'
     | '/despesas/nova'
     | '/pneus/instalar'
@@ -435,6 +446,7 @@ export interface FileRouteTypes {
     | '/_authenticated/relatorios-motorista'
     | '/_authenticated/sincronizacao'
     | '/_authenticated/trocar-senha'
+    | '/_authenticated/trocas-oleo'
     | '/_authenticated/veiculos'
     | '/_authenticated/despesas/nova'
     | '/_authenticated/pneus/instalar'
@@ -481,6 +493,13 @@ declare module '@tanstack/react-router' {
       path: '/veiculos'
       fullPath: '/veiculos'
       preLoaderRoute: typeof AuthenticatedVeiculosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/trocas-oleo': {
+      id: '/_authenticated/trocas-oleo'
+      path: '/trocas-oleo'
+      fullPath: '/trocas-oleo'
+      preLoaderRoute: typeof AuthenticatedTrocasOleoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/trocar-senha': {
@@ -733,6 +752,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedRelatoriosMotoristaRoute: typeof AuthenticatedRelatoriosMotoristaRoute
   AuthenticatedSincronizacaoRoute: typeof AuthenticatedSincronizacaoRouteWithChildren
   AuthenticatedTrocarSenhaRoute: typeof AuthenticatedTrocarSenhaRoute
+  AuthenticatedTrocasOleoRoute: typeof AuthenticatedTrocasOleoRoute
   AuthenticatedVeiculosRoute: typeof AuthenticatedVeiculosRoute
   AuthenticatedDespesasNovaRoute: typeof AuthenticatedDespesasNovaRoute
   AuthenticatedPneusInstalarRoute: typeof AuthenticatedPneusInstalarRoute
@@ -766,6 +786,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedRelatoriosMotoristaRoute: AuthenticatedRelatoriosMotoristaRoute,
   AuthenticatedSincronizacaoRoute: AuthenticatedSincronizacaoRouteWithChildren,
   AuthenticatedTrocarSenhaRoute: AuthenticatedTrocarSenhaRoute,
+  AuthenticatedTrocasOleoRoute: AuthenticatedTrocasOleoRoute,
   AuthenticatedVeiculosRoute: AuthenticatedVeiculosRoute,
   AuthenticatedDespesasNovaRoute: AuthenticatedDespesasNovaRoute,
   AuthenticatedPneusInstalarRoute: AuthenticatedPneusInstalarRoute,

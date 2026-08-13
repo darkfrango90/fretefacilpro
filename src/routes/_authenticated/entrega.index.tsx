@@ -21,6 +21,7 @@ import { Lock } from "lucide-react";
 import { enqueue } from "@/lib/offline/queue";
 import { syncNow } from "@/lib/offline/sync";
 import { ClienteCombobox } from "@/components/cliente-combobox";
+import { MoneyInput } from "@/components/money-input";
 
 export const Route = createFileRoute("/_authenticated/entrega/")({
   component: NovaVenda,
@@ -349,12 +350,10 @@ function NovaVenda() {
                   Valor praticado *
                   {valorTravado && <Lock className="h-3 w-3 text-muted-foreground" />}
                 </Label>
-                <Input
-                  type="number"
-                  step="0.01"
+                <MoneyInput
                   value={valorPraticado}
                   readOnly={valorTravado}
-                  onChange={(e) => setValorPraticado(e.target.value)}
+                  onValueChange={setValorPraticado}
                 />
               </div>
             </div>
@@ -369,12 +368,10 @@ function NovaVenda() {
               Valor do frete (R$) {somenteFrete ? "*" : ""}
               {freteTravado && <Lock className="h-3 w-3 text-muted-foreground" />}
             </Label>
-            <Input
-              type="number"
-              step="0.01"
+            <MoneyInput
               value={valorFrete}
               readOnly={freteTravado}
-              onChange={(e) => setValorFrete(e.target.value)}
+              onValueChange={setValorFrete}
               placeholder="0,00"
             />
           </div>

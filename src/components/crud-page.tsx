@@ -5,14 +5,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Plus, Trash2, Pencil } from "lucide-react";
+import { MoneyInput } from "@/components/money-input";
+import { parseMoeda } from "@/lib/moeda";
 
 interface CrudField {
   name: string;
   label: string;
-  type?: "text" | "number" | "tel" | "select";
+  type?: "text" | "number" | "currency" | "tel" | "select";
   required?: boolean;
   step?: string;
   options?: { value: string; label: string }[];
@@ -27,7 +35,14 @@ interface CrudPageProps {
   defaults?: Record<string, any>;
 }
 
-export function CrudPage({ title, table, fields, empresaId, renderRow, defaults = {} }: CrudPageProps) {
+export function CrudPage({
+  title,
+  table,
+  fields,
+  empresaId,
+  renderRow,
+  defaults = {},
+}: CrudPageProps) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
@@ -112,6 +127,8 @@ export function CrudPage({ title, table, fields, empresaId, renderRow, defaults 
         payload[f.name] = null;
       } else if (f.type === "number") {
         payload[f.name] = Number(v);
+      } else if (f.type === "currency") {
+        payload[f.name] = parseMoeda(String(v));
       } else {
         payload[f.name] = String(v);
       }
@@ -123,9 +140,18 @@ export function CrudPage({ title, table, fields, empresaId, renderRow, defaults 
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">{title}</h1>
-        <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setEditing(null); }}>
+        <Dialog
+          open={open}
+          onOpenChange={(o) => {
+            setOpen(o);
+            if (!o) setEditing(null);
+          }}
+        >
           <DialogTrigger asChild>
-            <Button size="sm"><Plus className="h-4 w-4 mr-1" />Novo</Button>
+            <Button size="sm">
+              <Plus className="h-4 w-4 mr-1" />
+              Novo
+            </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -150,6 +176,13 @@ export function CrudPage({ title, table, fields, empresaId, renderRow, defaults 
                         </option>
                       ))}
                     </select>
+                  ) : f.type === "currency" ? (
+                    <CurrencyFormField
+                      id={f.name}
+                      name={f.name}
+                      required={f.required}
+                      initialValue={editing?.[f.name] ?? ""}
+                    />
                   ) : (
                     <Input
                       id={f.name}
@@ -180,7 +213,10 @@ export function CrudPage({ title, table, fields, empresaId, renderRow, defaults 
                 <Button
                   size="icon"
                   variant="ghost"
-                  onClick={() => { setEditing(r); setOpen(true); }}
+                  onClick={() => {
+                    setEditing(r);
+                    setOpen(true);
+                  }}
                 >
                   <Pencil className="h-4 w-4" />
                 </Button>
@@ -202,5 +238,22 @@ export function CrudPage({ title, table, fields, empresaId, renderRow, defaults 
         )}
       </div>
     </div>
+  );
+}
+
+function CurrencyFormField({
+  id,
+  name,
+  required,
+  initialValue,
+}: {
+  id: string;
+  name: string;
+  required?: boolean;
+  initialValue: string | number;
+}) {
+  const [value, setValue] = useState(String(initialValue));
+  return (
+    <MoneyInput id={id} name={name} value={value} onValueChange={setValue} required={required} />
   );
 }

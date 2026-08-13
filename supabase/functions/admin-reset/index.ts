@@ -1,6 +1,6 @@
 // Edge function destrutiva: apaga TUDO exceto o(s) usuário(s) master.
 // Mantém: usuários com role 'master', seus profiles, sua empresa (se houver) e role.
-// Apaga: entregas, jornadas, abastecimentos, despesas, pneus, aferições,
+// Apaga: entregas, jornadas, abastecimentos, trocas de óleo, despesas, pneus, aferições,
 //        clientes, materiais, veículos, permissões, profiles não-master, user_roles não-master,
 //        empresas não-master, usuários auth não-master, sequência de vendas.
 
@@ -110,6 +110,7 @@ Deno.serve(async (req) => {
     "despesas",
     "entregas",
     "jornadas",
+    "trocas_oleo",
     "abastecimentos",
     "afericoes_tanque",
     "clientes",

@@ -6,6 +6,7 @@ import { useProfile } from "@/hooks/use-session";
 import { AdminOnly } from "@/components/role-guard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/money-input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
@@ -240,23 +241,28 @@ function PadraoForm({ empresaId }: { empresaId: string }) {
         {NUM_KEYS.map((k) => (
           <div key={k}>
             <Label className="text-sm">{LABELS[k]}</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={(form as any)[k] ?? ""}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  [k]:
-                    e.target.value === ""
-                      ? k === "desconto_maximo_percent"
-                        ? 0
-                        : null
-                      : Number(e.target.value),
-                } as any)
-              }
-              placeholder={k === "desconto_maximo_percent" ? "0" : "sem limite"}
-            />
+            {k === "desconto_maximo_percent" ? (
+              <Input
+                type="number"
+                step="0.01"
+                value={(form as any)[k] ?? ""}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    [k]: e.target.value === "" ? 0 : Number(e.target.value),
+                  } as any)
+                }
+                placeholder="0"
+              />
+            ) : (
+              <MoneyInput
+                value={(form as any)[k] == null ? "" : String((form as any)[k])}
+                onValueChange={(value) =>
+                  setForm({ ...form, [k]: value === "" ? null : Number(value) } as any)
+                }
+                placeholder="sem limite"
+              />
+            )}
           </div>
         ))}
         <div>
@@ -451,15 +457,23 @@ function MotoristaForm({ empresaId }: { empresaId: string }) {
               return (
                 <div key={k} className="space-y-1">
                   <Label className="text-sm">{LABELS[k]}</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={efetivo ?? ""}
-                    onChange={(e) =>
-                      setVal(k, e.target.value === "" ? null : Number(e.target.value))
-                    }
-                    placeholder={herdado ? "(herdado do padrão)" : ""}
-                  />
+                  {k === "desconto_maximo_percent" ? (
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={efetivo ?? ""}
+                      onChange={(e) =>
+                        setVal(k, e.target.value === "" ? null : Number(e.target.value))
+                      }
+                      placeholder={herdado ? "(herdado do padrão)" : ""}
+                    />
+                  ) : (
+                    <MoneyInput
+                      value={efetivo == null ? "" : String(efetivo)}
+                      onValueChange={(value) => setVal(k, value === "" ? null : Number(value))}
+                      placeholder={herdado ? "(herdado do padrão)" : "sem limite"}
+                    />
+                  )}
                   <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                     <span>{herdado ? "Herdado do padrão" : "Customizado"}</span>
                     {!herdado && (

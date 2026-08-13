@@ -37,10 +37,6 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
-    // Confirma que o pacote OTA inicializou. Se esta confirmação não ocorrer,
-    // o plugin restaura automaticamente o último pacote funcional.
-    void notifyUpdateReady();
-
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
   return (
@@ -146,6 +142,11 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   useEffect(() => {
+    // Confirma o pacote OTA depois que a aplicação montou com sucesso. Sem esta
+    // confirmação o atualizador restaura o pacote anterior e oferece novamente
+    // uma versão que o usuário já instalou.
+    void notifyUpdateReady();
+
     // Remove the loading overlay injected by the CSR shell HTML so users
     // cannot interact with inputs before React has fully mounted.
     const overlay = document.getElementById("app-loading");

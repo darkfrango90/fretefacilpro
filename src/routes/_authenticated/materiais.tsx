@@ -22,7 +22,7 @@ function Page() {
       defaults={{ unidade: "m3", ativo: true }}
       fields={[
         { name: "nome", label: "Nome (ex: Areia média)", required: true },
-        { name: "preco_base", label: "Preço base (R$)", type: "number", step: "0.01", required: true },
+        { name: "preco_base", label: "Preço base (R$)", type: "currency", required: true },
       ]}
       renderRow={(r) => (
         <div>

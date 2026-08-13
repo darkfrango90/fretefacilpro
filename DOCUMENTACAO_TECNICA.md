@@ -84,8 +84,9 @@ pendente ── iniciar ──> em_rota ── finalizar ──> entregue
 
 ### Frota e custos
 
-- `/operacao`: acesso rápido a abastecimentos, despesas e pneus;
-- `/abastecimento`: litros, valor, KM, cupom e OCR;
+- `/operacao`: acesso rápido a abastecimentos, trocas de óleo, despesas e pneus;
+- `/abastecimento`: litros, valor, KM, cupom e OCR; administradores consultam e editam os registros de toda a empresa;
+- `/trocas-oleo`: veículo, data, valor, KM, observação e histórico preparado para futuros alertas de manutenção;
 - `/despesas` e `/despesas/nova`: lançamento e conferência de custos;
 - `/pneus`, `/pneus/instalar`, `/pneus/remover/$id` e `/pneus/relatorio`: ciclo e custo dos pneus;
 - `/afericoes`: aferição física do tanque;
@@ -104,7 +105,7 @@ Principais tabelas:
 
 - identidade e empresa: `empresas`, `profiles`, `user_roles`;
 - operação: `clientes`, `materiais`, `veiculos`, `entregas`, `jornadas`;
-- frota/custos: `abastecimentos`, `afericoes_tanque`, `despesas`, `pneus`;
+- frota/custos: `abastecimentos`, `trocas_oleo`, `afericoes_tanque`, `despesas`, `pneus`;
 - configuração: `permissoes_padrao`, `permissoes_motorista`;
 - suporte: `empresa_venda_seq` e `auditoria`.
 
@@ -133,11 +134,11 @@ O Dexie mantém:
 - `sync_history`: resumo das tentativas;
 - `permissoes_cache`: permissão efetiva do usuário.
 
-A fila suporta venda, início/finalização, abastecimento, despesa e instalação/remoção de pneu. Cada item contém `empresa_id` e `motorista_id`; leitura e envio agora são filtrados pela identidade ativa para impedir vazamento entre sessões no mesmo aparelho.
+A fila suporta venda, início/finalização, abastecimento, troca de óleo, despesa e instalação/remoção de pneu. Cada item contém `empresa_id` e `motorista_id`; leitura e envio agora são filtrados pela identidade ativa para impedir vazamento entre sessões no mesmo aparelho.
 
 No início da entrega, a foto do painel e o KM confirmado ficam na mesma operação da fila. Ao reconectar, a foto é enviada primeiro ao bucket privado `odometros` e somente depois a entrega é iniciada. A leitura por IA exige conexão, mas a captura e o preenchimento manual continuam disponíveis offline.
 
-As listas críticas de entregas pendentes/em rota, veículos e abastecimento possuem último resultado persistido por usuário/empresa. A sincronização roda ao recuperar conexão, receber foco, alterar a fila, iniciar a aplicação e a cada 60 segundos. Uploads usam caminhos `empresa/usuario/arquivo` e `upsert` para retry idempotente.
+As listas críticas de entregas pendentes/em rota, veículos, abastecimentos e trocas de óleo possuem último resultado persistido por usuário/empresa. A sincronização roda ao recuperar conexão, receber foco, alterar a fila, iniciar a aplicação e a cada 60 segundos. Uploads usam caminhos `empresa/usuario/arquivo` e `upsert` para retry idempotente.
 
 Limite conhecido: o modo offline depende de ao menos um carregamento online anterior para popular listas de referência. Conflitos e violações de permissão são decididos pelo servidor; recusas definitivas permanecem visíveis na tela de sincronização.
 
@@ -176,6 +177,7 @@ Para uma instalação nova, aplique no SQL Editor nesta ordem:
 14. `MIGRATION_PNEUS.sql`;
 15. `MIGRATION_HARDENING.sql`;
 16. `supabase/migrations/20260808210000_ocr_odometro.sql` por último.
+17. `supabase/migrations/20260813120000_trocas_oleo.sql` para o histórico de manutenção.
 
 Em uma base existente, faça backup e aplique somente as migrações ainda ausentes, respeitando a ordem acima. Os scripts usam predominantemente operações idempotentes, mas devem ser validados primeiro em staging.
 
@@ -500,3 +502,34 @@ APK-base não assinado:
 - versão web/OTA: `1.6.2`, compatível com a base Android `1.6`.
 
 Limite: OTA atualiza somente HTML, CSS e JavaScript. Mudanças em câmera, localização, permissões, plugins, Gradle ou Manifest continuam exigindo um APK nativo com versão superior. A publicação do primeiro manifesto depende do deploy Git/Vercel; o CLI Vercel local não possuía credenciais e nenhuma conta externa foi criada automaticamente.
+
+## 23. Operação e correções OTA 1.6.3
+
+### Administração de abastecimentos
+
+- a listagem identifica o papel ativo: motorista continua vendo somente os próprios lançamentos e administrador vê os 30 mais recentes de toda a empresa;
+- cada registro administrativo mostra o motorista responsável e oferece edição de veículo, data/hora, litros, valor, KM e observações;
+- a atualização continua protegida pela RLS da empresa e atualiza o cache local depois da confirmação do banco;
+- a mensagem de lista vazia diferencia o histórico individual do histórico da empresa.
+
+### Valores monetários
+
+- criado o componente compartilhado `MoneyInput`, com prefixo `R$`, agrupamento de milhares enquanto o usuário digita e duas casas decimais ao concluir o campo;
+- a entrada `2000` é apresentada como `R$ 2.000,00`, evitando que o motorista confunda reais e centavos;
+- a máscara foi aplicada a vendas, fretes, despesas, abastecimentos, pneus, materiais, permissões comerciais, edição administrativa e troca de óleo;
+- os valores continuam sendo enviados ao banco como números decimais, sem símbolos ou separadores de apresentação.
+
+### Troca de óleo
+
+- adicionada a rota `/trocas-oleo`, acessível pelo menu **Operação**;
+- o lançamento exige caminhão ativo, data, valor positivo e KM válido; observação é opcional;
+- registros podem ser criados offline e são sincronizados de modo idempotente ao recuperar a conexão;
+- motorista vê o próprio histórico; administrador vê o histórico da empresa e o nome do responsável;
+- a tabela `trocas_oleo` possui RLS, auditoria e índices por empresa/data, veículo/KM e motorista/data, preparando a futura regra de aviso por quilometragem.
+- a migração `20260813120000_trocas_oleo.sql` foi aplicada no projeto Supabase vinculado e `admin-reset` foi publicada e confirmada como `ACTIVE`, versão 4.
+
+### Atualização interna
+
+- corrigida a chamada de `notifyAppReady()`: o pacote OTA agora é confirmado depois da montagem bem-sucedida da aplicação, e não somente quando ocorria um erro;
+- sem essa confirmação, o plugin podia restaurar o pacote anterior após o reinício e voltar a oferecer a mesma versão;
+- a versão web/OTA desta rodada é `1.6.3`, compatível com a base Android `1.6`, sem necessidade de gerar ou distribuir outro APK.

@@ -8,7 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -16,6 +20,7 @@ import { Camera } from "lucide-react";
 import { capturarFoto } from "@/lib/native";
 import { enqueue, fileToPhoto } from "@/lib/offline/queue";
 import { syncNow } from "@/lib/offline/sync";
+import { MoneyInput } from "@/components/money-input";
 
 export const Route = createFileRoute("/_authenticated/despesas/nova")({
   component: Page,
@@ -63,13 +68,23 @@ function Page() {
       try {
         const raw = localStorage.getItem(cacheKey);
         return raw ? JSON.parse(raw) : undefined;
-      } catch { return undefined; }
+      } catch {
+        return undefined;
+      }
     },
     queryFn: async () => {
       const list =
-        (await (supabase as any).from("veiculos").select("id, placa").eq("ativo", true).order("placa")).data ?? [];
+        (
+          await (supabase as any)
+            .from("veiculos")
+            .select("id, placa")
+            .eq("ativo", true)
+            .order("placa")
+        ).data ?? [];
       if (cacheKey) {
-        try { localStorage.setItem(cacheKey, JSON.stringify(list)); } catch {}
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify(list));
+        } catch {}
       }
       return list;
     },
@@ -130,10 +145,14 @@ function Page() {
           <div>
             <Label>Categoria *</Label>
             <Select value={categoria} onValueChange={setCategoria}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {CATEGORIAS.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  <SelectItem key={c.value} value={c.value}>
+                    {c.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -142,11 +161,15 @@ function Page() {
           <div>
             <Label>Veículo</Label>
             <Select value={veiculoId} onValueChange={setVeiculoId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__nenhum__">Despesa geral (sem veículo)</SelectItem>
                 {(veiculos ?? []).map((v: any) => (
-                  <SelectItem key={v.id} value={v.id}>{v.placa}</SelectItem>
+                  <SelectItem key={v.id} value={v.id}>
+                    {v.placa}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -154,20 +177,17 @@ function Page() {
 
           <div>
             <Label>Descrição</Label>
-            <Input value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Ex.: Pedágio BR-153" />
+            <Input
+              value={descricao}
+              onChange={(e) => setDescricao(e.target.value)}
+              placeholder="Ex.: Pedágio BR-153"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Valor (R$) *</Label>
-              <Input
-                type="number"
-                step="0.01"
-                inputMode="decimal"
-                value={valor}
-                onChange={(e) => setValor(e.target.value)}
-                required
-              />
+              <MoneyInput value={valor} onValueChange={setValor} required />
             </div>
             <div>
               <Label>Data *</Label>
@@ -177,7 +197,12 @@ function Page() {
 
           <div>
             <Label>KM do veículo</Label>
-            <Input type="number" inputMode="numeric" value={km} onChange={(e) => setKm(e.target.value)} />
+            <Input
+              type="number"
+              inputMode="numeric"
+              value={km}
+              onChange={(e) => setKm(e.target.value)}
+            />
           </div>
 
           <div>
@@ -201,11 +226,7 @@ function Page() {
                 <Camera className="h-4 w-4 mr-1" />
                 {foto ? "Trocar foto" : "Tirar foto"}
               </Button>
-              {foto && (
-                <span className="text-xs text-muted-foreground truncate">
-                  {foto.name}
-                </span>
-              )}
+              {foto && <span className="text-xs text-muted-foreground truncate">{foto.name}</span>}
             </div>
           </div>
 

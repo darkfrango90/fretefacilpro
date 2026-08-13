@@ -160,6 +160,13 @@ async function pushOne(item: OutboxItem, identity: SyncIdentity): Promise<void> 
     if (kmAtual == null || kmAtual <= 0) throw new Error("KM_ATUAL_INVALIDO");
     payload.km_atual = kmAtual;
   }
+  if (item.type === "troca_oleo") {
+    const { error } = await (supabase as any)
+      .from("trocas_oleo")
+      .upsert(payload, { onConflict: "id" });
+    if (error) throw error;
+    return;
+  }
   const { error } = await (supabase as any)
     .from("abastecimentos")
     .upsert(payload, { onConflict: "id" });

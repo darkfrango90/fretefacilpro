@@ -41,6 +41,7 @@ import { pendingByType } from "@/lib/offline/queue";
 import type { OutboxItem } from "@/lib/offline/db";
 import { SwipeToAction } from "@/components/swipe-to-action";
 import { EntregaDetalheDialog } from "@/components/entrega-detalhe-dialog";
+import { MoneyInput } from "@/components/money-input";
 
 import { AdminOnly } from "@/components/role-guard";
 
@@ -447,20 +448,16 @@ function Page() {
               </div>
               <div>
                 <Label>Valor praticado (R$)</Label>
-                <Input
-                  type="number"
-                  inputMode="decimal"
+                <MoneyInput
                   value={editar.valor_praticado}
-                  onChange={(e) => setEditar({ ...editar, valor_praticado: e.target.value })}
+                  onValueChange={(value) => setEditar({ ...editar, valor_praticado: value })}
                 />
               </div>
               <div>
                 <Label>Valor do frete (R$)</Label>
-                <Input
-                  type="number"
-                  inputMode="decimal"
+                <MoneyInput
                   value={editar.valor_frete}
-                  onChange={(e) => setEditar({ ...editar, valor_frete: e.target.value })}
+                  onValueChange={(value) => setEditar({ ...editar, valor_frete: value })}
                 />
               </div>
               <div>

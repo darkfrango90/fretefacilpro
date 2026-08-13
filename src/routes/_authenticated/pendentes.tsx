@@ -41,6 +41,7 @@ import { SwipeToAction } from "@/components/swipe-to-action";
 import { readOfflineCache, writeOfflineCache } from "@/lib/offline/cache";
 import { OdometroOcrField } from "@/components/odometro-ocr-field";
 import type { ConfiancaOdometro } from "@/lib/ocr-odometro";
+import { MoneyInput } from "@/components/money-input";
 
 export const Route = createFileRoute("/_authenticated/pendentes")({
   component: Pendentes,
@@ -423,20 +424,16 @@ function Pendentes() {
               </div>
               <div>
                 <Label>Valor praticado (R$)</Label>
-                <Input
-                  type="number"
-                  inputMode="decimal"
+                <MoneyInput
                   value={editar.valor_praticado}
-                  onChange={(e) => setEditar({ ...editar, valor_praticado: e.target.value })}
+                  onValueChange={(value) => setEditar({ ...editar, valor_praticado: value })}
                 />
               </div>
               <div>
                 <Label>Valor do frete (R$)</Label>
-                <Input
-                  type="number"
-                  inputMode="decimal"
+                <MoneyInput
                   value={editar.valor_frete}
-                  onChange={(e) => setEditar({ ...editar, valor_frete: e.target.value })}
+                  onValueChange={(value) => setEditar({ ...editar, valor_frete: value })}
                 />
               </div>
               <div>

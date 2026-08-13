@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Fuel, Receipt, CircleDot, ChevronRight } from "lucide-react";
+import { Fuel, Receipt, CircleDot, ChevronRight, Droplet } from "lucide-react";
 import { useProfile } from "@/hooks/use-session";
 
 export const Route = createFileRoute("/_authenticated/operacao")({
@@ -34,6 +34,12 @@ function Page() {
       icone: <Receipt className="h-6 w-6" />,
     },
     {
+      to: "/trocas-oleo",
+      titulo: "Troca de óleo",
+      descricao: "Registrar data, valor e KM da troca de óleo",
+      icone: <Droplet className="h-6 w-6" />,
+    },
+    {
       to: "/pneus",
       titulo: "Pneus",
       descricao: "Controle por posição, troca e durabilidade do pneu",
@@ -45,9 +51,7 @@ function Page() {
     <div className="space-y-4 pb-6">
       <div>
         <h1 className="text-xl font-bold">Operação</h1>
-        <p className="text-sm text-muted-foreground">
-          Funções operacionais do veículo
-        </p>
+        <p className="text-sm text-muted-foreground">Funções operacionais do veículo</p>
       </div>
 
       <div className="space-y-3">
@@ -66,13 +70,9 @@ function Page() {
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground line-clamp-2">
-                  {item.descricao}
-                </p>
+                <p className="text-xs text-muted-foreground line-clamp-2">{item.descricao}</p>
               </div>
-              {!item.emBreve && (
-                <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
-              )}
+              {!item.emBreve && <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />}
             </CardContent>
           );
 
@@ -85,9 +85,7 @@ function Page() {
           }
           return (
             <Link key={item.titulo} to={item.to} className="block">
-              <Card className="active:scale-[0.99] transition-transform">
-                {conteudo}
-              </Card>
+              <Card className="active:scale-[0.99] transition-transform">{conteudo}</Card>
             </Link>
           );
         })}

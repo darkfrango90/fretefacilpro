@@ -3,6 +3,7 @@ import Dexie, { type Table } from "dexie";
 export type OutboxType =
   | "entrega" // cadastro de venda (status pendente) - legado também
   | "abastecimento"
+  | "troca_oleo"
   | "despesa"
   | "pneu_instalacao"
   | "pneu_remocao"

@@ -16,6 +16,7 @@ import {
   CircleDot,
   Fuel,
   Download,
+  Droplet,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
@@ -92,6 +93,12 @@ function AdminConfig() {
           icon={<Fuel className="h-5 w-5" />}
           label="Abastecimento"
           hint="Registrar abastecimento com cupom"
+        />
+        <Item
+          to="/trocas-oleo"
+          icon={<Droplet className="h-5 w-5" />}
+          label="Troca de óleo"
+          hint="Registrar e consultar o histórico"
         />
         <Item
           to="/despesas"

@@ -86,6 +86,8 @@ O build cria saídas separadas:
 
 O manifesto informa a versão nativa compatível, tamanho, notas e SHA-256. O aplicativo rejeita formato inválido, versão nativa incompatível e ZIP com checksum diferente. `notifyAppReady()` confirma que a nova interface abriu; se isso não ocorrer no prazo configurado, o plugin restaura o pacote funcional anterior.
 
+A confirmação deve ser chamada no fluxo de montagem bem-sucedida da aplicação. A versão OTA 1.6.3 corrige o comportamento anterior em que a confirmação acontecia apenas no tratamento de erro, o que podia restaurar a versão anterior e repetir o aviso de atualização.
+
 Para publicar uma nova atualização somente de interface:
 
 1. altere `version` no `package.json`, por exemplo de `1.6.0` para `1.6.1`;
