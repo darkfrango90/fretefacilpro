@@ -2,9 +2,9 @@
   "nativeVersion": "1.6",
   "required": false,
   "notes": [
-    "Novo relatório mensal individual por motorista na tela Relatórios do administrador.",
-    "Vendas de material e fretes são exibidos como duas métricas separadas.",
-    "O motorista encontra Meu relatório mensal como primeiro item das Configurações.",
-    "A competência começa no primeiro dia e fecha automaticamente no último dia de cada mês."
+    "Agora uma venda pode conter até 3 materiais diferentes.",
+    "Use o botão Adicionar outro material abaixo da lista para incluir novos itens.",
+    "Cada material possui quantidade e valor próprios; o frete continua único por venda.",
+    "Listas, detalhes, filtros, financeiro e relatórios foram adaptados para os vários materiais."
   ]
 }

@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useProfile } from "@/hooks/use-session";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { calcularValorMateriais } from "@/lib/entrega-itens";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ClipboardList,
@@ -42,7 +43,7 @@ function AdminDashboard({ empresaId }: { empresaId: string }) {
         (supabase as any)
           .from("entregas")
           .select(
-            "id, valor_praticado, valor_frete, quantidade, motorista_venda_id, motorista_entrega_id, status, criada_em",
+            "id, material_id, itens, valor_praticado, valor_frete, quantidade, motorista_venda_id, motorista_entrega_id, status, criada_em",
           )
           .gte("criada_em", sinceIso),
         (supabase as any)
@@ -75,7 +76,7 @@ function AdminDashboard({ empresaId }: { empresaId: string }) {
 
       const totalVendas = vendasValidas.length;
       const receitaProduto = vendasValidas.reduce(
-        (s: number, e: any) => s + Number(e.valor_praticado || 0) * Number(e.quantidade || 1),
+        (s: number, e: any) => s + calcularValorMateriais(e),
         0,
       );
       const receitaFrete = vendasValidas.reduce(

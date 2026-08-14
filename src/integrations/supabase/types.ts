@@ -444,6 +444,7 @@ export type Database = {
           gps_inicio_lat: number | null;
           gps_inicio_lng: number | null;
           id: string;
+          itens: Json;
           iniciada_em: string | null;
           jornada_id: string | null;
           km_final: number | null;
@@ -495,6 +496,7 @@ export type Database = {
           gps_inicio_lat?: number | null;
           gps_inicio_lng?: number | null;
           id: string;
+          itens?: Json;
           iniciada_em?: string | null;
           jornada_id?: string | null;
           km_final?: number | null;
@@ -546,6 +548,7 @@ export type Database = {
           gps_inicio_lat?: number | null;
           gps_inicio_lng?: number | null;
           id?: string;
+          itens?: Json;
           iniciada_em?: string | null;
           jornada_id?: string | null;
           km_final?: number | null;

@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Lock } from "lucide-react";
+import { Lock, Plus, Trash2 } from "lucide-react";
 import { enqueue } from "@/lib/offline/queue";
 import { syncNow } from "@/lib/offline/sync";
 import { ClienteCombobox } from "@/components/cliente-combobox";
@@ -35,16 +35,25 @@ function materialEhFrete(material: { nome?: unknown } | undefined): boolean {
   );
 }
 
+type MaterialVendaForm = {
+  key: string;
+  materialId: string;
+  precoBase: number | null;
+  valorPraticado: string;
+  quantidade: string;
+};
+
+function novoMaterial(key: string = crypto.randomUUID()): MaterialVendaForm {
+  return { key, materialId: "", precoBase: null, valorPraticado: "", quantidade: "1" };
+}
+
 function NovaVenda() {
   const { data: prof } = useProfile();
   const { perms } = usePermissoes();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [clienteId, setClienteId] = useState("");
-  const [materialId, setMaterialId] = useState("");
-  const [precoBase, setPrecoBase] = useState<number | null>(null);
-  const [valorPraticado, setValorPraticado] = useState("");
-  const [quantidade, setQuantidade] = useState("1");
+  const [itens, setItens] = useState<MaterialVendaForm[]>(() => [novoMaterial("material-1")]);
   const [valorFrete, setValorFrete] = useState("");
   const [endereco, setEndereco] = useState("");
   const [cidade, setCidade] = useState("");
@@ -172,47 +181,85 @@ function NovaVenda() {
     return list.filter((m: any) => allow.includes(m.id));
   }, [materiaisAll, perms.materiais_permitidos]);
 
-  const materialSelecionado = (materiaisAll ?? []).find((item: any) => item.id === materialId);
-  const somenteFrete = materialEhFrete(materialSelecionado);
+  const materiaisSelecionados = itens.map((item) =>
+    (materiaisAll ?? []).find((material: any) => material.id === item.materialId),
+  );
+  const somenteFrete = itens.length === 1 && materialEhFrete(materiaisSelecionados[0]);
 
   if (!prof) return null;
   const profile = prof.profile;
 
-  function onMaterialChange(id: string) {
-    setMaterialId(id);
+  function onMaterialChange(index: number, id: string) {
     const m = (materiaisAll ?? []).find((x: any) => x.id === id);
-    if (m) {
-      const base = Number(m.preco_base);
-      setPrecoBase(base);
-      if (materialEhFrete(m)) {
-        setQuantidade("1");
-        setValorPraticado("0");
-      } else if (!perms.pode_alterar_valor_produto) {
-        setValorPraticado(String(base));
-      } else if (!valorPraticado || Number(valorPraticado) === 0) {
-        setValorPraticado(String(base));
-      }
-    }
+    const base = m ? Number(m.preco_base) : null;
+    setItens((atuais) =>
+      atuais.map((item, itemIndex) => {
+        if (itemIndex !== index) return item;
+        if (!m) return { ...item, materialId: id, precoBase: null };
+        const frete = materialEhFrete(m);
+        const manterValor = item.valorPraticado && Number(item.valorPraticado) !== 0;
+        return {
+          ...item,
+          materialId: id,
+          precoBase: base,
+          quantidade: frete ? "1" : item.quantidade,
+          valorPraticado: frete
+            ? "0"
+            : !perms.pode_alterar_valor_produto || !manterValor
+              ? String(base)
+              : item.valorPraticado,
+        };
+      }),
+    );
+  }
+
+  function atualizarItem(index: number, patch: Partial<MaterialVendaForm>) {
+    setItens((atuais) =>
+      atuais.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)),
+    );
+  }
+
+  function adicionarMaterial() {
+    setItens((atuais) => (atuais.length < 3 ? [...atuais, novoMaterial()] : atuais));
+  }
+
+  function removerMaterial(index: number) {
+    setItens((atuais) => atuais.filter((_, itemIndex) => itemIndex !== index));
   }
 
   function validar(): string | null {
-    if (!clienteId || !materialId) return "Cliente e material são obrigatórios";
+    if (!clienteId || itens.some((item) => !item.materialId)) {
+      return "Cliente e todos os materiais são obrigatórios";
+    }
+    if (itens.length < 1 || itens.length > 3) return "A venda deve ter de 1 a 3 materiais";
+    if (new Set(itens.map((item) => item.materialId)).size !== itens.length) {
+      return "Não adicione o mesmo material mais de uma vez";
+    }
+    if (materiaisSelecionados.some(materialEhFrete) && !somenteFrete) {
+      return "O material FRETE deve ser usado sozinho na venda";
+    }
     if (!formaPagamento) return "Escolha a forma de pagamento";
-    if (!somenteFrete && !valorPraticado) return "Informe o valor praticado";
-    const vp = somenteFrete ? 0 : Number(valorPraticado);
-    const qtd = somenteFrete ? 1 : Number(quantidade || 0);
-    if (!Number.isFinite(vp) || vp < 0) return "Valor praticado inválido";
-    if (!Number.isFinite(qtd) || qtd <= 0) return "Quantidade inválida";
-    if (!somenteFrete && precoBase != null) {
-      if (!perms.pode_alterar_valor_produto && vp !== precoBase) {
-        return "Você não pode alterar o valor do produto";
-      }
-      if (precoBase > 0 && vp < precoBase) {
-        const pct = ((precoBase - vp) / precoBase) * 100;
-        if (pct > (perms.desconto_maximo_percent ?? 0)) {
-          return `Desconto acima do permitido (${pct.toFixed(1)}% > ${perms.desconto_maximo_percent}%)`;
+    let totalMateriais = 0;
+    for (const item of itens) {
+      const material = (materiaisAll ?? []).find((m: any) => m.id === item.materialId);
+      const itemFrete = materialEhFrete(material);
+      if (!itemFrete && !item.valorPraticado) return "Informe o valor de todos os materiais";
+      const vp = itemFrete ? 0 : Number(item.valorPraticado);
+      const qtd = itemFrete ? 1 : Number(item.quantidade || 0);
+      if (!Number.isFinite(vp) || vp < 0) return "Valor praticado inválido";
+      if (!Number.isFinite(qtd) || qtd <= 0) return "Quantidade inválida";
+      if (!itemFrete && item.precoBase != null) {
+        if (!perms.pode_alterar_valor_produto && vp !== item.precoBase) {
+          return "Você não pode alterar o valor do produto";
+        }
+        if (item.precoBase > 0 && vp < item.precoBase) {
+          const pct = ((item.precoBase - vp) / item.precoBase) * 100;
+          if (pct > (perms.desconto_maximo_percent ?? 0)) {
+            return `Desconto acima do permitido (${pct.toFixed(1)}% > ${perms.desconto_maximo_percent}%)`;
+          }
         }
       }
+      totalMateriais += vp * qtd;
     }
     const frete = Number(valorFrete || 0);
     if (!Number.isFinite(frete) || frete < 0) return "Valor do frete inválido";
@@ -221,7 +268,7 @@ function NovaVenda() {
     if (perms.frete_maximo != null && frete > perms.frete_maximo) {
       return `Frete acima do máximo (R$ ${perms.frete_maximo.toFixed(2)})`;
     }
-    const total = vp * qtd + frete;
+    const total = totalMateriais + frete;
     if (perms.valor_venda_minimo != null && total < perms.valor_venda_minimo) {
       return `Venda abaixo do mínimo (R$ ${perms.valor_venda_minimo.toFixed(2)})`;
     }
@@ -245,15 +292,34 @@ function NovaVenda() {
         [endereco.trim(), [cidade.trim(), estado.trim().toUpperCase()].filter(Boolean).join("/")]
           .filter(Boolean)
           .join(" - ") || null;
+      const itensPayload = itens.map((item, index) => {
+        const material = materiaisSelecionados[index];
+        const itemFrete = materialEhFrete(material);
+        return {
+          material_id: item.materialId,
+          preco_base: itemFrete ? 0 : Number(item.precoBase ?? 0),
+          valor_praticado: itemFrete ? 0 : Number(item.valorPraticado),
+          quantidade: itemFrete ? 1 : Number(item.quantidade || 1),
+        };
+      });
+      const primeiroItem = itensPayload[0];
+      const totalMateriais = itensPayload.reduce(
+        (total, item) => total + item.valor_praticado * item.quantidade,
+        0,
+      );
       const payload: any = {
         empresa_id: profile.empresa_id,
         motorista_id: profile.id,
         motorista_venda_id: profile.id,
         cliente_id: clienteId,
-        material_id: materialId,
-        preco_base_no_momento: precoBase ?? 0,
-        valor_praticado: somenteFrete ? 0 : Number(valorPraticado),
-        quantidade: somenteFrete ? 1 : Number(quantidade || 1),
+        material_id: primeiroItem.material_id,
+        preco_base_no_momento:
+          itensPayload.length === 1
+            ? primeiroItem.preco_base
+            : itensPayload.reduce((total, item) => total + item.preco_base * item.quantidade, 0),
+        valor_praticado: itensPayload.length === 1 ? primeiroItem.valor_praticado : totalMateriais,
+        quantidade: itensPayload.length === 1 ? primeiroItem.quantidade : 1,
+        itens: itensPayload,
         valor_frete: Number(valorFrete || 0),
         endereco: enderecoCompleto,
         status: "pendente",
@@ -282,10 +348,7 @@ function NovaVenda() {
     }
   }
 
-  const diff =
-    !somenteFrete && precoBase != null && valorPraticado && Number(valorPraticado) !== precoBase;
   const freteTravado = !perms.pode_alterar_frete;
-  const valorTravado = somenteFrete || !perms.pode_alterar_valor_produto;
 
   return (
     <form onSubmit={onSubmit} className="space-y-4 pb-6">
@@ -310,59 +373,115 @@ function NovaVenda() {
               }}
             />
           </div>
-          <div>
-            <Label>Material *</Label>
-            <Select value={materialId} onValueChange={onMaterialChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                {materiais.map((m: any) => (
-                  <SelectItem key={m.id} value={m.id}>
-                    {m.nome} · R$ {Number(m.preco_base).toFixed(2)}/{m.unidade}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="space-y-3">
+            {itens.map((item, index) => {
+              const material = materiaisSelecionados[index];
+              const itemFrete = materialEhFrete(material);
+              const valorTravado = itemFrete || !perms.pode_alterar_valor_produto;
+              const diff =
+                !itemFrete &&
+                item.precoBase != null &&
+                item.valorPraticado &&
+                Number(item.valorPraticado) !== item.precoBase;
+              return (
+                <div key={item.key} className="space-y-3 rounded-xl border bg-muted/20 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label>Material {index + 1} *</Label>
+                    {itens.length > 1 ? (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 text-destructive"
+                        aria-label={`Remover material ${index + 1}`}
+                        onClick={() => removerMaterial(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    ) : null}
+                  </div>
+                  <Select
+                    value={item.materialId}
+                    onValueChange={(value) => onMaterialChange(index, value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {materiais.map((m: any) => (
+                        <SelectItem
+                          key={m.id}
+                          value={m.id}
+                          disabled={
+                            itens.some(
+                              (outroItem, outroIndex) =>
+                                outroIndex !== index && outroItem.materialId === m.id,
+                            ) ||
+                            (itens.length > 1 && materialEhFrete(m))
+                          }
+                        >
+                          {m.nome} · R$ {Number(m.preco_base).toFixed(2)}/{m.unidade}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {itemFrete ? (
+                    <p className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
+                      FRETE selecionado: informe somente o valor do frete da venda.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>Quantidade</Label>
+                        <Input
+                          type="number"
+                          step="0.001"
+                          value={item.quantidade}
+                          onChange={(event) =>
+                            atualizarItem(index, { quantidade: event.target.value })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <Label className="flex items-center gap-1">
+                          Valor praticado *
+                          {valorTravado ? <Lock className="h-3 w-3 text-muted-foreground" /> : null}
+                        </Label>
+                        <MoneyInput
+                          value={item.valorPraticado}
+                          readOnly={valorTravado}
+                          onValueChange={(value) => atualizarItem(index, { valorPraticado: value })}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {diff && !valorTravado ? (
+                    <p className="text-xs text-amber-500">
+                      ⚠ Diferente do preço base (R$ {item.precoBase?.toFixed(2)})
+                    </p>
+                  ) : null}
+                </div>
+              );
+            })}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full border-dashed"
+              onClick={adicionarMaterial}
+              disabled={itens.length >= 3 || somenteFrete}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              {itens.length >= 3 ? "Limite de 3 materiais" : "Adicionar outro material"}
+            </Button>
+            <p className="text-center text-[11px] text-muted-foreground">
+              Uma venda pode ter até 3 materiais. O frete é informado uma única vez.
+            </p>
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardContent className="p-3 space-y-3">
-          {somenteFrete ? (
-            <p className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
-              FRETE selecionado: informe somente o valor do frete.
-            </p>
-          ) : (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Quantidade</Label>
-                <Input
-                  type="number"
-                  step="0.001"
-                  value={quantidade}
-                  onChange={(e) => setQuantidade(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label className="flex items-center gap-1">
-                  Valor praticado *
-                  {valorTravado && <Lock className="h-3 w-3 text-muted-foreground" />}
-                </Label>
-                <MoneyInput
-                  value={valorPraticado}
-                  readOnly={valorTravado}
-                  onValueChange={setValorPraticado}
-                />
-              </div>
-            </div>
-          )}
-          {diff && !valorTravado && (
-            <p className="text-xs text-amber-500">
-              ⚠ Diferente do preço base (R$ {precoBase?.toFixed(2)})
-            </p>
-          )}
           <div>
             <Label className="flex items-center gap-1">
               Valor do frete (R$) {somenteFrete ? "*" : ""}

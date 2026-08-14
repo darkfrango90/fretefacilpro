@@ -18,6 +18,12 @@ import {
 import { BarChart3, Download, Filter, X } from "lucide-react";
 import { EntregaDetalheDialog } from "@/components/entrega-detalhe-dialog";
 import { RelatorioMensalMotoristas } from "@/components/relatorio-mensal-motoristas";
+import {
+  calcularValorMateriais,
+  entregaPossuiMaterial,
+  obterItensEntrega,
+  resumoMateriais,
+} from "@/lib/entrega-itens";
 
 export const Route = createFileRoute("/_authenticated/relatorios")({
   component: () => (
@@ -81,7 +87,7 @@ function Page() {
       let qEnt = (supabase as any)
         .from("entregas")
         .select(
-          "id, numero, criada_em, finalizada_em, status, quantidade, valor_praticado, valor_frete, motorista_venda_id, motorista_entrega_id, material_id, cliente_id, veiculo_id, forma_pagamento",
+          "id, numero, criada_em, finalizada_em, status, itens, quantidade, valor_praticado, valor_frete, motorista_venda_id, motorista_entrega_id, material_id, cliente_id, veiculo_id, forma_pagamento",
         );
       let qAb = (supabase as any)
         .from("abastecimentos")
@@ -102,7 +108,6 @@ function Page() {
         qDesp = qDesp.lte("data", untilIso.slice(0, 10));
       }
       if (pagamento !== "todos") qEnt = qEnt.eq("forma_pagamento", pagamento);
-      if (materialId !== "todos") qEnt = qEnt.eq("material_id", materialId);
       if (clienteId !== "todos") qEnt = qEnt.eq("cliente_id", clienteId);
       if (motoristaId !== "todos") {
         qEnt = qEnt.or(
@@ -127,7 +132,9 @@ function Page() {
         (supabase as any).from("clientes").select("id, nome").eq("empresa_id", empresaId),
       ]);
 
-      const ents = entR.data ?? [];
+      const ents = (entR.data ?? []).filter(
+        (entrega: any) => materialId === "todos" || entregaPossuiMaterial(entrega, materialId),
+      );
       const vendasValidas = ents.filter((e: any) => e.status !== "cancelada");
       const abs = abR.data ?? [];
       const despesas = despR.data ?? [];
@@ -146,7 +153,7 @@ function Page() {
       const emRota = ents.filter((e: any) => e.status === "em_rota").length;
       const pendentes = ents.filter((e: any) => e.status === "pendente").length;
       const receitaProduto = vendasValidas.reduce(
-        (s: number, e: any) => s + Number(e.valor_praticado || 0) * Number(e.quantidade || 1),
+        (s: number, e: any) => s + calcularValorMateriais(e),
         0,
       );
       const receitaFrete = vendasValidas.reduce(
@@ -172,8 +179,7 @@ function Page() {
         if (!id) continue;
         const cur = porMot.get(id) ?? { qtd: 0, receita: 0 };
         cur.qtd += 1;
-        cur.receita +=
-          Number(e.valor_praticado || 0) * Number(e.quantidade || 1) + Number(e.valor_frete || 0);
+        cur.receita += calcularValorMateriais(e) + Number(e.valor_frete || 0);
         porMot.set(id, cur);
       }
       const rankingMotoristas = Array.from(porMot.entries())
@@ -184,8 +190,7 @@ function Page() {
       for (const e of vendasValidas) {
         const cur = porCli.get(e.cliente_id) ?? { qtd: 0, receita: 0 };
         cur.qtd += 1;
-        cur.receita +=
-          Number(e.valor_praticado || 0) * Number(e.quantidade || 1) + Number(e.valor_frete || 0);
+        cur.receita += calcularValorMateriais(e) + Number(e.valor_frete || 0);
         porCli.set(e.cliente_id, cur);
       }
       const topClientes = Array.from(porCli.entries())
@@ -195,10 +200,12 @@ function Page() {
 
       const porMat = new Map<string, { qtd: number; receita: number }>();
       for (const e of vendasValidas) {
-        const cur = porMat.get(e.material_id) ?? { qtd: 0, receita: 0 };
-        cur.qtd += Number(e.quantidade || 1);
-        cur.receita += Number(e.valor_praticado || 0) * Number(e.quantidade || 1);
-        porMat.set(e.material_id, cur);
+        for (const item of obterItensEntrega(e)) {
+          const cur = porMat.get(item.material_id) ?? { qtd: 0, receita: 0 };
+          cur.qtd += Number(item.quantidade);
+          cur.receita += Number(item.valor_praticado) * Number(item.quantidade);
+          porMat.set(item.material_id, cur);
+        }
       }
       const topMateriais = Array.from(porMat.entries())
         .map(([id, v]) => ({ id, nome: nameMat.get(id) ?? "—", ...v }))
@@ -209,8 +216,7 @@ function Page() {
         const k = e.forma_pagamento || "—";
         const cur = porPag.get(k) ?? { qtd: 0, receita: 0 };
         cur.qtd += 1;
-        cur.receita +=
-          Number(e.valor_praticado || 0) * Number(e.quantidade || 1) + Number(e.valor_frete || 0);
+        cur.receita += calcularValorMateriais(e) + Number(e.valor_frete || 0);
         porPag.set(k, cur);
       }
       const porPagamento = Array.from(porPag.entries())
@@ -262,8 +268,7 @@ function Page() {
         const d = (e.criada_em as string).slice(0, 10);
         const cur = porDia.get(d) ?? { qtd: 0, receita: 0 };
         cur.qtd += 1;
-        cur.receita +=
-          Number(e.valor_praticado || 0) * Number(e.quantidade || 1) + Number(e.valor_frete || 0);
+        cur.receita += calcularValorMateriais(e) + Number(e.valor_frete || 0);
         porDia.set(d, cur);
       }
       const serieDiaria = Array.from(porDia.entries())
@@ -277,12 +282,11 @@ function Page() {
           criada_em: e.criada_em,
           status: e.status,
           cliente: nameCli.get(e.cliente_id) ?? "—",
-          material: nameMat.get(e.material_id) ?? "—",
+          material: resumoMateriais(e),
           motorista:
             nameProfile.get(e.motorista_entrega_id) ?? nameProfile.get(e.motorista_venda_id) ?? "—",
           forma_pagamento: e.forma_pagamento,
-          total:
-            Number(e.valor_praticado || 0) * Number(e.quantidade || 1) + Number(e.valor_frete || 0),
+          total: calcularValorMateriais(e) + Number(e.valor_frete || 0),
         }))
         .sort((a: any, b: any) => (a.criada_em < b.criada_em ? 1 : -1));
 

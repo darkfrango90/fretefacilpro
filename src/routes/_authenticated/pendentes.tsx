@@ -42,6 +42,7 @@ import { readOfflineCache, writeOfflineCache } from "@/lib/offline/cache";
 import { OdometroOcrField } from "@/components/odometro-ocr-field";
 import type { ConfiancaOdometro } from "@/lib/ocr-odometro";
 import { MoneyInput } from "@/components/money-input";
+import { calcularValorMateriais, obterItensEntrega, resumoMateriais } from "@/lib/entrega-itens";
 
 export const Route = createFileRoute("/_authenticated/pendentes")({
   component: Pendentes,
@@ -99,7 +100,7 @@ function Pendentes() {
       let query = (supabase as any)
         .from("entregas")
         .select(
-          "id, valor_praticado, valor_frete, quantidade, endereco, observacoes, criada_em, motorista_id, cliente:clientes(nome), material:materiais(nome, unidade)",
+          "id, material_id, itens, valor_praticado, valor_frete, quantidade, endereco, observacoes, criada_em, motorista_id, cliente:clientes(nome), material:materiais(nome, unidade)",
         )
         .eq("status", "pendente")
         .order("criada_em", { ascending: true })
@@ -211,6 +212,7 @@ function Pendentes() {
     valor_frete: string;
     endereco: string;
     observacoes: string;
+    multiplosMateriais: boolean;
   } | null>(null);
   const [salvando, setSalvando] = useState(false);
 
@@ -222,6 +224,7 @@ function Pendentes() {
       valor_frete: String(r.valor_frete ?? ""),
       endereco: r.endereco ?? "",
       observacoes: r.observacoes ?? "",
+      multiplosMateriais: obterItensEntrega(r).length > 1,
     });
   }
 
@@ -230,8 +233,9 @@ function Pendentes() {
     const quantidade = Number(editar.quantidade);
     const valorPraticado = Number(editar.valor_praticado);
     const valorFrete = Number(editar.valor_frete || 0);
-    if (!Number.isFinite(quantidade) || quantidade <= 0) return toast.error("Quantidade inválida");
-    if (!Number.isFinite(valorPraticado) || valorPraticado < 0)
+    if (!editar.multiplosMateriais && (!Number.isFinite(quantidade) || quantidade <= 0))
+      return toast.error("Quantidade inválida");
+    if (!editar.multiplosMateriais && (!Number.isFinite(valorPraticado) || valorPraticado < 0))
       return toast.error("Valor inválido");
     if (!Number.isFinite(valorFrete) || valorFrete < 0) return toast.error("Frete inválido");
 
@@ -241,8 +245,7 @@ function Pendentes() {
         body: {
           action: "editar_entrega",
           entrega_id: editar.id,
-          quantidade,
-          valor_praticado: valorPraticado,
+          ...(editar.multiplosMateriais ? {} : { quantidade, valor_praticado: valorPraticado }),
           valor_frete: valorFrete,
           endereco: editar.endereco,
           observacoes: editar.observacoes,
@@ -321,16 +324,10 @@ function Pendentes() {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="font-medium truncate">{r.cliente?.nome ?? "—"}</div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {r.material?.nome} · {r.quantidade} {r.material?.unidade}
-                  </div>
+                  <div className="text-xs text-muted-foreground truncate">{resumoMateriais(r)}</div>
                 </div>
                 <div className="text-right text-sm font-semibold whitespace-nowrap">
-                  R${" "}
-                  {(
-                    Number(r.valor_praticado) * Number(r.quantidade || 1) +
-                    Number(r.valor_frete || 0)
-                  ).toFixed(2)}
+                  R$ {(calcularValorMateriais(r) + Number(r.valor_frete || 0)).toFixed(2)}
                 </div>
               </div>
               {r.endereco && (
@@ -413,22 +410,32 @@ function Pendentes() {
           </DialogHeader>
           {editar && (
             <div className="space-y-3">
-              <div>
-                <Label>Quantidade</Label>
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  value={editar.quantidade}
-                  onChange={(e) => setEditar({ ...editar, quantidade: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>Valor praticado (R$)</Label>
-                <MoneyInput
-                  value={editar.valor_praticado}
-                  onValueChange={(value) => setEditar({ ...editar, valor_praticado: value })}
-                />
-              </div>
+              {editar.multiplosMateriais && (
+                <p className="rounded-lg bg-muted p-2 text-xs text-muted-foreground">
+                  Esta venda possui vários materiais. Para preservar os itens, edite aqui apenas
+                  frete, endereço e observações.
+                </p>
+              )}
+              {!editar.multiplosMateriais && (
+                <div>
+                  <Label>Quantidade</Label>
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    value={editar.quantidade}
+                    onChange={(e) => setEditar({ ...editar, quantidade: e.target.value })}
+                  />
+                </div>
+              )}
+              {!editar.multiplosMateriais && (
+                <div>
+                  <Label>Valor praticado (R$)</Label>
+                  <MoneyInput
+                    value={editar.valor_praticado}
+                    onValueChange={(value) => setEditar({ ...editar, valor_praticado: value })}
+                  />
+                </div>
+              )}
               <div>
                 <Label>Valor do frete (R$)</Label>
                 <MoneyInput

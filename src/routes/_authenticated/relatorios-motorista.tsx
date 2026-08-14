@@ -21,6 +21,7 @@ import {
   competenciaAtual,
   obterIntervaloCompetencia,
 } from "@/lib/competencia-mensal";
+import { entregaPossuiMaterial, resumoMateriais } from "@/lib/entrega-itens";
 
 export const Route = createFileRoute("/_authenticated/relatorios-motorista")({
   component: Page,
@@ -82,7 +83,7 @@ function Page() {
       let q = (supabase as any)
         .from("entregas")
         .select(
-          "id, numero, criada_em, finalizada_em, status, quantidade, valor_praticado, valor_frete, forma_pagamento, cliente_id, material_id, cliente:clientes(nome), material:materiais(nome, unidade)",
+          "id, numero, criada_em, finalizada_em, status, itens, quantidade, valor_praticado, valor_frete, forma_pagamento, cliente_id, material_id, cliente:clientes(nome), material:materiais(nome, unidade)",
         )
         .eq("status", "entregue")
         .eq("motorista_entrega_id", uid)
@@ -92,12 +93,13 @@ function Page() {
         .gte("finalizada_em", intervaloMensal.inicioIso)
         .lte("finalizada_em", intervaloMensal.fimIso);
       if (pagamento !== "todos") q = q.eq("forma_pagamento", pagamento);
-      if (materialId !== "todos") q = q.eq("material_id", materialId);
       if (clienteId !== "todos") q = q.eq("cliente_id", clienteId);
 
       const { data: rows, error } = await q.limit(500);
       if (error) throw error;
-      const ents = rows ?? [];
+      const ents = (rows ?? []).filter(
+        (entrega: any) => materialId === "todos" || entregaPossuiMaterial(entrega, materialId),
+      );
       const totalVendas = ents.reduce(
         (s: number, e: any) => s + calcularValoresEntrega(e).vendasMaterial,
         0,
@@ -276,7 +278,7 @@ function Page() {
                         {e.cliente?.nome ?? "—"}
                       </div>
                       <div className="text-xs text-muted-foreground truncate">
-                        {e.material?.nome} · {e.quantidade} {e.material?.unidade}
+                        {resumoMateriais(e)}
                         {e.forma_pagamento
                           ? ` · ${
                               PAGAMENTOS.find((p) => p.v === e.forma_pagamento)?.l ??

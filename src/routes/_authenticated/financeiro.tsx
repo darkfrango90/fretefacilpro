@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Wallet, CheckCircle2, Clock, BanknoteIcon } from "lucide-react";
+import { calcularValorMateriais, resumoMateriais } from "@/lib/entrega-itens";
 
 export const Route = createFileRoute("/_authenticated/financeiro")({
   component: () => (
@@ -33,7 +34,7 @@ function brl(n: number) {
 }
 
 function totalEntrega(e: any) {
-  return Number(e.valor_praticado || 0) * Number(e.quantidade || 1) + Number(e.valor_frete || 0);
+  return calcularValorMateriais(e) + Number(e.valor_frete || 0);
 }
 
 function Page() {
@@ -51,7 +52,7 @@ function Page() {
         .select(
           `
           id, numero, status, status_pagamento, forma_pagamento,
-          valor_praticado, valor_frete, quantidade,
+          valor_praticado, valor_frete, quantidade, itens,
           criada_em, finalizada_em, pagamento_confirmado_em,
           motorista_venda_id, motorista_entrega_id,
           cliente_id, clientes(nome),
@@ -265,9 +266,7 @@ function EntregaCard({
               {e.numero != null && <span className="text-muted-foreground mr-1">#{e.numero}</span>}
               {e.clientes?.nome ?? "Cliente"}
             </div>
-            <div className="text-xs text-muted-foreground truncate">
-              {e.materiais?.nome ?? "—"} · {Number(e.quantidade || 1)} {e.materiais?.unidade ?? ""}
-            </div>
+            <div className="text-xs text-muted-foreground truncate">{resumoMateriais(e)}</div>
           </div>
           <div className="text-right shrink-0">
             <div className="font-bold">{brl(total)}</div>

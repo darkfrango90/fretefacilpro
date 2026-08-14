@@ -11,9 +11,10 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Loader2, MapPin, User } from "lucide-react";
+import { obterItensEntrega } from "@/lib/entrega-itens";
 
 const SELECT_DETAIL =
-  "id, numero, endereco, km_inicial, km_final, km_inicial_ia_confianca, km_final_ia_confianca, iniciada_em, finalizada_em, criada_em, quantidade, valor_praticado, valor_frete, preco_base_no_momento, status, observacoes, forma_pagamento, foto_odometro_inicial_url, foto_odometro_final_url, foto_material_url, assinatura_url, foto_material_gps_lat, foto_material_gps_lng, motorista_venda_id, motorista_entrega_id, cliente:clientes(nome), material:materiais(nome, unidade), veiculo:veiculos(placa)";
+  "id, numero, endereco, km_inicial, km_final, km_inicial_ia_confianca, km_final_ia_confianca, iniciada_em, finalizada_em, criada_em, material_id, itens, quantidade, valor_praticado, valor_frete, preco_base_no_momento, status, observacoes, forma_pagamento, foto_odometro_inicial_url, foto_odometro_final_url, foto_material_url, assinatura_url, foto_material_gps_lat, foto_material_gps_lng, motorista_venda_id, motorista_entrega_id, cliente:clientes(nome), material:materiais(nome, unidade), veiculo:veiculos(placa)";
 
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   pendente: { label: "Pendente", cls: "" },
@@ -123,11 +124,20 @@ export function EntregaDetalheDialog({
         {item && !isLoading && (
           <>
             <div className="space-y-1">
-              <Row
-                label="Material"
-                value={`${item.material?.nome ?? "—"} (${item.material?.unidade ?? ""})`}
-              />
-              <Row label="Quantidade" value={item.quantidade} />
+              {obterItensEntrega(item).map((material, index) => (
+                <div key={`${material.material_id}-${index}`} className="rounded-lg border p-2">
+                  <Row
+                    label={`Material ${index + 1}`}
+                    value={`${material.nome} (${material.unidade})`}
+                  />
+                  <Row label="Quantidade" value={material.quantidade} />
+                  <Row label="Valor unitário" value={fmtBRL(material.valor_praticado)} />
+                  <Row
+                    label="Subtotal"
+                    value={fmtBRL(Number(material.valor_praticado) * Number(material.quantidade))}
+                  />
+                </div>
+              ))}
               <Row label="Veículo" value={item.veiculo?.placa} />
               <Row
                 label="Endereço"
@@ -141,10 +151,10 @@ export function EntregaDetalheDialog({
                   )
                 }
               />
-              <Row label="Valor praticado" value={fmtBRL(item.valor_praticado)} />
-              {Number(item.preco_base_no_momento) !== Number(item.valor_praticado) && (
-                <Row label="Preço base" value={fmtBRL(item.preco_base_no_momento)} />
-              )}
+              {obterItensEntrega(item).length === 1 &&
+                Number(item.preco_base_no_momento) !== Number(item.valor_praticado) && (
+                  <Row label="Preço base" value={fmtBRL(item.preco_base_no_momento)} />
+                )}
               <Row label="Valor frete" value={fmtBRL(item.valor_frete)} />
               <Row label="Forma de pagamento" value={item.forma_pagamento ?? "—"} />
               <Row

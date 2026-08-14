@@ -1,3 +1,5 @@
+import { calcularValorMateriais } from "@/lib/entrega-itens";
+
 export type IntervaloCompetencia = {
   inicioIso: string;
   fimIso: string;
@@ -35,12 +37,14 @@ export function obterIntervaloCompetencia(
 }
 
 export function calcularValoresEntrega(entrega: {
+  itens?: unknown;
+  material_id?: string | null;
   quantidade?: number | string | null;
   valor_praticado?: number | string | null;
   valor_frete?: number | string | null;
 }) {
   return {
-    vendasMaterial: Number(entrega.valor_praticado || 0) * Number(entrega.quantidade || 1),
+    vendasMaterial: calcularValorMateriais(entrega),
     fretes: Number(entrega.valor_frete || 0),
   };
 }

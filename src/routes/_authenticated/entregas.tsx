@@ -42,6 +42,7 @@ import type { OutboxItem } from "@/lib/offline/db";
 import { SwipeToAction } from "@/components/swipe-to-action";
 import { EntregaDetalheDialog } from "@/components/entrega-detalhe-dialog";
 import { MoneyInput } from "@/components/money-input";
+import { calcularValorMateriais, obterItensEntrega, resumoMateriais } from "@/lib/entrega-itens";
 
 import { AdminOnly } from "@/components/role-guard";
 
@@ -81,7 +82,7 @@ function Page() {
       let q = (supabase as any)
         .from("entregas")
         .select(
-          "id, numero, valor_praticado, preco_base_no_momento, valor_frete, quantidade, status, criada_em, endereco, observacoes, motorista_venda_id, motorista_entrega_id, cliente:clientes(nome), material:materiais(nome, unidade), veiculo:veiculos(placa)",
+          "id, numero, material_id, itens, valor_praticado, preco_base_no_momento, valor_frete, quantidade, status, criada_em, endereco, observacoes, motorista_venda_id, motorista_entrega_id, cliente:clientes(nome), material:materiais(nome, unidade), veiculo:veiculos(placa)",
         )
         .order("criada_em", { ascending: false })
         .limit(150);
@@ -121,6 +122,7 @@ function Page() {
     valor_frete: string;
     endereco: string;
     observacoes: string;
+    multiplosMateriais: boolean;
   } | null>(null);
   const [salvando, setSalvando] = useState(false);
 
@@ -132,6 +134,7 @@ function Page() {
       valor_frete: String(r.valor_frete ?? ""),
       endereco: r.endereco ?? "",
       observacoes: r.observacoes ?? "",
+      multiplosMateriais: obterItensEntrega(r).length > 1,
     });
   }
 
@@ -140,8 +143,9 @@ function Page() {
     const quantidade = Number(editar.quantidade);
     const valorPraticado = Number(editar.valor_praticado);
     const valorFrete = Number(editar.valor_frete || 0);
-    if (!Number.isFinite(quantidade) || quantidade <= 0) return toast.error("Quantidade inválida");
-    if (!Number.isFinite(valorPraticado) || valorPraticado < 0)
+    if (!editar.multiplosMateriais && (!Number.isFinite(quantidade) || quantidade <= 0))
+      return toast.error("Quantidade inválida");
+    if (!editar.multiplosMateriais && (!Number.isFinite(valorPraticado) || valorPraticado < 0))
       return toast.error("Valor inválido");
     if (!Number.isFinite(valorFrete) || valorFrete < 0) return toast.error("Frete inválido");
 
@@ -151,8 +155,7 @@ function Page() {
         body: {
           action: "editar_entrega",
           entrega_id: editar.id,
-          quantidade,
-          valor_praticado: valorPraticado,
+          ...(editar.multiplosMateriais ? {} : { quantidade, valor_praticado: valorPraticado }),
           valor_frete: valorFrete,
           endereco: editar.endereco,
           observacoes: editar.observacoes,
@@ -289,8 +292,7 @@ function Page() {
             <div className="text-sm">
               R${" "}
               {(
-                Number(p.payload?.valor_praticado ?? 0) * Number(p.payload?.quantidade ?? 1) +
-                Number(p.payload?.valor_frete ?? 0)
+                calcularValorMateriais(p.payload ?? {}) + Number(p.payload?.valor_frete ?? 0)
               ).toFixed(2)}
             </div>
           </CardContent>
@@ -346,16 +348,12 @@ function Page() {
                 </span>
               </div>
               <div className="text-xs text-muted-foreground truncate">
-                {r.material?.nome} · {r.quantidade} {r.material?.unidade}
+                {resumoMateriais(r)}
                 {r.veiculo?.placa ? ` · ${r.veiculo.placa}` : ""}
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span>
-                  R${" "}
-                  {(
-                    Number(r.valor_praticado) * Number(r.quantidade || 1) +
-                    Number(r.valor_frete || 0)
-                  ).toFixed(2)}
+                  R$ {(calcularValorMateriais(r) + Number(r.valor_frete || 0)).toFixed(2)}
                 </span>
                 <span className="flex items-center gap-2">
                   {diff && (
@@ -437,22 +435,32 @@ function Page() {
           </DialogHeader>
           {editar && (
             <div className="space-y-3">
-              <div>
-                <Label>Quantidade</Label>
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  value={editar.quantidade}
-                  onChange={(e) => setEditar({ ...editar, quantidade: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>Valor praticado (R$)</Label>
-                <MoneyInput
-                  value={editar.valor_praticado}
-                  onValueChange={(value) => setEditar({ ...editar, valor_praticado: value })}
-                />
-              </div>
+              {editar.multiplosMateriais && (
+                <p className="rounded-lg bg-muted p-2 text-xs text-muted-foreground">
+                  Esta venda possui vários materiais. Para preservar os itens, edite aqui apenas
+                  frete, endereço e observações.
+                </p>
+              )}
+              {!editar.multiplosMateriais && (
+                <div>
+                  <Label>Quantidade</Label>
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    value={editar.quantidade}
+                    onChange={(e) => setEditar({ ...editar, quantidade: e.target.value })}
+                  />
+                </div>
+              )}
+              {!editar.multiplosMateriais && (
+                <div>
+                  <Label>Valor praticado (R$)</Label>
+                  <MoneyInput
+                    value={editar.valor_praticado}
+                    onValueChange={(value) => setEditar({ ...editar, valor_praticado: value })}
+                  />
+                </div>
+              )}
               <div>
                 <Label>Valor do frete (R$)</Label>
                 <MoneyInput

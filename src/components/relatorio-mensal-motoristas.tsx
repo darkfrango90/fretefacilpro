@@ -35,7 +35,7 @@ export function RelatorioMensalMotoristas({ empresaId }: Props) {
         (supabase as any)
           .from("entregas")
           .select(
-            "motorista_entrega_id, motorista_venda_id, quantidade, valor_praticado, valor_frete",
+            "motorista_entrega_id, motorista_venda_id, material_id, itens, quantidade, valor_praticado, valor_frete",
           )
           .eq("empresa_id", empresaId)
           .eq("status", "entregue")

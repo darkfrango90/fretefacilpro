@@ -83,7 +83,29 @@ Deno.serve(async (req) => {
       const localId = String(body?.local_id ?? "");
       if (!localId) return businessError("ID_LOCAL_OBRIGATORIO");
 
-      const [{ data: cliente }, { data: material }] = await Promise.all([
+      const itensRecebidos =
+        Array.isArray(payload.itens) && payload.itens.length > 0
+          ? payload.itens
+          : [
+              {
+                material_id: payload.material_id,
+                preco_base: payload.preco_base_no_momento,
+                valor_praticado: payload.valor_praticado,
+                quantidade: payload.quantidade,
+              },
+            ];
+      if (itensRecebidos.length < 1 || itensRecebidos.length > 3) {
+        return businessError("QUANTIDADE_MATERIAIS_INVALIDA");
+      }
+      const materialIds = itensRecebidos.map((item: any) => String(item?.material_id ?? ""));
+      if (
+        materialIds.some((id: string) => !id) ||
+        new Set(materialIds).size !== materialIds.length
+      ) {
+        return businessError("MATERIAIS_INVALIDOS");
+      }
+
+      const [{ data: cliente }, { data: materiaisEncontrados }] = await Promise.all([
         admin
           .from("clientes")
           .select("id, cpf_cnpj, telefone")
@@ -92,14 +114,15 @@ Deno.serve(async (req) => {
           .maybeSingle(),
         admin
           .from("materiais")
-          .select("id, nome, preco_base")
-          .eq("id", payload.material_id)
+          .select("id, nome, preco_base, unidade")
+          .in("id", materialIds)
           .eq("empresa_id", profile.empresa_id)
-          .eq("ativo", true)
-          .maybeSingle(),
+          .eq("ativo", true),
       ]);
       if (!cliente) return businessError("CLIENTE_INVALIDO");
-      if (!material) return businessError("MATERIAL_INVALIDO");
+      if ((materiaisEncontrados ?? []).length !== materialIds.length) {
+        return businessError("MATERIAL_INVALIDO");
+      }
 
       const isAdminOuMaster = await podeGerenciarEntrega(
         admin,
@@ -111,18 +134,36 @@ Deno.serve(async (req) => {
         ? { data: null }
         : await admin.rpc("get_permissoes_efetivas", { _motorista_id: userData.user.id });
 
-      const precoBase = Number(material.preco_base ?? 0);
-      const somenteFrete =
-        String(material.nome ?? "")
-          .trim()
-          .toLocaleUpperCase("pt-BR") === "FRETE";
-      const valorPraticado = somenteFrete ? 0 : Number(payload.valor_praticado);
-      const quantidade = somenteFrete ? 1 : Number(payload.quantidade ?? 1);
+      const materialPorId = new Map(
+        (materiaisEncontrados ?? []).map((material: any) => [material.id, material]),
+      );
+      const itens = itensRecebidos.map((item: any) => {
+        const material: any = materialPorId.get(String(item.material_id));
+        const itemFrete =
+          String(material?.nome ?? "")
+            .trim()
+            .toLocaleUpperCase("pt-BR") === "FRETE";
+        return {
+          material_id: material.id,
+          nome: material.nome,
+          unidade: material.unidade ?? null,
+          preco_base: itemFrete ? 0 : Number(material.preco_base ?? 0),
+          valor_praticado: itemFrete ? 0 : Number(item.valor_praticado),
+          quantidade: itemFrete ? 1 : Number(item.quantidade ?? 1),
+          item_frete: itemFrete,
+        };
+      });
+      const somenteFrete = itens.length === 1 && itens[0].item_frete;
+      if (itens.some((item: any) => item.item_frete) && !somenteFrete) {
+        return businessError("FRETE_DEVE_SER_UNICO");
+      }
       const valorFrete = Number(payload.valor_frete ?? 0);
       const observacoes = String(payload.observacoes ?? "").trim();
       if (
-        !numeroValido(valorPraticado) ||
-        !numeroValido(quantidade, Number.EPSILON) ||
+        itens.some(
+          (item: any) =>
+            !numeroValido(item.valor_praticado) || !numeroValido(item.quantidade, Number.EPSILON),
+        ) ||
         !numeroValido(valorFrete)
       ) {
         return businessError("VALORES_INVALIDOS");
@@ -137,17 +178,19 @@ Deno.serve(async (req) => {
         if (perms.telefone_obrigatorio === true && !cliente.telefone) {
           return businessError("PERMISSAO_NEGADA: telefone do cliente é obrigatório");
         }
-        if (
-          !somenteFrete &&
-          perms.pode_alterar_valor_produto === false &&
-          valorPraticado !== precoBase
-        ) {
-          return businessError("PERMISSAO_NEGADA: motorista não pode alterar o valor do produto");
-        }
-        if (!somenteFrete && precoBase > 0 && valorPraticado < precoBase) {
-          const desconto = ((precoBase - valorPraticado) / precoBase) * 100;
-          if (desconto > Number(perms.desconto_maximo_percent ?? 0)) {
-            return businessError("PERMISSAO_NEGADA: desconto acima do permitido");
+        for (const item of itens) {
+          if (item.item_frete) continue;
+          if (
+            perms.pode_alterar_valor_produto === false &&
+            item.valor_praticado !== item.preco_base
+          ) {
+            return businessError("PERMISSAO_NEGADA: motorista não pode alterar o valor do produto");
+          }
+          if (item.preco_base > 0 && item.valor_praticado < item.preco_base) {
+            const desconto = ((item.preco_base - item.valor_praticado) / item.preco_base) * 100;
+            if (desconto > Number(perms.desconto_maximo_percent ?? 0)) {
+              return businessError("PERMISSAO_NEGADA: desconto acima do permitido");
+            }
           }
         }
         if (perms.pode_alterar_frete === false && valorFrete > 0) {
@@ -159,11 +202,15 @@ Deno.serve(async (req) => {
         if (
           Array.isArray(perms.materiais_permitidos) &&
           perms.materiais_permitidos.length > 0 &&
-          !perms.materiais_permitidos.includes(payload.material_id)
+          itens.some((item: any) => !perms.materiais_permitidos.includes(item.material_id))
         ) {
           return businessError("PERMISSAO_NEGADA: material não permitido");
         }
-        const totalVenda = valorPraticado * quantidade + valorFrete;
+        const totalVenda =
+          itens.reduce(
+            (total: number, item: any) => total + item.valor_praticado * item.quantidade,
+            0,
+          ) + valorFrete;
         if (perms.valor_venda_minimo != null && totalVenda < Number(perms.valor_venda_minimo)) {
           return businessError("PERMISSAO_NEGADA: venda abaixo do mínimo permitido");
         }
@@ -182,6 +229,19 @@ Deno.serve(async (req) => {
         ? "pendente"
         : "a_confirmar";
 
+      const itensPersistidos = itens.map((item: any) => ({
+        material_id: item.material_id,
+        nome: item.nome,
+        unidade: item.unidade,
+        preco_base: item.preco_base,
+        valor_praticado: item.valor_praticado,
+        quantidade: item.quantidade,
+      }));
+      const primeiroItem = itensPersistidos[0];
+      const totalMateriais = itensPersistidos.reduce(
+        (total: number, item: any) => total + item.valor_praticado * item.quantidade,
+        0,
+      );
       const row = {
         id: localId,
         empresa_id: profile.empresa_id,
@@ -190,10 +250,18 @@ Deno.serve(async (req) => {
         motorista_entrega_id: null,
         veiculo_id: null,
         cliente_id: payload.cliente_id,
-        material_id: payload.material_id,
-        preco_base_no_momento: somenteFrete ? 0 : precoBase,
-        valor_praticado: valorPraticado,
-        quantidade,
+        material_id: primeiroItem.material_id,
+        preco_base_no_momento:
+          itensPersistidos.length === 1
+            ? primeiroItem.preco_base
+            : itensPersistidos.reduce(
+                (total: number, item: any) => total + item.preco_base * item.quantidade,
+                0,
+              ),
+        valor_praticado:
+          itensPersistidos.length === 1 ? primeiroItem.valor_praticado : totalMateriais,
+        quantidade: itensPersistidos.length === 1 ? primeiroItem.quantidade : 1,
+        itens: itensPersistidos,
         valor_frete: valorFrete,
         endereco: payload.endereco ?? null,
         lat: payload.lat ?? null,
@@ -374,6 +442,21 @@ Deno.serve(async (req) => {
         {},
       );
 
+      const { data: entregaAtual, error: buscaError } = await admin
+        .from("entregas")
+        .select("id, itens, material_id, quantidade, valor_praticado, preco_base_no_momento")
+        .eq("id", entregaId)
+        .eq("empresa_id", profile.empresa_id)
+        .maybeSingle();
+      if (buscaError) throw buscaError;
+      if (!entregaAtual) return businessError("ENTREGA_NAO_ENCONTRADA");
+
+      const itensAtuais = Array.isArray(entregaAtual.itens) ? entregaAtual.itens : [];
+      const alterandoMaterial = body.quantidade != null || body.valor_praticado != null;
+      if (alterandoMaterial && itensAtuais.length > 1) {
+        return businessError("EDICAO_MULTIPLOS_MATERIAIS_RESTRITA");
+      }
+
       const patch: Record<string, unknown> = {};
       if (body.quantidade != null) {
         const q = Number(body.quantidade);
@@ -393,6 +476,19 @@ Deno.serve(async (req) => {
       if (body.endereco !== undefined) patch.endereco = String(body.endereco ?? "").trim() || null;
       if (body.observacoes !== undefined)
         patch.observacoes = String(body.observacoes ?? "").trim() || null;
+      if (alterandoMaterial && itensAtuais.length === 1) {
+        patch.itens = [
+          {
+            ...itensAtuais[0],
+            quantidade:
+              patch.quantidade != null ? Number(patch.quantidade) : itensAtuais[0].quantidade,
+            valor_praticado:
+              patch.valor_praticado != null
+                ? Number(patch.valor_praticado)
+                : itensAtuais[0].valor_praticado,
+          },
+        ];
+      }
       if (Object.keys(patch).length === 0) return businessError("NADA_PARA_ATUALIZAR");
 
       // Atualiza com o client do usuário (não service role): admin fica

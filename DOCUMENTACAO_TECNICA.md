@@ -559,3 +559,34 @@ Limite: OTA atualiza somente HTML, CSS e JavaScript. Mudanças em câmera, local
 - motoristas sem movimento no mês também aparecem com valores zerados;
 - os valores de material usam `valor_praticado × quantidade`; o frete usa `valor_frete`, sem somar as duas métricas;
 - versão web/OTA: `1.6.4`, compatível com a base Android `1.6`, sem novo APK.
+
+## 25. Vendas com até três materiais — OTA 1.6.5
+
+### Cadastro
+
+- o primeiro material continua obrigatório e o botão **Adicionar outro material** aparece logo abaixo da lista;
+- cada venda aceita de um a três materiais diferentes, cada um com sua própria quantidade e valor praticado;
+- materiais repetidos na mesma venda são bloqueados para evitar totais ambíguos;
+- o item especial **FRETE** continua sem valor de material e deve ser usado sozinho; o valor do frete é único para toda a venda;
+- permissões de materiais, alteração de preço, desconto e limites mínimo/máximo são validadas em cada item e novamente no servidor.
+
+### Compatibilidade e dados
+
+- adicionada a coluna `entregas.itens` em JSON, limitada a três itens pelo banco de dados;
+- as colunas históricas `material_id`, `quantidade`, `valor_praticado` e `preco_base_no_momento` continuam preenchidas, mantendo versões anteriores e registros legados compatíveis;
+- vendas antigas sem `itens` são interpretadas automaticamente como vendas de um material;
+- a fila offline envia todos os materiais na mesma venda e a função `sync-entrega` valida e grava um único registro, impedindo duplicação do frete e da entrega.
+
+### Exibição, edição e relatórios
+
+- pendentes, entregas, histórico do motorista, finalização, financeiro e detalhes mostram o resumo de todos os materiais;
+- dashboards e relatórios somam o subtotal de cada item e acrescentam o frete somente uma vez;
+- o filtro por material encontra a venda mesmo quando o material pesquisado é o segundo ou terceiro item;
+- o ranking de materiais atribui quantidade e receita ao item correto;
+- na edição rápida de uma venda com vários materiais, quantidade e valor ficam protegidos; frete, endereço e observações continuam editáveis sem corromper os itens.
+
+### Publicação
+
+- versão web/OTA: `1.6.5`, compatível com a base Android `1.6`, sem necessidade de gerar outro APK;
+- a migração `20260814120000_entrega_multiplos_materiais.sql` foi aplicada no projeto vinculado;
+- a função `sync-entrega` foi publicada e confirmada como `ACTIVE`, versão 16.

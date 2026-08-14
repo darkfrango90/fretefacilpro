@@ -16,6 +16,7 @@ import { SignaturePad } from "@/components/signature-pad";
 import { readOfflineCache } from "@/lib/offline/cache";
 import { OdometroOcrField } from "@/components/odometro-ocr-field";
 import type { ConfiancaOdometro } from "@/lib/ocr-odometro";
+import { resumoMateriais } from "@/lib/entrega-itens";
 
 export const Route = createFileRoute("/_authenticated/entrega/$id/finalizar")({
   component: Finalizar,
@@ -40,7 +41,7 @@ function Finalizar() {
       const { data, error } = await (supabase as any)
         .from("entregas")
         .select(
-          "id, km_inicial, status, cliente:clientes(nome), material:materiais(nome, unidade), quantidade",
+          "id, km_inicial, status, material_id, itens, cliente:clientes(nome), material:materiais(nome, unidade), quantidade",
         )
         .eq("id", id)
         .maybeSingle();
@@ -167,7 +168,7 @@ function Finalizar() {
         <CardContent className="p-3 text-xs">
           <div className="font-medium">{entrega.cliente?.nome}</div>
           <div className="text-muted-foreground">
-            {entrega.material?.nome} · {entrega.quantidade} {entrega.material?.unidade}
+            {resumoMateriais(entrega)}
             {entrega.km_inicial != null && ` · KM ini: ${entrega.km_inicial}`}
           </div>
         </CardContent>

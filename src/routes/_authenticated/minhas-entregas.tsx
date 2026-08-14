@@ -11,6 +11,7 @@ import { SwipeToAction } from "@/components/swipe-to-action";
 import { EntregaDetalheDialog } from "@/components/entrega-detalhe-dialog";
 import { toast } from "sonner";
 import { readOfflineCache, writeOfflineCache } from "@/lib/offline/cache";
+import { resumoMateriais } from "@/lib/entrega-itens";
 
 export const Route = createFileRoute("/_authenticated/minhas-entregas")({
   component: MinhasEntregas,
@@ -18,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/minhas-entregas")({
 
 // SELECT enxuto pra lista (sem fotos)
 const SELECT_LIST =
-  "id, numero, endereco, km_inicial, km_final, iniciada_em, finalizada_em, quantidade, valor_praticado, valor_frete, status, cliente:clientes(nome), material:materiais(nome, unidade), veiculo:veiculos(placa)";
+  "id, numero, endereco, km_inicial, km_final, iniciada_em, finalizada_em, material_id, itens, quantidade, valor_praticado, valor_frete, status, cliente:clientes(nome), material:materiais(nome, unidade), veiculo:veiculos(placa)";
 
 function MinhasEntregas() {
   const { data: prof } = useProfile();
@@ -233,7 +234,7 @@ function ListaCards({
                     {r.cliente?.nome ?? "—"}
                   </div>
                   <div className="text-xs text-muted-foreground truncate">
-                    {r.material?.nome} · {r.quantidade} {r.material?.unidade}
+                    {resumoMateriais(r)}
                     {r.veiculo?.placa ? ` · ${r.veiculo.placa}` : ""}
                   </div>
                 </div>
