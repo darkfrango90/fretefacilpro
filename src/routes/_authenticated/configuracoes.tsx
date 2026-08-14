@@ -144,16 +144,16 @@ function MotoristaConfig() {
 
       <Section title="Operação">
         <Item
+          to="/relatorios-motorista"
+          icon={<LineChart className="h-5 w-5" />}
+          label="Meu relatório mensal"
+          hint="Vendas de material e fretes separados"
+        />
+        <Item
           to="/sincronizacao"
           icon={<RefreshCw className="h-5 w-5" />}
           label="Sincronização"
           hint="Enviar pendências e ver histórico"
-        />
-        <Item
-          to="/relatorios-motorista"
-          icon={<LineChart className="h-5 w-5" />}
-          label="Relatórios"
-          hint="Minhas entregas por período"
         />
       </Section>
 

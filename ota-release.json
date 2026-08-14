@@ -2,9 +2,9 @@
   "nativeVersion": "1.6",
   "required": false,
   "notes": [
-    "Administradores agora visualizam e editam os abastecimentos de todos os motoristas da empresa.",
-    "Campos de dinheiro formatam milhares e centavos automaticamente no padrão brasileiro.",
-    "Nova operação de troca de óleo com caminhão, data, valor, quilometragem e histórico.",
-    "Corrigida a confirmação da instalação para não oferecer repetidamente uma atualização já aplicada."
+    "Novo relatório mensal individual por motorista na tela Relatórios do administrador.",
+    "Vendas de material e fretes são exibidos como duas métricas separadas.",
+    "O motorista encontra Meu relatório mensal como primeiro item das Configurações.",
+    "A competência começa no primeiro dia e fecha automaticamente no último dia de cada mês."
   ]
 }

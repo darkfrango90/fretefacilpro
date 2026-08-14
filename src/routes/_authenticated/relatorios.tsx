@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { BarChart3, Download, Filter, X } from "lucide-react";
 import { EntregaDetalheDialog } from "@/components/entrega-detalhe-dialog";
+import { RelatorioMensalMotoristas } from "@/components/relatorio-mensal-motoristas";
 
 export const Route = createFileRoute("/_authenticated/relatorios")({
   component: () => (
@@ -389,6 +390,8 @@ function Page() {
           <Download className="h-4 w-4 mr-1" /> CSV
         </Button>
       </div>
+
+      {empresaId ? <RelatorioMensalMotoristas empresaId={empresaId} /> : null}
 
       <div className="flex gap-2 flex-wrap items-center">
         {(["7", "30", "90", "365"] as Periodo[]).map((p) => (

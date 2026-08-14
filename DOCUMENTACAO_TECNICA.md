@@ -533,3 +533,29 @@ Limite: OTA atualiza somente HTML, CSS e JavaScript. Mudanças em câmera, local
 - corrigida a chamada de `notifyAppReady()`: o pacote OTA agora é confirmado depois da montagem bem-sucedida da aplicação, e não somente quando ocorria um erro;
 - sem essa confirmação, o plugin podia restaurar o pacote anterior após o reinício e voltar a oferecer a mesma versão;
 - a versão web/OTA desta rodada é `1.6.3`, compatível com a base Android `1.6`, sem necessidade de gerar ou distribuir outro APK.
+
+## 24. Relatório mensal por motorista — OTA 1.6.4
+
+### Competência e fechamento
+
+- o relatório usa competência de calendário, iniciando sempre no primeiro dia do mês;
+- na competência atual, o período termina na data presente; em 14/08/2026, a tela apresenta **01/08/2026 até 14/08/2026**;
+- o sistema informa o fechamento automático no último dia do mês; para agosto de 2026, o fechamento é **31/08/2026**;
+- ao consultar um mês anterior, o período já aparece fechado no respectivo último dia;
+- o seletor de competência não permite selecionar meses futuros.
+
+### Visão do motorista
+
+- **Meu relatório mensal** passou a ser o primeiro item das Configurações do motorista;
+- a tela mostra imediatamente **Vendas material** e **Fretes** em cartões separados;
+- os totais consideram apenas entregas concluídas atribuídas ao motorista dentro da competência;
+- filtros opcionais por pagamento, material e cliente continuam disponíveis;
+- vendas concluídas diretamente pelo administrador permanecem no relatório do motorista responsável.
+
+### Visão do administrador
+
+- a tela `/relatorios` ganhou a seção **Relatório individual por motorista**;
+- cada motorista aparece separadamente com quantidade de entregas, **Vendas material** e **Fretes**;
+- motoristas sem movimento no mês também aparecem com valores zerados;
+- os valores de material usam `valor_praticado × quantidade`; o frete usa `valor_frete`, sem somar as duas métricas;
+- versão web/OTA: `1.6.4`, compatível com a base Android `1.6`, sem novo APK.
