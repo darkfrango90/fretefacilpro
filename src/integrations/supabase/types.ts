@@ -466,6 +466,7 @@ export type Database = {
           sincronizada_em: string;
           status: Database["public"]["Enums"]["entrega_status"];
           status_pagamento: string;
+          vencimento_pagamento: string | null;
           valor_frete: number;
           valor_praticado: number;
           veiculo_id: string | null;
@@ -518,6 +519,7 @@ export type Database = {
           sincronizada_em?: string;
           status?: Database["public"]["Enums"]["entrega_status"];
           status_pagamento?: string;
+          vencimento_pagamento?: string | null;
           valor_frete?: number;
           valor_praticado: number;
           veiculo_id?: string | null;
@@ -570,6 +572,7 @@ export type Database = {
           sincronizada_em?: string;
           status?: Database["public"]["Enums"]["entrega_status"];
           status_pagamento?: string;
+          vencimento_pagamento?: string | null;
           valor_frete?: number;
           valor_praticado?: number;
           veiculo_id?: string | null;
