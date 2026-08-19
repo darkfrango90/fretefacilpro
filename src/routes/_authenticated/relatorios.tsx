@@ -39,6 +39,7 @@ const PAGAMENTOS = [
   { v: "dinheiro", l: "Dinheiro" },
   { v: "pix", l: "Pix" },
   { v: "deposito", l: "Depósito" },
+  { v: "cartao_credito", l: "Cartão de crédito" },
   { v: "boleto", l: "Boleto" },
   { v: "permuta", l: "Permuta" },
   { v: "carteira", l: "Carteira" },

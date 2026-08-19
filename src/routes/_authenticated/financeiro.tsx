@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/use-session";
@@ -17,6 +17,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   BanknoteIcon,
@@ -24,8 +31,10 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock,
+  Filter,
   MapPin,
   Wallet,
+  X,
 } from "lucide-react";
 import { calcularValorMateriais, obterItensEntrega, resumoMateriais } from "@/lib/entrega-itens";
 
@@ -41,10 +50,25 @@ const FORMA_LABEL: Record<string, string> = {
   dinheiro: "Dinheiro",
   pix: "Pix",
   deposito: "Depósito",
+  cartao_credito: "Cartão de crédito",
   permuta: "Permuta",
   boleto: "Boleto",
   carteira: "Carteira",
 };
+
+const FORMAS_PAGAMENTO = [
+  { value: "dinheiro", label: "Dinheiro" },
+  { value: "pix", label: "Pix" },
+  { value: "deposito", label: "Depósito" },
+  { value: "cartao_credito", label: "Cartão de crédito" },
+  { value: "permuta", label: "Permuta" },
+  { value: "boleto", label: "Boleto" },
+  { value: "carteira", label: "Carteira" },
+];
+
+function statusPagamentoPorForma(forma: string) {
+  return ["boleto", "permuta", "carteira"].includes(forma) ? "pendente" : "a_confirmar";
+}
 
 const STATUS_ENTREGA_LABEL: Record<string, string> = {
   pendente: "Pendente",
@@ -71,6 +95,14 @@ function hojeLocalISO() {
   return `${ano}-${mes}-${dia}`;
 }
 
+function inicioDiaISO(data: string) {
+  return new Date(`${data}T00:00:00`).toISOString();
+}
+
+function fimDiaISO(data: string) {
+  return new Date(`${data}T23:59:59.999`).toISOString();
+}
+
 function totalEntrega(e: any) {
   return calcularValorMateriais(e) + Number(e.valor_frete || 0);
 }
@@ -82,12 +114,16 @@ function Page() {
   const [tab, setTab] = useState("a_confirmar");
   const [selecionadaId, setSelecionadaId] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [dataIni, setDataIni] = useState("");
+  const [dataFim, setDataFim] = useState("");
+  const [clienteFiltro, setClienteFiltro] = useState("todos");
+  const [motoristaFiltro, setMotoristaFiltro] = useState("todos");
 
   const { data: rows, isLoading } = useQuery({
-    queryKey: ["financeiro", empresaId],
+    queryKey: ["financeiro", empresaId, dataIni, dataFim],
     enabled: !!empresaId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      let query = (supabase as any)
         .from("entregas")
         .select(
           `
@@ -104,7 +140,11 @@ function Page() {
         .neq("status", "cancelada")
         .not("forma_pagamento", "is", null)
         .order("criada_em", { ascending: false })
-        .limit(500);
+        .limit(1000);
+      if (dataIni) query = query.gte("criada_em", inicioDiaISO(dataIni));
+      if (dataFim) query = query.lte("criada_em", fimDiaISO(dataFim));
+
+      const { data, error } = await query;
       if (error) throw error;
       const lista = data ?? [];
       const motoristaIds = Array.from(
@@ -129,6 +169,51 @@ function Page() {
   });
 
   const selecionada = (rows ?? []).find((e: any) => e.id === selecionadaId) ?? null;
+
+  const clienteOptions = useMemo(() => {
+    const mapa = new Map<string, string>();
+    for (const e of rows ?? []) {
+      if (e.cliente_id) mapa.set(e.cliente_id, e.clientes?.nome ?? "Cliente");
+    }
+    return Array.from(mapa.entries())
+      .map(([id, nome]) => ({ id, nome }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  }, [rows]);
+
+  const motoristaOptions = useMemo(() => {
+    const mapa = new Map<string, string>();
+    for (const e of rows ?? []) {
+      if (e.motorista_venda_id) {
+        mapa.set(e.motorista_venda_id, e.motorista_venda_nome ?? "Motorista");
+      }
+      if (e.motorista_entrega_id) {
+        mapa.set(e.motorista_entrega_id, e.motorista_entrega_nome ?? "Motorista");
+      }
+    }
+    return Array.from(mapa.entries())
+      .map(([id, nome]) => ({ id, nome }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  }, [rows]);
+
+  const rowsFiltradas = useMemo(() => {
+    return (rows ?? []).filter((e: any) => {
+      const clienteOk = clienteFiltro === "todos" || e.cliente_id === clienteFiltro;
+      const motoristaOk =
+        motoristaFiltro === "todos" ||
+        e.motorista_venda_id === motoristaFiltro ||
+        e.motorista_entrega_id === motoristaFiltro;
+      return clienteOk && motoristaOk;
+    });
+  }, [rows, clienteFiltro, motoristaFiltro]);
+
+  const filtrosAtivos = [dataIni, dataFim, clienteFiltro !== "todos", motoristaFiltro !== "todos"].filter(Boolean).length;
+
+  function limparFiltros() {
+    setDataIni("");
+    setDataFim("");
+    setClienteFiltro("todos");
+    setMotoristaFiltro("todos");
+  }
 
   async function confirmar(id: string) {
     if (!prof || !empresaId) return;
@@ -192,10 +277,8 @@ function Page() {
         .eq("id", id)
         .eq("empresa_id", empresaId)
         .maybeSingle();
-      const forma = cur?.forma_pagamento;
-      const novoStatus = ["boleto", "permuta", "carteira"].includes(forma)
-        ? "pendente"
-        : "a_confirmar";
+      const forma = cur?.forma_pagamento ?? "";
+      const novoStatus = statusPagamentoPorForma(forma);
       const { error } = await (supabase as any)
         .from("entregas")
         .update({
@@ -217,9 +300,39 @@ function Page() {
     }
   }
 
-  const aConfirmar = (rows ?? []).filter((e: any) => e.status_pagamento === "a_confirmar");
-  const pendentes = (rows ?? []).filter((e: any) => e.status_pagamento === "pendente");
-  const confirmados = (rows ?? []).filter((e: any) => e.status_pagamento === "confirmado");
+  async function alterarFormaPagamento(id: string, formaPagamento: string) {
+    if (!empresaId) return;
+    setSalvando(true);
+    try {
+      const novoStatus = statusPagamentoPorForma(formaPagamento);
+      const patch: Record<string, unknown> = {
+        forma_pagamento: formaPagamento,
+        status_pagamento: novoStatus,
+        pagamento_confirmado_em: null,
+        pagamento_confirmado_por: null,
+      };
+      if (novoStatus !== "pendente") patch.vencimento_pagamento = null;
+
+      const { error } = await (supabase as any)
+        .from("entregas")
+        .update(patch)
+        .eq("id", id)
+        .eq("empresa_id", empresaId)
+        .neq("status", "cancelada");
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success("Forma de pagamento atualizada");
+      await qc.invalidateQueries({ queryKey: ["financeiro", empresaId] });
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  const aConfirmar = rowsFiltradas.filter((e: any) => e.status_pagamento === "a_confirmar");
+  const pendentes = rowsFiltradas.filter((e: any) => e.status_pagamento === "pendente");
+  const confirmados = rowsFiltradas.filter((e: any) => e.status_pagamento === "confirmado");
 
   const sum = (arr: any[]) => arr.reduce((s, e) => s + totalEntrega(e), 0);
 
@@ -233,6 +346,76 @@ function Page() {
           Abra uma venda para conferir os dados e registrar o recebimento.
         </p>
       </div>
+
+      <Card>
+        <CardContent className="space-y-3 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <Filter className="h-4 w-4" /> Filtros
+            </div>
+            {filtrosAtivos > 0 && (
+              <Button type="button" variant="ghost" size="sm" onClick={limparFiltros}>
+                <X className="h-4 w-4" /> Limpar
+              </Button>
+            )}
+          </div>
+          <div className="grid gap-3 md:grid-cols-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="financeiro-data-inicial">Data inicial</Label>
+              <Input
+                id="financeiro-data-inicial"
+                type="date"
+                value={dataIni}
+                onChange={(event) => setDataIni(event.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="financeiro-data-final">Data final</Label>
+              <Input
+                id="financeiro-data-final"
+                type="date"
+                value={dataFim}
+                onChange={(event) => setDataFim(event.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Cliente</Label>
+              <Select value={clienteFiltro} onValueChange={setClienteFiltro}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  {clienteOptions.map((cliente) => (
+                    <SelectItem key={cliente.id} value={cliente.id}>
+                      {cliente.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Motorista</Label>
+              <Select value={motoristaFiltro} onValueChange={setMotoristaFiltro}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  {motoristaOptions.map((motorista) => (
+                    <SelectItem key={motorista.id} value={motorista.id}>
+                      {motorista.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="text-[11px] text-muted-foreground">
+            Exibindo {rowsFiltradas.length} de {(rows ?? []).length} venda(s) carregada(s).
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-3 gap-2">
         <SummaryCard
@@ -300,6 +483,7 @@ function Page() {
         onClose={() => setSelecionadaId(null)}
         onConfirmar={confirmar}
         onSalvarVencimento={salvarVencimento}
+        onAlterarFormaPagamento={alterarFormaPagamento}
         onReverter={reverter}
       />
     </div>
@@ -407,6 +591,7 @@ function FinanceiroDetalheDialog({
   onClose,
   onConfirmar,
   onSalvarVencimento,
+  onAlterarFormaPagamento,
   onReverter,
 }: {
   entrega: any | null;
@@ -414,13 +599,16 @@ function FinanceiroDetalheDialog({
   onClose: () => void;
   onConfirmar: (id: string) => Promise<void>;
   onSalvarVencimento: (id: string, vencimento: string) => Promise<void>;
+  onAlterarFormaPagamento: (id: string, formaPagamento: string) => Promise<void>;
   onReverter: (id: string) => Promise<void>;
 }) {
   const [vencimento, setVencimento] = useState("");
+  const [formaPagamento, setFormaPagamento] = useState("");
 
   useEffect(() => {
     setVencimento(entrega?.vencimento_pagamento ?? "");
-  }, [entrega?.id, entrega?.vencimento_pagamento]);
+    setFormaPagamento(entrega?.forma_pagamento ?? "");
+  }, [entrega?.id, entrega?.vencimento_pagamento, entrega?.forma_pagamento]);
 
   if (!entrega) return null;
 
@@ -512,6 +700,38 @@ function FinanceiroDetalheDialog({
             />
           )}
         </section>
+
+        <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-3">
+          <div className="text-sm font-semibold">Editar forma de pagamento</div>
+          <div className="space-y-1.5">
+            <Label htmlFor="forma-pagamento-financeiro">Forma de pagamento</Label>
+            <Select value={formaPagamento} onValueChange={setFormaPagamento} disabled={salvando}>
+              <SelectTrigger id="forma-pagamento-financeiro">
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {FORMAS_PAGAMENTO.map((forma) => (
+                  <SelectItem key={forma.value} value={forma.value}>
+                    {forma.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            disabled={salvando || !formaPagamento || formaPagamento === entrega.forma_pagamento}
+            onClick={() => onAlterarFormaPagamento(entrega.id, formaPagamento)}
+          >
+            {salvando ? "Salvando..." : "Salvar forma de pagamento"}
+          </Button>
+          <p className="text-[11px] text-muted-foreground">
+            Alterar a forma de pagamento recalcula o status financeiro e limpa uma baixa já
+            confirmada para evitar recebimento com forma incorreta.
+          </p>
+        </div>
 
         {entrega.status_pagamento === "pendente" && (
           <div className="space-y-3 rounded-xl border border-sky-500/30 bg-sky-500/5 p-3">

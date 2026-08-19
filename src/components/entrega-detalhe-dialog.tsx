@@ -23,6 +23,16 @@ const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   cancelada: { label: "Cancelada", cls: "" },
 };
 
+const FORMA_PAGAMENTO_LABEL: Record<string, string> = {
+  dinheiro: "Dinheiro",
+  pix: "Pix",
+  deposito: "Depósito",
+  cartao_credito: "Cartão de crédito",
+  permuta: "Permuta",
+  boleto: "Boleto",
+  carteira: "Carteira",
+};
+
 function fmtBRL(v: any) {
   if (v == null) return "—";
   return Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -156,7 +166,14 @@ export function EntregaDetalheDialog({
                   <Row label="Preço base" value={fmtBRL(item.preco_base_no_momento)} />
                 )}
               <Row label="Valor frete" value={fmtBRL(item.valor_frete)} />
-              <Row label="Forma de pagamento" value={item.forma_pagamento ?? "—"} />
+              <Row
+                label="Forma de pagamento"
+                value={
+                  item.forma_pagamento
+                    ? (FORMA_PAGAMENTO_LABEL[item.forma_pagamento] ?? item.forma_pagamento)
+                    : "—"
+                }
+              />
               <Row
                 label="Motorista (venda)"
                 value={

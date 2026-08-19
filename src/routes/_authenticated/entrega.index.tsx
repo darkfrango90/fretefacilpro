@@ -504,14 +504,15 @@ function NovaVenda() {
                 <SelectItem value="dinheiro">Dinheiro</SelectItem>
                 <SelectItem value="pix">Pix</SelectItem>
                 <SelectItem value="deposito">Depósito</SelectItem>
+                <SelectItem value="cartao_credito">Cartão de crédito</SelectItem>
                 <SelectItem value="permuta">Permuta</SelectItem>
                 <SelectItem value="boleto">Boleto</SelectItem>
                 <SelectItem value="carteira">Carteira</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-[10px] text-muted-foreground mt-1">
-              Dinheiro, Pix e Depósito entram como "recebido" para confirmação. Boleto, Permuta e
-              Carteira ficam pendentes de recebimento.
+              Dinheiro, Pix, Depósito e Cartão de crédito entram para confirmação. Boleto, Permuta
+              e Carteira ficam pendentes de recebimento.
             </p>
           </div>
           <div>

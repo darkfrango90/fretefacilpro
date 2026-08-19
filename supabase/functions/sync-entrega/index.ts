@@ -222,7 +222,15 @@ Deno.serve(async (req) => {
         }
       }
 
-      const formasValidas = ["dinheiro", "pix", "deposito", "permuta", "boleto", "carteira"];
+      const formasValidas = [
+        "dinheiro",
+        "pix",
+        "deposito",
+        "cartao_credito",
+        "permuta",
+        "boleto",
+        "carteira",
+      ];
       const forma = String(payload.forma_pagamento ?? "").toLowerCase();
       if (!formasValidas.includes(forma)) return businessError("FORMA_PAGAMENTO_INVALIDA");
       const statusPag = ["boleto", "permuta", "carteira"].includes(forma)
