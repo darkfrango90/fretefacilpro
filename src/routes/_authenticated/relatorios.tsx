@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/use-session";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BarChart3, Download, Filter, X } from "lucide-react";
+import { BarChart3, Download, FileSpreadsheet, FileText, Filter, Loader2, X } from "lucide-react";
 import { EntregaDetalheDialog } from "@/components/entrega-detalhe-dialog";
 import { RelatorioMensalMotoristas } from "@/components/relatorio-mensal-motoristas";
 import {
@@ -24,6 +25,11 @@ import {
   obterItensEntrega,
   resumoMateriais,
 } from "@/lib/entrega-itens";
+import {
+  exportarRelatorioExcel,
+  exportarRelatorioPdf,
+  type DadosRelatorioExportacao,
+} from "@/lib/relatorio-export";
 
 export const Route = createFileRoute("/_authenticated/relatorios")({
   component: () => (
@@ -58,6 +64,7 @@ function Page() {
   const [numero, setNumero] = useState<string>("");
   const [showFiltros, setShowFiltros] = useState<boolean>(false);
   const [detalheId, setDetalheId] = useState<string | null>(null);
+  const [exportando, setExportando] = useState<"pdf" | "excel" | null>(null);
 
   const { sinceIso, untilIso } = useMemo(() => {
     if (periodo === "custom") {
@@ -88,7 +95,7 @@ function Page() {
       let qEnt = (supabase as any)
         .from("entregas")
         .select(
-          "id, numero, criada_em, finalizada_em, status, itens, quantidade, valor_praticado, valor_frete, motorista_venda_id, motorista_entrega_id, material_id, cliente_id, veiculo_id, forma_pagamento",
+          "id, numero, criada_em, finalizada_em, status, itens, quantidade, valor_praticado, valor_frete, observacoes, motorista_venda_id, motorista_entrega_id, material_id, cliente_id, veiculo_id, forma_pagamento",
         );
       let qAb = (supabase as any)
         .from("abastecimentos")
@@ -284,10 +291,15 @@ function Page() {
           status: e.status,
           cliente: nameCli.get(e.cliente_id) ?? "—",
           material: resumoMateriais(e),
+          motorista_venda: nameProfile.get(e.motorista_venda_id) ?? "—",
+          motorista_entrega: nameProfile.get(e.motorista_entrega_id) ?? "—",
           motorista:
             nameProfile.get(e.motorista_entrega_id) ?? nameProfile.get(e.motorista_venda_id) ?? "—",
           forma_pagamento: e.forma_pagamento,
+          valor_venda: calcularValorMateriais(e),
+          valor_frete: Number(e.valor_frete || 0),
           total: calcularValorMateriais(e) + Number(e.valor_frete || 0),
+          observacoes: e.observacoes ?? "",
         }))
         .sort((a: any, b: any) => (a.criada_em < b.criada_em ? 1 : -1));
 
@@ -339,11 +351,56 @@ function Page() {
     (numero.trim() ? 1 : 0) +
     (periodo === "custom" ? 1 : 0);
 
+  const periodoExportacao =
+    periodo === "custom"
+      ? `${dataIni ? fmtDiaLonga(dataIni) : "início"} a ${dataFim ? fmtDiaLonga(dataFim) : "hoje"}`
+      : periodo === "365"
+        ? "Últimos 12 meses"
+        : `Últimos ${periodo} dias`;
+
+  const descricaoExportacao = [
+    periodoExportacao,
+    clienteId !== "todos"
+      ? `Cliente: ${data?.listaClientes.find((cliente: any) => cliente.id === clienteId)?.nome ?? "selecionado"}`
+      : null,
+    motoristaId !== "todos"
+      ? `Motorista: ${data?.listaMotoristas.find((motorista: any) => motorista.id === motoristaId)?.nome ?? "selecionado"}`
+      : null,
+    materialId !== "todos"
+      ? `Material: ${data?.listaMateriais.find((material: any) => material.id === materialId)?.nome ?? "selecionado"}`
+      : null,
+    pagamento !== "todos"
+      ? `Pagamento: ${PAGAMENTOS.find((item) => item.v === pagamento)?.l ?? pagamento}`
+      : null,
+    numero.trim() ? `Venda nº ${numero.trim()}` : null,
+  ]
+    .filter(Boolean)
+    .join(" | ");
+
+  async function exportar(formato: "pdf" | "excel") {
+    if (!data || exportando) return;
+    setExportando(formato);
+    try {
+      const opcoes = {
+        dados: data as DadosRelatorioExportacao,
+        periodo: descricaoExportacao,
+      };
+      if (formato === "pdf") await exportarRelatorioPdf(opcoes);
+      else await exportarRelatorioExcel(opcoes);
+      toast.success(`Relatório ${formato === "pdf" ? "PDF" : "Excel"} gerado`);
+    } catch (erro) {
+      console.error(`Erro ao exportar relatório em ${formato}`, erro);
+      toast.error(`Não foi possível gerar o ${formato === "pdf" ? "PDF" : "Excel"}`);
+    } finally {
+      setExportando(null);
+    }
+  }
+
   function exportCsv() {
     if (!data) return;
     const lines: string[] = [];
     lines.push("Relatório geral");
-    lines.push(`Período,${periodo === "custom" ? `${dataIni} a ${dataFim}` : periodo + " dias"}`);
+    lines.push(`Filtros,${csv(descricaoExportacao)}`);
     lines.push(`Total vendas,${data.total}`);
     lines.push(`Receita total,${data.totalReceita.toFixed(2)}`);
     lines.push(`Ticket médio,${data.ticketMedio.toFixed(2)}`);
@@ -351,10 +408,12 @@ function Page() {
     lines.push(`Despesas conferidas,${data.despesasOperacionais.toFixed(2)}`);
     lines.push(`Saldo operacional,${data.saldoOperacional.toFixed(2)}`);
     lines.push("");
-    lines.push("Nº,Data,Cliente,Material,Motorista,Pagamento,Status,Total");
+    lines.push(
+      "Nº,Data,Cliente,Material,Motorista da venda,Motorista da entrega,Valor da venda,Frete,Total,Pagamento,Status,Observação",
+    );
     for (const v of data.vendas) {
       lines.push(
-        `${v.numero ?? ""},${csv(fmtData(v.criada_em))},${csv(v.cliente)},${csv(v.material)},${csv(v.motorista)},${csv(v.forma_pagamento ?? "")},${csv(v.status)},${v.total.toFixed(2)}`,
+        `${v.numero ?? ""},${csv(fmtData(v.criada_em))},${csv(v.cliente)},${csv(v.material)},${csv(v.motorista_venda)},${csv(v.motorista_entrega)},${v.valor_venda.toFixed(2)},${v.valor_frete.toFixed(2)},${v.total.toFixed(2)},${csv(v.forma_pagamento ?? "")},${csv(v.status)},${csv(v.observacoes)}`,
       );
     }
     lines.push("");
@@ -384,16 +443,44 @@ function Page() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-primary" /> Relatórios
           </h1>
           <p className="text-xs text-muted-foreground">Métricas da empresa no período</p>
         </div>
-        <Button size="sm" variant="outline" onClick={exportCsv} disabled={!data}>
-          <Download className="h-4 w-4 mr-1" /> CSV
-        </Button>
+        <div className="grid grid-cols-3 gap-2 sm:flex">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => exportar("pdf")}
+            disabled={!data || !!exportando}
+          >
+            {exportando === "pdf" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileText className="h-4 w-4" />
+            )}
+            PDF
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => exportar("excel")}
+            disabled={!data || !!exportando}
+          >
+            {exportando === "excel" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileSpreadsheet className="h-4 w-4" />
+            )}
+            Excel
+          </Button>
+          <Button size="sm" variant="outline" onClick={exportCsv} disabled={!data || !!exportando}>
+            <Download className="h-4 w-4" /> CSV
+          </Button>
+        </div>
       </div>
 
       {empresaId ? <RelatorioMensalMotoristas empresaId={empresaId} /> : null}
@@ -568,7 +655,7 @@ function Page() {
             ))}
             {data.vendas.length > 100 && (
               <div className="text-xs text-muted-foreground">
-                Mostrando 100 de {data.vendas.length}. Exporte CSV para ver tudo.
+                Mostrando 100 de {data.vendas.length}. Exporte PDF, Excel ou CSV para ver tudo.
               </div>
             )}
           </Section>
@@ -734,6 +821,11 @@ function brl(n?: number) {
 function fmtDia(iso: string) {
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y.slice(2)}`;
+}
+
+function fmtDiaLonga(iso: string) {
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
 }
 
 function fmtData(iso: string) {
