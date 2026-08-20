@@ -191,10 +191,10 @@ function Page() {
       const calcularCustoMateriais = (entrega: any) => {
         const custosHistoricos = custosPorEntrega.get(entrega.id);
         return obterItensEntrega(entrega).reduce((totalItem, item) => {
+          const custoHistorico = custosHistoricos?.get(item.material_id);
+          const custoAtual = custoAtualPorMaterial.get(item.material_id) ?? 0;
           const custoUnitario =
-            custosHistoricos?.get(item.material_id) ??
-            custoAtualPorMaterial.get(item.material_id) ??
-            0;
+            custoHistorico != null && custoHistorico > 0 ? custoHistorico : custoAtual;
           return totalItem + custoUnitario * Number(item.quantidade || 1);
         }, 0);
       };
@@ -212,9 +212,6 @@ function Page() {
         (s: number, e: any) => s + calcularCustoMateriais(e),
         0,
       );
-      const lucroBrutoProdutos = receitaProduto - custoMateriais;
-      const margemBrutaProdutos =
-        receitaProduto > 0 ? (lucroBrutoProdutos / receitaProduto) * 100 : 0;
       const receitaFrete = vendasValidas.reduce(
         (s: number, e: any) => s + Number(e.valor_frete || 0),
         0,
@@ -225,6 +222,8 @@ function Page() {
 
       const gastoCombustivel = abs.reduce((s: number, a: any) => s + Number(a.valor_total || 0), 0);
       const litrosTotais = abs.reduce((s: number, a: any) => s + Number(a.litros || 0), 0);
+      const lucroReal = totalReceita - custoMateriais - gastoCombustivel;
+      const margemLucroReal = totalReceita > 0 ? (lucroReal / totalReceita) * 100 : 0;
       const despesasOperacionais = despesas.reduce(
         (s: number, d: any) => s + Number(d.valor || 0),
         0,
@@ -380,8 +379,8 @@ function Page() {
         despesasOperacionais,
         saldoOperacional,
         custoMateriais,
-        lucroBrutoProdutos,
-        margemBrutaProdutos,
+        lucroReal,
+        margemLucroReal,
         rankingMotoristas,
         topClientes,
         topMateriais,

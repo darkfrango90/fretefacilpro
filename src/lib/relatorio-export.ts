@@ -39,8 +39,8 @@ export type DadosRelatorioExportacao = {
   despesasOperacionais: number;
   saldoOperacional: number;
   custoMateriais: number;
-  lucroBrutoProdutos: number;
-  margemBrutaProdutos: number;
+  lucroReal: number;
+  margemLucroReal: number;
   vendas: LinhaVenda[];
   rankingMotoristas: LinhaRanking[];
   topClientes: LinhaRanking[];
@@ -401,19 +401,8 @@ export async function exportarRelatorioPdf({ dados, periodo }: OpcoesExportacao)
         "Litros",
         `${dados.litrosTotais.toFixed(2)} L`,
       ],
-      [
-        "Despesas conferidas",
-        moeda(dados.despesasOperacionais),
-        "Saldo operacional",
-        moeda(dados.saldoOperacional),
-      ],
-      [
-        "Custo dos materiais",
-        moeda(dados.custoMateriais),
-        "Lucro bruto dos produtos",
-        moeda(dados.lucroBrutoProdutos),
-      ],
-      ["Margem bruta dos produtos", `${dados.margemBrutaProdutos.toFixed(1)}%`, "", ""],
+      ["Custo dos materiais", moeda(dados.custoMateriais), "Lucro real", moeda(dados.lucroReal)],
+      ["Margem sobre a receita", `${dados.margemLucroReal.toFixed(1)}%`, "", ""],
     ],
   );
 
@@ -427,8 +416,8 @@ export async function exportarRelatorioPdf({ dados, periodo }: OpcoesExportacao)
       "Motorista",
       "Venda",
       "Custo",
-      "Lucro bruto",
-      "Margem",
+      "Resultado produto",
+      "Margem produto",
       "Frete",
       "Status",
       "Observação",
