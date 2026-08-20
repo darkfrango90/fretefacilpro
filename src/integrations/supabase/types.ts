@@ -417,6 +417,42 @@ export type Database = {
         };
         Relationships: [];
       };
+      entrega_custos: {
+        Row: {
+          criado_em: string;
+          empresa_id: string;
+          entrega_id: string;
+          itens: Json;
+        };
+        Insert: {
+          criado_em?: string;
+          empresa_id: string;
+          entrega_id: string;
+          itens?: Json;
+        };
+        Update: {
+          criado_em?: string;
+          empresa_id?: string;
+          entrega_id?: string;
+          itens?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "entrega_custos_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "empresas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "entrega_custos_entrega_id_fkey";
+            columns: ["entrega_id"];
+            isOneToOne: true;
+            referencedRelation: "entregas";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       entregas: {
         Row: {
           assinatura_coletada: boolean;
@@ -706,6 +742,42 @@ export type Database = {
             columns: ["empresa_id"];
             isOneToOne: false;
             referencedRelation: "empresas";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      materiais_custos: {
+        Row: {
+          atualizado_em: string;
+          custo_compra: number;
+          empresa_id: string;
+          material_id: string;
+        };
+        Insert: {
+          atualizado_em?: string;
+          custo_compra?: number;
+          empresa_id: string;
+          material_id: string;
+        };
+        Update: {
+          atualizado_em?: string;
+          custo_compra?: number;
+          empresa_id?: string;
+          material_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "materiais_custos_empresa_id_fkey";
+            columns: ["empresa_id"];
+            isOneToOne: false;
+            referencedRelation: "empresas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "materiais_custos_material_id_fkey";
+            columns: ["material_id"];
+            isOneToOne: true;
+            referencedRelation: "materiais";
             referencedColumns: ["id"];
           },
         ];

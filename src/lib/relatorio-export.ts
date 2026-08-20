@@ -17,6 +17,9 @@ type LinhaVenda = {
   valor_venda: number;
   valor_frete: number;
   total: number;
+  custo_materiais: number;
+  lucro_bruto: number;
+  margem_bruta: number;
   observacoes: string;
 };
 
@@ -35,6 +38,9 @@ export type DadosRelatorioExportacao = {
   litrosTotais: number;
   despesasOperacionais: number;
   saldoOperacional: number;
+  custoMateriais: number;
+  lucroBrutoProdutos: number;
+  margemBrutaProdutos: number;
   vendas: LinhaVenda[];
   rankingMotoristas: LinhaRanking[];
   topClientes: LinhaRanking[];
@@ -348,7 +354,12 @@ export async function exportarRelatorioPdf({ dados, periodo }: OpcoesExportacao)
     }
   };
 
-  const tabela = (titulo: string, cabecalho: string[], corpo: Array<Array<string | number>>) => {
+  const tabela = (
+    titulo: string,
+    cabecalho: string[],
+    corpo: Array<Array<string | number>>,
+    tamanhoFonte = 7.5,
+  ) => {
     if (y > alturaPagina - 35) {
       doc.addPage();
       y = 16;
@@ -363,7 +374,12 @@ export async function exportarRelatorioPdf({ dados, periodo }: OpcoesExportacao)
       body: corpo.length ? corpo : [["Sem dados no período"]],
       margin: { left: margem, right: margem, bottom: 14 },
       theme: "grid",
-      styles: { font: "helvetica", fontSize: 7.5, cellPadding: 1.8, overflow: "linebreak" },
+      styles: {
+        font: "helvetica",
+        fontSize: tamanhoFonte,
+        cellPadding: 1.8,
+        overflow: "linebreak",
+      },
       headStyles: { fillColor: [30, 49, 88], textColor: 255, fontStyle: "bold" },
       alternateRowStyles: { fillColor: [246, 248, 251] },
     });
@@ -391,22 +407,47 @@ export async function exportarRelatorioPdf({ dados, periodo }: OpcoesExportacao)
         "Saldo operacional",
         moeda(dados.saldoOperacional),
       ],
+      [
+        "Custo dos materiais",
+        moeda(dados.custoMateriais),
+        "Lucro bruto dos produtos",
+        moeda(dados.lucroBrutoProdutos),
+      ],
+      ["Margem bruta dos produtos", `${dados.margemBrutaProdutos.toFixed(1)}%`, "", ""],
     ],
   );
 
   tabela(
     `Vendas (${dados.vendas.length})`,
-    ["Nº", "Data", "Cliente", "Motorista", "Venda", "Frete", "Status", "Observação"],
+    [
+      "Nº",
+      "Data",
+      "Cliente",
+      "Material",
+      "Motorista",
+      "Venda",
+      "Custo",
+      "Lucro bruto",
+      "Margem",
+      "Frete",
+      "Status",
+      "Observação",
+    ],
     dados.vendas.map((venda) => [
       venda.numero ?? "—",
       dataHoraBR(venda.criada_em),
       venda.cliente,
+      venda.material,
       venda.motorista,
       moeda(venda.valor_venda),
+      moeda(venda.custo_materiais),
+      moeda(venda.lucro_bruto),
+      `${venda.margem_bruta.toFixed(1)}%`,
       moeda(venda.valor_frete),
       statusLabel(venda.status),
       venda.observacoes || "—",
     ]),
+    6.5,
   );
 
   tabela(

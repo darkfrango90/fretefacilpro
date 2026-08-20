@@ -33,6 +33,9 @@ interface CrudPageProps {
   empresaId: string;
   renderRow: (row: any) => React.ReactNode;
   defaults?: Record<string, any>;
+  loadRows?: () => Promise<any[]>;
+  saveRow?: (row: Record<string, any>, editing: any | null) => Promise<void>;
+  cacheEnabled?: boolean;
 }
 
 export function CrudPage({
@@ -42,6 +45,9 @@ export function CrudPage({
   empresaId,
   renderRow,
   defaults = {},
+  loadRows,
+  saveRow,
+  cacheEnabled = true,
 }: CrudPageProps) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -51,7 +57,7 @@ export function CrudPage({
     queryKey: [table, empresaId],
     enabled: !!empresaId,
     initialData: () => {
-      if (typeof window === "undefined" || !empresaId) return undefined;
+      if (!cacheEnabled || typeof window === "undefined" || !empresaId) return undefined;
       try {
         const raw = localStorage.getItem(`crud:${table}:cache:${empresaId}`);
         return raw ? JSON.parse(raw) : undefined;
@@ -61,20 +67,27 @@ export function CrudPage({
     },
     queryFn: async () => {
       try {
-        const { data, error } = await (supabase as any)
-          .from(table)
-          .select("*")
-          .eq("empresa_id", empresaId)
-          .order("criado_em", { ascending: false });
-        if (error) throw error;
-        const result = data ?? [];
-        try {
-          localStorage.setItem(`crud:${table}:cache:${empresaId}`, JSON.stringify(result));
-        } catch {}
+        let result: any[];
+        if (loadRows) {
+          result = await loadRows();
+        } else {
+          const { data, error } = await (supabase as any)
+            .from(table)
+            .select("*")
+            .eq("empresa_id", empresaId)
+            .order("criado_em", { ascending: false });
+          if (error) throw error;
+          result = data ?? [];
+        }
+        if (cacheEnabled) {
+          try {
+            localStorage.setItem(`crud:${table}:cache:${empresaId}`, JSON.stringify(result));
+          } catch {}
+        }
         return result;
       } catch (err) {
         // Se falhar (por exemplo, offline), tenta carregar do cache local
-        if (typeof window !== "undefined") {
+        if (cacheEnabled && typeof window !== "undefined") {
           try {
             const raw = localStorage.getItem(`crud:${table}:cache:${empresaId}`);
             if (raw) return JSON.parse(raw);
@@ -88,6 +101,10 @@ export function CrudPage({
   const upsert = useMutation({
     mutationFn: async (payload: any) => {
       const row = { ...defaults, ...payload, empresa_id: empresaId };
+      if (saveRow) {
+        await saveRow(row, editing);
+        return;
+      }
       if (editing?.id) {
         const { error } = await (supabase as any).from(table).update(row).eq("id", editing.id);
         if (error) throw error;

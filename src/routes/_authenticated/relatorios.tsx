@@ -127,7 +127,7 @@ function Page() {
         if (!isNaN(n)) qEnt = qEnt.eq("numero", n);
       }
 
-      const [entR, abR, despR, profR, vR, matR, cliR] = await Promise.all([
+      const [entR, abR, despR, profR, vR, matR, cliR, custosMatR] = await Promise.all([
         qEnt,
         qAb,
         qDesp,
@@ -138,11 +138,27 @@ function Page() {
           .eq("empresa_id", empresaId),
         (supabase as any).from("materiais").select("id, nome, unidade").eq("empresa_id", empresaId),
         (supabase as any).from("clientes").select("id, nome").eq("empresa_id", empresaId),
+        (supabase as any)
+          .from("materiais_custos")
+          .select("material_id, custo_compra")
+          .eq("empresa_id", empresaId),
       ]);
 
       const ents = (entR.data ?? []).filter(
         (entrega: any) => materialId === "todos" || entregaPossuiMaterial(entrega, materialId),
       );
+      const custosEntregaR = ents.length
+        ? await (supabase as any)
+            .from("entrega_custos")
+            .select("entrega_id, itens")
+            .in(
+              "entrega_id",
+              ents.map((entrega: any) => entrega.id),
+            )
+        : { data: [], error: null };
+      if (custosMatR.error) throw custosMatR.error;
+      if (custosEntregaR.error) throw custosEntregaR.error;
+
       const vendasValidas = ents.filter((e: any) => e.status !== "cancelada");
       const abs = abR.data ?? [];
       const despesas = despR.data ?? [];
@@ -154,6 +170,34 @@ function Page() {
       );
       const nameMat = new Map<string, string>((matR.data ?? []).map((m: any) => [m.id, m.nome]));
       const nameCli = new Map<string, string>((cliR.data ?? []).map((c: any) => [c.id, c.nome]));
+      const custoAtualPorMaterial = new Map<string, number>(
+        (custosMatR.data ?? []).map((custo: any) => [
+          custo.material_id,
+          Number(custo.custo_compra || 0),
+        ]),
+      );
+      const custosPorEntrega = new Map<string, Map<string, number>>();
+      for (const registro of custosEntregaR.data ?? []) {
+        if (!Array.isArray(registro.itens)) continue;
+        custosPorEntrega.set(
+          registro.entrega_id,
+          new Map(
+            registro.itens
+              .filter((item: any) => item && typeof item.material_id === "string")
+              .map((item: any) => [item.material_id, Number(item.custo_unitario || 0)]),
+          ),
+        );
+      }
+      const calcularCustoMateriais = (entrega: any) => {
+        const custosHistoricos = custosPorEntrega.get(entrega.id);
+        return obterItensEntrega(entrega).reduce((totalItem, item) => {
+          const custoUnitario =
+            custosHistoricos?.get(item.material_id) ??
+            custoAtualPorMaterial.get(item.material_id) ??
+            0;
+          return totalItem + custoUnitario * Number(item.quantidade || 1);
+        }, 0);
+      };
 
       const total = ents.length;
       const finalizadas = ents.filter((e: any) => e.status === "entregue").length;
@@ -164,6 +208,13 @@ function Page() {
         (s: number, e: any) => s + calcularValorMateriais(e),
         0,
       );
+      const custoMateriais = vendasValidas.reduce(
+        (s: number, e: any) => s + calcularCustoMateriais(e),
+        0,
+      );
+      const lucroBrutoProdutos = receitaProduto - custoMateriais;
+      const margemBrutaProdutos =
+        receitaProduto > 0 ? (lucroBrutoProdutos / receitaProduto) * 100 : 0;
       const receitaFrete = vendasValidas.reduce(
         (s: number, e: any) => s + Number(e.valor_frete || 0),
         0,
@@ -284,23 +335,33 @@ function Page() {
         .sort((a, b) => a.dia.localeCompare(b.dia));
 
       const vendas = ents
-        .map((e: any) => ({
-          id: e.id,
-          numero: e.numero,
-          criada_em: e.criada_em,
-          status: e.status,
-          cliente: nameCli.get(e.cliente_id) ?? "—",
-          material: resumoMateriais(e),
-          motorista_venda: nameProfile.get(e.motorista_venda_id) ?? "—",
-          motorista_entrega: nameProfile.get(e.motorista_entrega_id) ?? "—",
-          motorista:
-            nameProfile.get(e.motorista_entrega_id) ?? nameProfile.get(e.motorista_venda_id) ?? "—",
-          forma_pagamento: e.forma_pagamento,
-          valor_venda: calcularValorMateriais(e),
-          valor_frete: Number(e.valor_frete || 0),
-          total: calcularValorMateriais(e) + Number(e.valor_frete || 0),
-          observacoes: e.observacoes ?? "",
-        }))
+        .map((e: any) => {
+          const valorVenda = calcularValorMateriais(e);
+          const custoVenda = calcularCustoMateriais(e);
+          const lucroBruto = valorVenda - custoVenda;
+          return {
+            id: e.id,
+            numero: e.numero,
+            criada_em: e.criada_em,
+            status: e.status,
+            cliente: nameCli.get(e.cliente_id) ?? "—",
+            material: resumoMateriais(e),
+            motorista_venda: nameProfile.get(e.motorista_venda_id) ?? "—",
+            motorista_entrega: nameProfile.get(e.motorista_entrega_id) ?? "—",
+            motorista:
+              nameProfile.get(e.motorista_entrega_id) ??
+              nameProfile.get(e.motorista_venda_id) ??
+              "—",
+            forma_pagamento: e.forma_pagamento,
+            valor_venda: valorVenda,
+            valor_frete: Number(e.valor_frete || 0),
+            total: valorVenda + Number(e.valor_frete || 0),
+            custo_materiais: custoVenda,
+            lucro_bruto: lucroBruto,
+            margem_bruta: valorVenda > 0 ? (lucroBruto / valorVenda) * 100 : 0,
+            observacoes: e.observacoes ?? "",
+          };
+        })
         .sort((a: any, b: any) => (a.criada_em < b.criada_em ? 1 : -1));
 
       return {
@@ -318,6 +379,9 @@ function Page() {
         litrosTotais,
         despesasOperacionais,
         saldoOperacional,
+        custoMateriais,
+        lucroBrutoProdutos,
+        margemBrutaProdutos,
         rankingMotoristas,
         topClientes,
         topMateriais,
