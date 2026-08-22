@@ -23,6 +23,8 @@ import {
   PackageCheck,
   Truck,
   Plus,
+  BarChart3,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OfflineProvider } from "@/components/offline/offline-provider";
@@ -72,6 +74,13 @@ const ADMIN_NAV: NavItem[] = [
   { to: "/veiculos", icon: <Car className="h-5 w-5" />, label: "Veículos" },
   { to: "/entregas", icon: <ClipboardList className="h-5 w-5" />, label: "Entregas" },
   { to: "/configuracoes", icon: <Settings className="h-5 w-5" />, label: "Config." },
+];
+
+// Itens extras que só aparecem na sidebar do desktop (md+), sem afetar a
+// barra de navegação inferior do celular.
+const ADMIN_NAV_DESKTOP_EXTRA: NavItem[] = [
+  { to: "/financeiro", icon: <Wallet className="h-5 w-5" />, label: "Financeiro" },
+  { to: "/relatorios", icon: <BarChart3 className="h-5 w-5" />, label: "Relatórios" },
 ];
 
 const MOTORISTA_NAV: NavItem[] = [
@@ -213,6 +222,7 @@ function AuthedLayout() {
   }
 
   const items = isMaster ? MASTER_NAV : isAdmin ? ADMIN_NAV : MOTORISTA_NAV;
+  const sidebarItems = isAdmin ? [...items, ...ADMIN_NAV_DESKTOP_EXTRA] : items;
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -227,7 +237,7 @@ function AuthedLayout() {
         </div>
 
         <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto">
-          {items.map((item) => (
+          {sidebarItems.map((item) => (
             <SidebarNavBtn key={item.to} {...item} />
           ))}
         </nav>
@@ -279,7 +289,7 @@ function AuthedLayout() {
       <OfflineProvider />
 
       <div className="flex-1 flex flex-col min-w-0 md:pl-64 min-h-screen">
-        <main className="px-4 py-6 md:py-8 max-w-4xl mx-auto flex-1 w-full pb-28 md:pb-8">
+        <main className="px-4 py-6 md:px-6 md:py-8 lg:px-8 max-w-4xl md:max-w-6xl xl:max-w-7xl mx-auto flex-1 w-full pb-28 md:pb-8">
           <Outlet />
         </main>
       </div>

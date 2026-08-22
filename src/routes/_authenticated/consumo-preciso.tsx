@@ -7,6 +7,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { BarChart3, Droplets, AlertCircle } from "lucide-react";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 
 import { AdminOnly } from "@/components/role-guard";
 
@@ -189,11 +197,11 @@ function Page() {
         </Select>
       </div>
 
-      <div className="space-y-3">
-        {filtrados.length === 0 && (
-          <p className="text-sm text-muted-foreground">Nenhuma aferição encontrada. Registre aferições para começar.</p>
-        )}
+      {filtrados.length === 0 && (
+        <p className="text-sm text-muted-foreground">Nenhuma aferição encontrada. Registre aferições para começar.</p>
+      )}
 
+      <div className="space-y-3 md:hidden">
         {filtrados.map((it, idx) => {
           if (it.incompleto) {
             return (
@@ -259,6 +267,65 @@ function Page() {
           );
         })}
       </div>
+
+      {filtrados.length > 0 && (
+        <Card className="hidden md:block">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Veículo</TableHead>
+                <TableHead>Período</TableHead>
+                <TableHead>Estoque inicial</TableHead>
+                <TableHead>Estoque final</TableHead>
+                <TableHead>Abastecido</TableHead>
+                <TableHead>Consumido</TableHead>
+                <TableHead>KM rodados</TableHead>
+                <TableHead>Consumo</TableHead>
+                <TableHead className="text-right">Custo/km</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtrados.map((it, idx) => {
+                if (it.incompleto) {
+                  return (
+                    <TableRow key={`${it.veiculo_id}-incompleto-${idx}`}>
+                      <TableCell className="font-medium">{it.placa}</TableCell>
+                      <TableCell colSpan={8} className="text-amber-700">
+                        <span className="inline-flex items-center gap-1">
+                          <AlertCircle className="h-3.5 w-3.5" /> {it.mensagem}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                }
+                const negativo = it.dieselConsumido < 0;
+                return (
+                  <TableRow key={`${it.inicio.id}-${it.fim.id}`}>
+                    <TableCell className="font-medium">{it.placa}</TableCell>
+                    <TableCell className="text-muted-foreground whitespace-nowrap">
+                      {new Date(it.inicio.data_hora).toLocaleDateString("pt-BR")} →{" "}
+                      {new Date(it.fim.data_hora).toLocaleDateString("pt-BR")}
+                    </TableCell>
+                    <TableCell>{fmtL(it.inicio.litros_aferidos)}</TableCell>
+                    <TableCell>{fmtL(it.fim.litros_aferidos)}</TableCell>
+                    <TableCell>{fmtL(it.litrosAbast)}</TableCell>
+                    <TableCell className={negativo ? "text-destructive" : ""}>
+                      {fmtL(it.dieselConsumido)}
+                    </TableCell>
+                    <TableCell>{fmtKm(it.kmRodados)}</TableCell>
+                    <TableCell className="text-primary font-medium">
+                      {it.kmL != null ? `${fmtN(it.kmL, 2)} km/L` : "—"}
+                    </TableCell>
+                    <TableCell className="text-right text-primary font-medium">
+                      {it.custoKm != null ? `${fmtR(it.custoKm)}/km` : "—"}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
     </div>
   );
 }

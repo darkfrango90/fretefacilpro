@@ -24,6 +24,14 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Camera, Clock, Fuel, Loader2, Pencil, RefreshCw, Sparkles } from "lucide-react";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import { capturarFoto } from "@/lib/native";
 import { enqueue, fileToPhoto, pendingByType } from "@/lib/offline/queue";
 import { syncNow } from "@/lib/offline/sync";
@@ -469,54 +477,124 @@ function Page() {
           <p className="text-sm text-muted-foreground">Carregando abastecimentos...</p>
         ) : null}
 
-        {(abastecimentosQuery.data ?? []).map((item: any) => (
-          <Card key={item.id}>
-            <CardContent className="space-y-1 p-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-medium">{item.veiculo?.placa ?? "Veículo"}</span>
-                <span className="text-xs text-muted-foreground">
-                  {new Date(item.data_hora).toLocaleString("pt-BR")}
-                </span>
-              </div>
-              {isAdmin ? (
-                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                  <span>
-                    Motorista:{" "}
-                    {motoristas?.find((m: any) => m.id === item.motorista_id)?.nome ??
-                      "Não identificado"}
+        <div className="space-y-2 md:hidden">
+          {(abastecimentosQuery.data ?? []).map((item: any) => (
+            <Card key={item.id}>
+              <CardContent className="space-y-1 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium">{item.veiculo?.placa ?? "Veículo"}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(item.data_hora).toLocaleString("pt-BR")}
                   </span>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7"
-                    aria-label="Editar abastecimento"
-                    onClick={() =>
-                      setEditando({
-                        ...item,
-                        litros: item.litros == null ? "" : String(item.litros),
-                        valor_total: item.valor_total == null ? "" : String(item.valor_total),
-                        km_atual: String(item.km_atual),
-                        data_hora: new Date(item.data_hora).toISOString().slice(0, 16),
-                        observacoes: item.observacoes ?? "",
-                      })
-                    }
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
                 </div>
-              ) : null}
-              <div className="text-sm">
-                {item.litros != null ? `${Number(item.litros).toFixed(3)} L` : "—"}
-                {item.valor_total != null ? ` · ${formatarMoeda(item.valor_total)}` : ""}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                KM {formatarQuilometragem(item.km_atual)}
-              </div>
-              {item.observacoes ? <p className="text-xs">{item.observacoes}</p> : null}
-            </CardContent>
+                {isAdmin ? (
+                  <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span>
+                      Motorista:{" "}
+                      {motoristas?.find((m: any) => m.id === item.motorista_id)?.nome ??
+                        "Não identificado"}
+                    </span>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      aria-label="Editar abastecimento"
+                      onClick={() =>
+                        setEditando({
+                          ...item,
+                          litros: item.litros == null ? "" : String(item.litros),
+                          valor_total: item.valor_total == null ? "" : String(item.valor_total),
+                          km_atual: String(item.km_atual),
+                          data_hora: new Date(item.data_hora).toISOString().slice(0, 16),
+                          observacoes: item.observacoes ?? "",
+                        })
+                      }
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : null}
+                <div className="text-sm">
+                  {item.litros != null ? `${Number(item.litros).toFixed(3)} L` : "—"}
+                  {item.valor_total != null ? ` · ${formatarMoeda(item.valor_total)}` : ""}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  KM {formatarQuilometragem(item.km_atual)}
+                </div>
+                {item.observacoes ? <p className="text-xs">{item.observacoes}</p> : null}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {(abastecimentosQuery.data?.length ?? 0) > 0 && (
+          <Card className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Veículo</TableHead>
+                  {isAdmin && <TableHead>Motorista</TableHead>}
+                  <TableHead>Data/hora</TableHead>
+                  <TableHead>Litros</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>KM</TableHead>
+                  <TableHead>Observações</TableHead>
+                  {isAdmin && <TableHead className="w-14 text-right">Ações</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(abastecimentosQuery.data ?? []).map((item: any) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{item.veiculo?.placa ?? "—"}</TableCell>
+                    {isAdmin && (
+                      <TableCell className="text-muted-foreground">
+                        {motoristas?.find((m: any) => m.id === item.motorista_id)?.nome ??
+                          "Não identificado"}
+                      </TableCell>
+                    )}
+                    <TableCell className="text-muted-foreground">
+                      {new Date(item.data_hora).toLocaleString("pt-BR")}
+                    </TableCell>
+                    <TableCell>
+                      {item.litros != null ? `${Number(item.litros).toFixed(3)} L` : "—"}
+                    </TableCell>
+                    <TableCell>
+                      {item.valor_total != null ? formatarMoeda(item.valor_total) : "—"}
+                    </TableCell>
+                    <TableCell>{formatarQuilometragem(item.km_atual)}</TableCell>
+                    <TableCell className="max-w-56 truncate text-muted-foreground">
+                      {item.observacoes || "—"}
+                    </TableCell>
+                    {isAdmin && (
+                      <TableCell className="text-right">
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          aria-label="Editar abastecimento"
+                          onClick={() =>
+                            setEditando({
+                              ...item,
+                              litros: item.litros == null ? "" : String(item.litros),
+                              valor_total:
+                                item.valor_total == null ? "" : String(item.valor_total),
+                              km_atual: String(item.km_atual),
+                              data_hora: new Date(item.data_hora).toISOString().slice(0, 16),
+                              observacoes: item.observacoes ?? "",
+                            })
+                          }
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </Card>
-        ))}
+        )}
 
         {!abastecimentosQuery.isLoading &&
         pendentes.length === 0 &&

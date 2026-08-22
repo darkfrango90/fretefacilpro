@@ -4,6 +4,13 @@ import { CalendarDays, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { formatarMoeda } from "@/lib/moeda";
 import {
@@ -12,7 +19,11 @@ import {
   obterIntervaloCompetencia,
 } from "@/lib/competencia-mensal";
 
-type Props = { empresaId: string };
+type Props = {
+  empresaId: string;
+  motoristaId: string;
+  onMotoristaIdChange: (motoristaId: string) => void;
+};
 
 type TotaisMotorista = {
   id: string;
@@ -22,7 +33,11 @@ type TotaisMotorista = {
   fretes: number;
 };
 
-export function RelatorioMensalMotoristas({ empresaId }: Props) {
+export function RelatorioMensalMotoristas({
+  empresaId,
+  motoristaId,
+  onMotoristaIdChange,
+}: Props) {
   const mesAtual = competenciaAtual();
   const [competencia, setCompetencia] = useState(mesAtual);
   const intervalo = useMemo(() => obterIntervaloCompetencia(competencia), [competencia]);
@@ -92,26 +107,36 @@ export function RelatorioMensalMotoristas({ empresaId }: Props) {
     },
   });
 
+  const opcoesMotoristas = useMemo(
+    () =>
+      [...(relatorio.data ?? [])].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
+    [relatorio.data],
+  );
+
+  const motoristasExibidos = useMemo(() => {
+    if (motoristaId === "todos") return relatorio.data ?? [];
+    return (relatorio.data ?? []).filter((motorista) => motorista.id === motoristaId);
+  }, [relatorio.data, motoristaId]);
+
   return (
     <section className="space-y-3" aria-labelledby="relatorio-mensal-motoristas-title">
       <Card className="border-primary/30">
         <CardContent className="space-y-3 p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2
-                id="relatorio-mensal-motoristas-title"
-                className="flex items-center gap-2 font-semibold"
-              >
-                <Users className="h-4 w-4 text-primary" /> Relatório individual por motorista
-              </h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {intervalo.inicioLabel} até {intervalo.fimLabel}
-              </p>
-            </div>
-            <div className="w-36 shrink-0">
-              <Label htmlFor="competencia-motoristas" className="sr-only">
-                Competência
-              </Label>
+          <div>
+            <h2
+              id="relatorio-mensal-motoristas-title"
+              className="flex items-center gap-2 font-semibold"
+            >
+              <Users className="h-4 w-4 text-primary" /> Relatório individual por motorista
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {intervalo.inicioLabel} até {intervalo.fimLabel}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="competencia-motoristas">Competência</Label>
               <Input
                 id="competencia-motoristas"
                 type="month"
@@ -120,7 +145,24 @@ export function RelatorioMensalMotoristas({ empresaId }: Props) {
                 onChange={(event) => setCompetencia(event.target.value || mesAtual)}
               />
             </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="motorista-relatorio-mensal">Motorista</Label>
+              <Select value={motoristaId} onValueChange={onMotoristaIdChange}>
+                <SelectTrigger id="motorista-relatorio-mensal">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os motoristas</SelectItem>
+                  {opcoesMotoristas.map((motorista) => (
+                    <SelectItem key={motorista.id} value={motorista.id}>
+                      {motorista.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
           <p className="flex items-center gap-1 text-xs text-muted-foreground">
             <CalendarDays className="h-3.5 w-3.5" />
             {intervalo.emAberto
@@ -134,7 +176,7 @@ export function RelatorioMensalMotoristas({ empresaId }: Props) {
         <p className="py-4 text-center text-sm text-muted-foreground">Carregando motoristas...</p>
       ) : null}
 
-      {(relatorio.data ?? []).map((motorista) => (
+      {motoristasExibidos.map((motorista) => (
         <Card key={motorista.id}>
           <CardContent className="space-y-3 p-4">
             <div className="flex items-center justify-between gap-2">

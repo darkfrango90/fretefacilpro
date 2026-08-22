@@ -450,9 +450,21 @@ Deno.serve(async (req) => {
         {},
       );
 
+      // Cliente, material e forma de pagamento só podem ser trocados pelo
+      // admin/master; o motorista (pendentes.tsx) nunca envia esses campos,
+      // mas o servidor precisa recusar mesmo assim caso alguém tente.
+      if (
+        !isAdminOuMaster &&
+        (body.cliente_id != null || body.material_id != null || body.forma_pagamento != null)
+      ) {
+        return businessError("SEM_PERMISSAO");
+      }
+
       const { data: entregaAtual, error: buscaError } = await admin
         .from("entregas")
-        .select("id, itens, material_id, quantidade, valor_praticado, preco_base_no_momento")
+        .select(
+          "id, itens, material_id, quantidade, valor_praticado, preco_base_no_momento, cliente_id, forma_pagamento",
+        )
         .eq("id", entregaId)
         .eq("empresa_id", profile.empresa_id)
         .maybeSingle();
@@ -460,7 +472,8 @@ Deno.serve(async (req) => {
       if (!entregaAtual) return businessError("ENTREGA_NAO_ENCONTRADA");
 
       const itensAtuais = Array.isArray(entregaAtual.itens) ? entregaAtual.itens : [];
-      const alterandoMaterial = body.quantidade != null || body.valor_praticado != null;
+      const alterandoMaterial =
+        body.quantidade != null || body.valor_praticado != null || body.material_id != null;
       if (alterandoMaterial && itensAtuais.length > 1) {
         return businessError("EDICAO_MULTIPLOS_MATERIAIS_RESTRITA");
       }
@@ -484,10 +497,39 @@ Deno.serve(async (req) => {
       if (body.endereco !== undefined) patch.endereco = String(body.endereco ?? "").trim() || null;
       if (body.observacoes !== undefined)
         patch.observacoes = String(body.observacoes ?? "").trim() || null;
+
+      let novoMaterial: { id: string; nome: string; unidade: string | null } | null = null;
+      if (body.material_id != null) {
+        const { data: material } = await admin
+          .from("materiais")
+          .select("id, nome, preco_base, unidade")
+          .eq("id", String(body.material_id))
+          .eq("empresa_id", profile.empresa_id)
+          .eq("ativo", true)
+          .maybeSingle();
+        if (!material) return businessError("MATERIAL_INVALIDO");
+        const itemFrete = String(material.nome ?? "").trim().toLocaleUpperCase("pt-BR") === "FRETE";
+        patch.material_id = material.id;
+        patch.preco_base_no_momento = itemFrete ? 0 : Number(material.preco_base ?? 0);
+        if (itemFrete) {
+          patch.quantidade = 1;
+          patch.valor_praticado = 0;
+        }
+        novoMaterial = { id: material.id, nome: material.nome, unidade: material.unidade ?? null };
+      }
+
       if (alterandoMaterial && itensAtuais.length === 1) {
+        const base = novoMaterial
+          ? {
+              material_id: novoMaterial.id,
+              nome: novoMaterial.nome,
+              unidade: novoMaterial.unidade,
+              preco_base: patch.preco_base_no_momento,
+            }
+          : { ...itensAtuais[0] };
         patch.itens = [
           {
-            ...itensAtuais[0],
+            ...base,
             quantidade:
               patch.quantidade != null ? Number(patch.quantidade) : itensAtuais[0].quantidade,
             valor_praticado:
@@ -497,6 +539,39 @@ Deno.serve(async (req) => {
           },
         ];
       }
+
+      if (body.cliente_id != null) {
+        const { data: cliente } = await admin
+          .from("clientes")
+          .select("id")
+          .eq("id", String(body.cliente_id))
+          .eq("empresa_id", profile.empresa_id)
+          .maybeSingle();
+        if (!cliente) return businessError("CLIENTE_INVALIDO");
+        patch.cliente_id = cliente.id;
+      }
+
+      if (body.forma_pagamento != null && String(body.forma_pagamento) !== entregaAtual.forma_pagamento) {
+        const formasValidas = [
+          "dinheiro",
+          "pix",
+          "deposito",
+          "cartao_credito",
+          "permuta",
+          "boleto",
+          "carteira",
+        ];
+        const forma = String(body.forma_pagamento).toLowerCase();
+        if (!formasValidas.includes(forma)) return businessError("FORMA_PAGAMENTO_INVALIDA");
+        patch.forma_pagamento = forma;
+        patch.status_pagamento = ["boleto", "permuta", "carteira"].includes(forma)
+          ? "pendente"
+          : "a_confirmar";
+        patch.pagamento_confirmado_em = null;
+        patch.pagamento_confirmado_por = null;
+        if (patch.status_pagamento !== "pendente") patch.vencimento_pagamento = null;
+      }
+
       if (Object.keys(patch).length === 0) return businessError("NADA_PARA_ATUALIZAR");
 
       // Atualiza com o client do usuário (não service role): admin fica

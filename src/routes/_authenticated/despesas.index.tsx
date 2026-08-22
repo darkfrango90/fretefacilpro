@@ -17,6 +17,14 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, CheckCircle2, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 
 export const Route = createFileRoute("/_authenticated/despesas/")({
   component: () => (
@@ -221,6 +229,9 @@ function DespesasAdmin() {
             Nenhuma despesa no período.
           </div>
         )}
+      </div>
+
+      <div className="space-y-2 md:hidden">
         {(despesas ?? []).map((d: any) => (
           <Card
             key={d.id}
@@ -256,6 +267,60 @@ function DespesasAdmin() {
           </Card>
         ))}
       </div>
+
+      {(despesas?.length ?? 0) > 0 && (
+        <Card className="hidden md:block">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Categoria</TableHead>
+                <TableHead>Descrição</TableHead>
+                <TableHead>Data</TableHead>
+                <TableHead>Veículo</TableHead>
+                <TableHead>Lançado por</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Valor</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(despesas ?? []).map((d: any) => (
+                <TableRow key={d.id} className="cursor-pointer" onClick={() => setDetalhe(d)}>
+                  <TableCell>
+                    <Badge variant="secondary" className="text-[10px]">
+                      {labelCategoria(d.categoria)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="max-w-56 truncate">
+                    <span className="inline-flex items-center gap-1">
+                      {d.descricao || "(sem descrição)"}
+                      {d.foto_cupom_url && (
+                        <ImageIcon className="h-3 w-3 text-muted-foreground shrink-0" />
+                      )}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {new Date(d.data).toLocaleDateString("pt-BR")}
+                  </TableCell>
+                  <TableCell>{d.veiculo_id ? (placas.get(d.veiculo_id) ?? "—") : "Geral"}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {nomes?.get(d.lancado_por) ?? "—"}
+                  </TableCell>
+                  <TableCell>
+                    {d.status === "a_conferir" ? (
+                      <Badge className="text-[10px] bg-amber-500">A conferir</Badge>
+                    ) : (
+                      <Badge className="text-[10px] bg-emerald-600">Conferida</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right font-semibold">
+                    {brl(Number(d.valor))}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
 
       <Dialog open={!!detalhe} onOpenChange={(o) => !o && setDetalhe(null)}>
         <DialogContent className="max-w-md">

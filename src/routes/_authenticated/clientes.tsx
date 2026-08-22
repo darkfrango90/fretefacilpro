@@ -14,6 +14,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Plus, Trash2, Pencil } from "lucide-react";
 import {
@@ -308,7 +309,8 @@ function Page() {
       </div>
 
       {isLoading && <p className="text-sm text-muted-foreground">Carregando...</p>}
-      <div className="space-y-2">
+
+      <div className="space-y-2 md:hidden">
         {(rows ?? []).map((r: any) => (
           <Card key={r.id}>
             <CardContent className="p-3 flex items-center justify-between gap-2">
@@ -343,6 +345,62 @@ function Page() {
           <p className="text-sm text-muted-foreground text-center py-8">Nada cadastrado ainda.</p>
         )}
       </div>
+
+      <Card className="hidden md:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nome / Razão social</TableHead>
+              <TableHead>Documento</TableHead>
+              <TableHead>Telefone</TableHead>
+              <TableHead>Endereço</TableHead>
+              <TableHead>Cidade/UF</TableHead>
+              {isAdmin && <TableHead className="w-24 text-right">Ações</TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {(rows ?? []).map((r: any) => (
+              <TableRow key={r.id}>
+                <TableCell className="font-medium">
+                  {r.tipo_pessoa === "juridica" && r.razao_social ? r.razao_social : r.nome}
+                </TableCell>
+                <TableCell>
+                  {r.cpf_cnpj ? maskCpfCnpj(r.cpf_cnpj, r.tipo_pessoa ?? "fisica") : "—"}
+                </TableCell>
+                <TableCell>{r.telefone || "—"}</TableCell>
+                <TableCell className="max-w-56 truncate">{r.endereco || "—"}</TableCell>
+                <TableCell>{[r.cidade, r.estado].filter(Boolean).join("/") || "—"}</TableCell>
+                {isAdmin && (
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button size="icon" variant="ghost" onClick={() => openEdit(r)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => { if (confirm("Remover?")) remove.mutate(r.id); }}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                )}
+              </TableRow>
+            ))}
+            {!isLoading && (rows ?? []).length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={isAdmin ? 6 : 5}
+                  className="text-center text-sm text-muted-foreground py-8"
+                >
+                  Nada cadastrado ainda.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </Card>
     </div>
   );
 }

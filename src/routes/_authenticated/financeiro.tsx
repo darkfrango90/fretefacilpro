@@ -37,6 +37,14 @@ import {
   X,
 } from "lucide-react";
 import { calcularValorMateriais, obterItensEntrega, resumoMateriais } from "@/lib/entrega-itens";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 
 export const Route = createFileRoute("/_authenticated/financeiro")({
   component: () => (
@@ -453,27 +461,36 @@ function Page() {
           {!isLoading && aConfirmar.length === 0 && (
             <Empty msg="Nenhuma venda aguardando confirmação." />
           )}
-          {aConfirmar.map((e: any) => (
-            <EntregaCard key={e.id} e={e} onClick={() => setSelecionadaId(e.id)} />
-          ))}
+          <div className="space-y-2 md:hidden">
+            {aConfirmar.map((e: any) => (
+              <EntregaCard key={e.id} e={e} onClick={() => setSelecionadaId(e.id)} />
+            ))}
+          </div>
+          <FinanceiroTable rows={aConfirmar} onClickRow={(id) => setSelecionadaId(id)} />
         </TabsContent>
 
         <TabsContent value="pendente" className="space-y-2 pt-2">
           {!isLoading && pendentes.length === 0 && (
             <Empty msg="Nenhuma venda pendente de recebimento." />
           )}
-          {pendentes.map((e: any) => (
-            <EntregaCard key={e.id} e={e} onClick={() => setSelecionadaId(e.id)} />
-          ))}
+          <div className="space-y-2 md:hidden">
+            {pendentes.map((e: any) => (
+              <EntregaCard key={e.id} e={e} onClick={() => setSelecionadaId(e.id)} />
+            ))}
+          </div>
+          <FinanceiroTable rows={pendentes} onClickRow={(id) => setSelecionadaId(id)} />
         </TabsContent>
 
         <TabsContent value="confirmado" className="space-y-2 pt-2">
           {!isLoading && confirmados.length === 0 && (
             <Empty msg="Nenhum recebimento confirmado ainda." />
           )}
-          {confirmados.map((e: any) => (
-            <EntregaCard key={e.id} e={e} onClick={() => setSelecionadaId(e.id)} />
-          ))}
+          <div className="space-y-2 md:hidden">
+            {confirmados.map((e: any) => (
+              <EntregaCard key={e.id} e={e} onClick={() => setSelecionadaId(e.id)} />
+            ))}
+          </div>
+          <FinanceiroTable rows={confirmados} onClickRow={(id) => setSelecionadaId(id)} />
         </TabsContent>
       </Tabs>
 
@@ -582,6 +599,76 @@ function EntregaCard({ e, onClick }: { e: any; onClick: () => void }) {
         </CardContent>
       </Card>
     </button>
+  );
+}
+
+function FinanceiroTable({
+  rows,
+  onClickRow,
+}: {
+  rows: any[];
+  onClickRow: (id: string) => void;
+}) {
+  return (
+    <Card className="hidden md:block">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Venda</TableHead>
+            <TableHead>Valor</TableHead>
+            <TableHead>Forma de pagamento</TableHead>
+            <TableHead>Motorista</TableHead>
+            <TableHead>Status entrega</TableHead>
+            <TableHead>Criada em</TableHead>
+            <TableHead>Vencimento</TableHead>
+            <TableHead>Recebida em</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((e: any) => {
+            const motorista = e.motorista_entrega_nome || e.motorista_venda_nome || "—";
+            const vencida =
+              e.status_pagamento === "pendente" &&
+              e.vencimento_pagamento &&
+              e.vencimento_pagamento < hojeLocalISO();
+            return (
+              <TableRow
+                key={e.id}
+                className="cursor-pointer"
+                onClick={() => onClickRow(e.id)}
+              >
+                <TableCell className="font-medium">
+                  {e.numero != null && (
+                    <span className="text-muted-foreground mr-1">#{e.numero}</span>
+                  )}
+                  {e.clientes?.nome ?? "Cliente"}
+                </TableCell>
+                <TableCell className="font-semibold">{brl(totalEntrega(e))}</TableCell>
+                <TableCell>
+                  <Badge variant="outline">{FORMA_LABEL[e.forma_pagamento] ?? e.forma_pagamento}</Badge>
+                </TableCell>
+                <TableCell>{motorista}</TableCell>
+                <TableCell>{STATUS_ENTREGA_LABEL[e.status] ?? e.status}</TableCell>
+                <TableCell className="text-muted-foreground">{formatarData(e.criada_em)}</TableCell>
+                <TableCell className={vencida ? "font-medium text-destructive" : "text-muted-foreground"}>
+                  {e.vencimento_pagamento ? formatarData(e.vencimento_pagamento) : "—"}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {e.pagamento_confirmado_em ? formatarData(e.pagamento_confirmado_em) : "—"}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+          {rows.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-8">
+                Nenhuma venda encontrada.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </Card>
   );
 }
 

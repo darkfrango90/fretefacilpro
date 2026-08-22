@@ -161,7 +161,7 @@ function AdminDashboard({ empresaId }: { empresaId: string }) {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold">Painel · últimos 30 dias</h1>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
         <StatCard
           label="Vendas"
           value={stats?.totalVendas ?? "—"}
@@ -194,65 +194,69 @@ function AdminDashboard({ empresaId }: { empresaId: string }) {
         />
       </div>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Trophy className="h-4 w-4 text-primary" /> Ranking de entregas
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {!stats?.rankingMotoristas?.length && (
-            <div className="text-xs text-muted-foreground">
-              Nenhuma entrega finalizada no período.
-            </div>
-          )}
-          {stats?.rankingMotoristas?.map((m, i) => (
-            <div key={m.id} className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="w-5 text-xs text-muted-foreground">#{i + 1}</span>
-                <span className="truncate">{m.nome}</span>
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-primary" /> Ranking de entregas
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {!stats?.rankingMotoristas?.length && (
+              <div className="text-xs text-muted-foreground">
+                Nenhuma entrega finalizada no período.
               </div>
-              <span className="font-semibold">{m.qtd}</span>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+            )}
+            {stats?.rankingMotoristas?.map((m, i) => (
+              <div key={m.id} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="w-5 text-xs text-muted-foreground">#{i + 1}</span>
+                  <span className="truncate">{m.nome}</span>
+                </div>
+                <span className="font-semibold">{m.qtd}</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Truck className="h-4 w-4 text-primary" /> Consumo por caminhão
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {!stats?.consumoVeiculos?.length && (
-            <div className="text-xs text-muted-foreground">Sem abastecimentos no período.</div>
-          )}
-          {stats?.consumoVeiculos?.map((v) => (
-            <div key={v.id} className="text-sm border rounded-lg p-2">
-              <div className="font-medium truncate">{v.label}</div>
-              <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground mt-1">
-                <div>
-                  <div className="text-foreground font-semibold">
-                    {v.kmL ? v.kmL.toFixed(2) : "—"}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Truck className="h-4 w-4 text-primary" /> Consumo por caminhão
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {!stats?.consumoVeiculos?.length && (
+              <div className="text-xs text-muted-foreground">Sem abastecimentos no período.</div>
+            )}
+            {stats?.consumoVeiculos?.map((v) => (
+              <div key={v.id} className="text-sm border rounded-lg p-2">
+                <div className="font-medium truncate">{v.label}</div>
+                <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground mt-1">
+                  <div>
+                    <div className="text-foreground font-semibold">
+                      {v.kmL ? v.kmL.toFixed(2) : "—"}
+                    </div>
+                    km/L
                   </div>
-                  km/L
-                </div>
-                <div>
-                  <div className="text-foreground font-semibold">{v.rsKm ? brl(v.rsKm) : "—"}</div>
-                  R$/km
-                </div>
-                <div>
-                  <div className="text-foreground font-semibold">{v.litros.toFixed(0)} L</div>
-                  {brl(v.valor)}
+                  <div>
+                    <div className="text-foreground font-semibold">
+                      {v.rsKm ? brl(v.rsKm) : "—"}
+                    </div>
+                    R$/km
+                  </div>
+                  <div>
+                    <div className="text-foreground font-semibold">{v.litros.toFixed(0)} L</div>
+                    {brl(v.valor)}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
 
-      <div className="grid grid-cols-2 gap-3 pt-2">
+      <div className="grid grid-cols-2 gap-3 pt-2 md:grid-cols-4 lg:grid-cols-7">
         <QuickLink to="/relatorios" icon={<BarChart3 className="h-5 w-5" />} label="Relatórios" />
         <QuickLink to="/financeiro" icon={<Wallet className="h-5 w-5" />} label="Financeiro" />
         <QuickLink to="/entregas" icon={<ClipboardList className="h-5 w-5" />} label="Entregas" />

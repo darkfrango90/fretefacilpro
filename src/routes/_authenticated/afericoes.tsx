@@ -11,6 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Droplets, BarChart3, Trash2 } from "lucide-react";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 
 import { AdminOnly } from "@/components/role-guard";
 
@@ -167,10 +175,11 @@ function Page() {
 
       <div>
         <h2 className="text-sm font-semibold mb-2 text-muted-foreground">Aferições recentes</h2>
-        <div className="space-y-2">
-          {(lista ?? []).length === 0 && (
-            <p className="text-sm text-muted-foreground">Nenhuma aferição registrada ainda.</p>
-          )}
+        {(lista ?? []).length === 0 && (
+          <p className="text-sm text-muted-foreground">Nenhuma aferição registrada ainda.</p>
+        )}
+
+        <div className="space-y-2 md:hidden">
           {(lista ?? []).map((a: any) => (
             <Card key={a.id}>
               <CardContent className="p-3 flex items-start justify-between gap-3">
@@ -194,6 +203,52 @@ function Page() {
             </Card>
           ))}
         </div>
+
+        {(lista?.length ?? 0) > 0 && (
+          <Card className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Veículo</TableHead>
+                  <TableHead>Data/hora</TableHead>
+                  <TableHead>Litros aferidos</TableHead>
+                  <TableHead>KM odômetro</TableHead>
+                  <TableHead>Observação</TableHead>
+                  <TableHead className="w-14 text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(lista ?? []).map((a: any) => (
+                  <TableRow key={a.id}>
+                    <TableCell className="font-medium">{a.veiculos?.placa ?? "—"}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(a.data_hora).toLocaleString("pt-BR")}
+                    </TableCell>
+                    <TableCell>
+                      {Number(a.litros_aferidos).toLocaleString("pt-BR", {
+                        maximumFractionDigits: 3,
+                      })}{" "}
+                      L
+                    </TableCell>
+                    <TableCell>
+                      {a.km_odometro != null
+                        ? `${Number(a.km_odometro).toLocaleString("pt-BR")} km`
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="max-w-56 truncate text-muted-foreground">
+                      {a.observacao || "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => remover(a.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        )}
       </div>
     </div>
   );

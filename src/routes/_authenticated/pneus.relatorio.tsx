@@ -12,6 +12,14 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { labelPosicao } from "@/lib/pneus-constants";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 
 export const Route = createFileRoute("/_authenticated/pneus/relatorio")({
   component: () => <AdminOnly><Page /></AdminOnly>,
@@ -160,38 +168,40 @@ function Page() {
         </div>
       </CardContent></Card>
 
-      <Card><CardContent className="p-3 space-y-2">
-        <div className="text-sm font-semibold">Média por marca (removidos)</div>
-        {porMarca.length === 0 && <div className="text-xs text-muted-foreground">Sem dados.</div>}
-        {porMarca.map(([m, a]) => (
-          <div key={m} className="flex items-center justify-between text-xs border-b last:border-0 py-1">
-            <div>
-              <div className="font-medium text-sm">{m}</div>
-              <div className="text-muted-foreground">{a.count} pneu(s) • custo médio/km: {a.count > 0 && a.somaCustoKm > 0 ? brl(a.somaCustoKm / a.count) : "—"}</div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card><CardContent className="p-3 space-y-2">
+          <div className="text-sm font-semibold">Média por marca (removidos)</div>
+          {porMarca.length === 0 && <div className="text-xs text-muted-foreground">Sem dados.</div>}
+          {porMarca.map(([m, a]) => (
+            <div key={m} className="flex items-center justify-between text-xs border-b last:border-0 py-1">
+              <div>
+                <div className="font-medium text-sm">{m}</div>
+                <div className="text-muted-foreground">{a.count} pneu(s) • custo médio/km: {a.count > 0 && a.somaCustoKm > 0 ? brl(a.somaCustoKm / a.count) : "—"}</div>
+              </div>
+              <div className="text-right">
+                <div className="font-semibold">{Math.round(a.somaKm / a.count).toLocaleString("pt-BR")} km</div>
+                <div className="text-muted-foreground">média</div>
+              </div>
             </div>
-            <div className="text-right">
+          ))}
+        </CardContent></Card>
+
+        <Card><CardContent className="p-3 space-y-2">
+          <div className="text-sm font-semibold">Média por tipo</div>
+          {porTipo.length === 0 && <div className="text-xs text-muted-foreground">Sem dados.</div>}
+          {porTipo.map(([t, a]) => (
+            <div key={t} className="flex items-center justify-between text-xs border-b last:border-0 py-1">
+              <div>
+                <div className="font-medium text-sm capitalize">{t}</div>
+                <div className="text-muted-foreground">{a.count} pneu(s) • {brl(a.somaCusto)} investido</div>
+              </div>
               <div className="font-semibold">{Math.round(a.somaKm / a.count).toLocaleString("pt-BR")} km</div>
-              <div className="text-muted-foreground">média</div>
             </div>
-          </div>
-        ))}
-      </CardContent></Card>
+          ))}
+        </CardContent></Card>
+      </div>
 
-      <Card><CardContent className="p-3 space-y-2">
-        <div className="text-sm font-semibold">Média por tipo</div>
-        {porTipo.length === 0 && <div className="text-xs text-muted-foreground">Sem dados.</div>}
-        {porTipo.map(([t, a]) => (
-          <div key={t} className="flex items-center justify-between text-xs border-b last:border-0 py-1">
-            <div>
-              <div className="font-medium text-sm capitalize">{t}</div>
-              <div className="text-muted-foreground">{a.count} pneu(s) • {brl(a.somaCusto)} investido</div>
-            </div>
-            <div className="font-semibold">{Math.round(a.somaKm / a.count).toLocaleString("pt-BR")} km</div>
-          </div>
-        ))}
-      </CardContent></Card>
-
-      <div className="space-y-2">
+      <div className="space-y-2 md:hidden">
         <h2 className="text-sm font-semibold">Pneus no período</h2>
         {(pneus ?? []).map((p: any) => {
           const removido = p.status === "removido";
@@ -227,6 +237,61 @@ function Page() {
         {(pneus ?? []).length === 0 && (
           <div className="text-sm text-muted-foreground text-center py-6">Sem pneus no período.</div>
         )}
+      </div>
+
+      <div className="hidden md:block space-y-2">
+        <h2 className="text-sm font-semibold">Pneus no período</h2>
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Marca / Modelo</TableHead>
+                <TableHead>Veículo</TableHead>
+                <TableHead>Posição</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Duração</TableHead>
+                <TableHead className="text-right">Custo/km</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(pneus ?? []).map((p: any) => {
+                const removido = p.status === "removido";
+                const kmAtual = kmPorVeiculo?.get(p.veiculo_id) ?? 0;
+                const dur = removido
+                  ? Math.max(0, Number(p.km_remocao) - Number(p.km_instalacao))
+                  : Math.max(0, kmAtual - Number(p.km_instalacao));
+                const custoKm = dur > 0 && p.valor > 0 ? Number(p.valor) / dur : 0;
+                return (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium">
+                      {p.marca} {p.modelo ?? ""}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {placas.get(p.veiculo_id) ?? "—"}
+                    </TableCell>
+                    <TableCell>{labelPosicao(p.posicao)}</TableCell>
+                    <TableCell className="capitalize">{p.tipo}</TableCell>
+                    <TableCell>
+                      <Badge variant={removido ? "outline" : "secondary"}>
+                        {removido ? "Removido" : "Em uso"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{dur.toLocaleString("pt-BR")} km</TableCell>
+                    <TableCell className="text-right">{custoKm > 0 ? brl(custoKm) : "—"}</TableCell>
+                  </TableRow>
+                );
+              })}
+              {(pneus ?? []).length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">
+                    Sem pneus no período.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </Card>
       </div>
     </div>
   );

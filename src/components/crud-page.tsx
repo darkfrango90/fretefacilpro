@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { Plus, Trash2, Pencil } from "lucide-react";
 import { MoneyInput } from "@/components/money-input";
 import { parseMoeda } from "@/lib/moeda";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 interface CrudField {
   name: string;
@@ -24,6 +25,12 @@ interface CrudField {
   required?: boolean;
   step?: string;
   options?: { value: string; label: string }[];
+}
+
+interface CrudColumn {
+  header: string;
+  cell: (row: any) => React.ReactNode;
+  className?: string;
 }
 
 interface CrudPageProps {
@@ -36,6 +43,8 @@ interface CrudPageProps {
   loadRows?: () => Promise<any[]>;
   saveRow?: (row: Record<string, any>, editing: any | null) => Promise<void>;
   cacheEnabled?: boolean;
+  /** Colunas para a tabela exibida em telas md+ (desktop). Sem isso, a lista em cards é usada em todas as larguras. */
+  columns?: CrudColumn[];
 }
 
 export function CrudPage({
@@ -48,6 +57,7 @@ export function CrudPage({
   loadRows,
   saveRow,
   cacheEnabled = true,
+  columns,
 }: CrudPageProps) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -221,7 +231,8 @@ export function CrudPage({
       </div>
 
       {isLoading && <p className="text-sm text-muted-foreground">Carregando...</p>}
-      <div className="space-y-2">
+
+      <div className={`space-y-2${columns ? " md:hidden" : ""}`}>
         {(rows ?? []).map((r: any) => (
           <Card key={r.id}>
             <CardContent className="p-3 flex items-center justify-between gap-2">
@@ -254,6 +265,67 @@ export function CrudPage({
           <p className="text-sm text-muted-foreground text-center py-8">Nada cadastrado ainda.</p>
         )}
       </div>
+
+      {columns && (
+        <Card className="hidden md:block">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {columns.map((c, i) => (
+                  <TableHead key={i} className={c.className}>
+                    {c.header}
+                  </TableHead>
+                ))}
+                <TableHead className="w-24 text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(rows ?? []).map((r: any) => (
+                <TableRow key={r.id}>
+                  {columns.map((c, i) => (
+                    <TableCell key={i} className={c.className}>
+                      {c.cell(r)}
+                    </TableCell>
+                  ))}
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          setEditing(r);
+                          setOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          if (confirm("Remover?")) remove.mutate(r.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {!isLoading && (rows ?? []).length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length + 1}
+                    className="text-center text-sm text-muted-foreground py-8"
+                  >
+                    Nada cadastrado ainda.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
     </div>
   );
 }

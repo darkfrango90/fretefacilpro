@@ -253,7 +253,7 @@ function Page() {
           {!isLoading && pneus && pneus.filter((p: any) => p.status === "instalado").length > 0 && (
             <div className="space-y-2 pt-2">
               <h2 className="text-sm font-semibold">Lista de Pneus Instalados</h2>
-              <div className="grid gap-2">
+              <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
                 {pneus
                   .filter((p: any) => p.status === "instalado")
                   .map((p: any) => {
@@ -294,7 +294,7 @@ function Page() {
           {removidos.length > 0 && (
             <div className="space-y-2">
               <h2 className="text-sm font-semibold pt-2">Histórico (Removidos)</h2>
-              <div className="grid gap-2">
+              <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
                 {removidos.map((p: any) => {
                   const duracao = Math.max(0, Number(p.km_remocao || 0) - Number(p.km_instalacao || 0));
                   return (

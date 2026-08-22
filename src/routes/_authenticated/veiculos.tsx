@@ -48,6 +48,21 @@ function Page() {
           </Badge>
         </div>
       )}
+      columns={[
+        { header: "Placa", cell: (r) => <span className="font-medium uppercase">{r.placa}</span> },
+        { header: "Descrição", cell: (r) => r.descricao || "—" },
+        {
+          header: "Tipo",
+          cell: (r) => (
+            <Badge
+              variant="secondary"
+              className="capitalize text-[10px] font-medium bg-primary/10 text-primary border-none hover:bg-primary/20"
+            >
+              {r.tipo || "toco"}
+            </Badge>
+          ),
+        },
+      ]}
     />
   );
 }

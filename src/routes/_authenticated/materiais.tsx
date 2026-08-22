@@ -103,6 +103,12 @@ function Page() {
           </div>
         </div>
       )}
+      columns={[
+        { header: "Nome", cell: (r) => <span className="font-medium">{r.nome}</span> },
+        { header: "Unidade", cell: (r) => r.unidade },
+        { header: "Preço de venda", cell: (r) => `R$ ${Number(r.preco_base).toFixed(2)}` },
+        { header: "Custo", cell: (r) => `R$ ${Number(r.custo_compra || 0).toFixed(2)}` },
+      ]}
     />
   );
 }

@@ -16,6 +16,16 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Copy, Pencil, Power, RotateCcw, Save, ShieldCheck, UserPlus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 
 export const Route = createFileRoute("/_authenticated/motoristas")({
   component: () => (
@@ -140,7 +150,7 @@ function Page() {
         <h2 className="text-sm font-semibold flex items-center gap-2">
           <UserPlus className="h-4 w-4" /> Novo motorista
         </h2>
-        <form onSubmit={criar} className="grid gap-3">
+        <form onSubmit={criar} className="grid gap-3 md:grid-cols-2">
           <div>
             <Label htmlFor="nome">Nome</Label>
             <Input id="nome" name="nome" required />
@@ -157,7 +167,7 @@ function Page() {
             <Label htmlFor="telefone">Telefone (opcional)</Label>
             <Input id="telefone" name="telefone" type="tel" />
           </div>
-          <Button type="submit" disabled={loading}>
+          <Button type="submit" disabled={loading} className="md:col-span-2">
             {loading ? "Cadastrando…" : "Cadastrar motorista"}
           </Button>
         </form>
@@ -191,7 +201,7 @@ function Page() {
 
       <section className="space-y-2">
         <h2 className="text-sm font-semibold">Cadastrados</h2>
-        <div className="grid gap-2">
+        <div className="grid gap-2 md:hidden">
           {(motoristas ?? []).map((m: any) => (
             <div
               key={m.id}
@@ -257,6 +267,87 @@ function Page() {
             <div className="text-xs text-muted-foreground">Nenhum motorista cadastrado ainda.</div>
           )}
         </div>
+
+        <Card className="hidden md:block">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>E-mail</TableHead>
+                <TableHead>Telefone</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(motoristas ?? []).map((m: any) => (
+                <TableRow key={m.id}>
+                  <TableCell className="font-medium">{m.nome}</TableCell>
+                  <TableCell>{m.email || "—"}</TableCell>
+                  <TableCell>{m.telefone || "—"}</TableCell>
+                  <TableCell>
+                    {m.ativo ? (
+                      <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/15">
+                        Ativo
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive">Inativo</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        aria-label={`Editar dados de ${m.nome}`}
+                        onClick={() =>
+                          setEditando({
+                            id: m.id,
+                            nome: m.nome ?? "",
+                            email: m.email ?? "",
+                            telefone: m.telefone ?? "",
+                          })
+                        }
+                      >
+                        <Pencil className="mr-1 h-3 w-3" /> Editar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        aria-label={`Editar permissões de ${m.nome}`}
+                        onClick={() => abrirPermissoes(m.id)}
+                      >
+                        <ShieldCheck className="mr-1 h-3 w-3" /> Permissões
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={m.ativo ? "destructive" : "default"}
+                        onClick={() => toggleAtivo(m.id, m.ativo)}
+                      >
+                        {m.ativo ? (
+                          <>
+                            <Power className="h-3 w-3 mr-1" /> Desativar
+                          </>
+                        ) : (
+                          <>
+                            <RotateCcw className="h-3 w-3 mr-1" /> Reativar
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {motoristas && motoristas.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-8">
+                    Nenhum motorista cadastrado ainda.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </Card>
       </section>
 
       <Dialog open={!!editando} onOpenChange={(open) => !open && setEditando(null)}>

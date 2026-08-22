@@ -24,6 +24,14 @@ import { syncNow } from "@/lib/offline/sync";
 import type { OutboxItem } from "@/lib/offline/db";
 import { readOfflineCache, writeOfflineCache } from "@/lib/offline/cache";
 import { formatarQuilometragem, parseQuilometragem } from "@/lib/quilometragem";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 
 export const Route = createFileRoute("/_authenticated/trocas-oleo")({
   component: TrocasOleoPage,
@@ -283,29 +291,69 @@ function TrocasOleoPage() {
           </Card>
         ))}
 
-        {(historico.data ?? []).map((item: any) => (
-          <Card key={item.id}>
-            <CardContent className="space-y-1 p-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-medium">{item.veiculo?.placa ?? "Veículo"}</span>
-                <span className="text-xs text-muted-foreground">
-                  {new Date(`${item.data}T12:00:00`).toLocaleDateString("pt-BR")}
-                </span>
-              </div>
-              {isAdmin ? (
-                <div className="text-xs text-muted-foreground">
-                  Motorista:{" "}
-                  {motoristas?.find((motorista: any) => motorista.id === item.motorista_id)?.nome ??
-                    "Não identificado"}
+        <div className="space-y-2 md:hidden">
+          {(historico.data ?? []).map((item: any) => (
+            <Card key={item.id}>
+              <CardContent className="space-y-1 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium">{item.veiculo?.placa ?? "Veículo"}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(`${item.data}T12:00:00`).toLocaleDateString("pt-BR")}
+                  </span>
                 </div>
-              ) : null}
-              <div className="text-sm">
-                {formatarMoeda(item.valor)} · KM {formatarQuilometragem(item.km)}
-              </div>
-              {item.observacoes ? <p className="text-xs">{item.observacoes}</p> : null}
-            </CardContent>
+                {isAdmin ? (
+                  <div className="text-xs text-muted-foreground">
+                    Motorista:{" "}
+                    {motoristas?.find((motorista: any) => motorista.id === item.motorista_id)
+                      ?.nome ?? "Não identificado"}
+                  </div>
+                ) : null}
+                <div className="text-sm">
+                  {formatarMoeda(item.valor)} · KM {formatarQuilometragem(item.km)}
+                </div>
+                {item.observacoes ? <p className="text-xs">{item.observacoes}</p> : null}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {(historico.data?.length ?? 0) > 0 && (
+          <Card className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Veículo</TableHead>
+                  {isAdmin && <TableHead>Motorista</TableHead>}
+                  <TableHead>Data</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>KM</TableHead>
+                  <TableHead>Observações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(historico.data ?? []).map((item: any) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{item.veiculo?.placa ?? "—"}</TableCell>
+                    {isAdmin && (
+                      <TableCell className="text-muted-foreground">
+                        {motoristas?.find((motorista: any) => motorista.id === item.motorista_id)
+                          ?.nome ?? "Não identificado"}
+                      </TableCell>
+                    )}
+                    <TableCell className="text-muted-foreground">
+                      {new Date(`${item.data}T12:00:00`).toLocaleDateString("pt-BR")}
+                    </TableCell>
+                    <TableCell>{formatarMoeda(item.valor)}</TableCell>
+                    <TableCell>{formatarQuilometragem(item.km)}</TableCell>
+                    <TableCell className="max-w-56 truncate text-muted-foreground">
+                      {item.observacoes || "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </Card>
-        ))}
+        )}
 
         {!historico.isLoading && pendentes.length === 0 && (historico.data?.length ?? 0) === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">

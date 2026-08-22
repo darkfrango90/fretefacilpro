@@ -17,6 +17,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BarChart3, Download, FileSpreadsheet, FileText, Filter, Loader2, X } from "lucide-react";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import { EntregaDetalheDialog } from "@/components/entrega-detalhe-dialog";
 import { RelatorioMensalMotoristas } from "@/components/relatorio-mensal-motoristas";
 import {
@@ -546,7 +554,13 @@ function Page() {
         </div>
       </div>
 
-      {empresaId ? <RelatorioMensalMotoristas empresaId={empresaId} /> : null}
+      {empresaId ? (
+        <RelatorioMensalMotoristas
+          empresaId={empresaId}
+          motoristaId={motoristaId}
+          onMotoristaIdChange={setMotoristaId}
+        />
+      ) : null}
 
       <div className="flex gap-2 flex-wrap items-center">
         {(["7", "30", "90", "365"] as Periodo[]).map((p) => (
@@ -638,22 +652,6 @@ function Page() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label className="text-xs">Motorista</Label>
-              <Select value={motoristaId} onValueChange={setMotoristaId}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  {(data?.listaMotoristas ?? []).map((p: any) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
             <div className="sm:col-span-2">
               <Label className="text-xs">Cliente</Label>
               <Select value={clienteId} onValueChange={setClienteId}>
@@ -678,7 +676,7 @@ function Page() {
 
       {data && (
         <>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
             <Mini label="Vendas" value={data.total} />
             <Mini label="Finalizadas" value={data.finalizadas} />
             <Mini label="Em rota" value={data.emRota} />
@@ -697,25 +695,64 @@ function Page() {
 
           <Section title={`Vendas (${data.vendas.length})`}>
             {data.vendas.length === 0 && <Empty />}
-            {data.vendas.slice(0, 100).map((v: any) => (
-              <button
-                key={v.id}
-                type="button"
-                onClick={() => setDetalheId(v.id)}
-                className="w-full text-left border rounded-lg p-2 text-sm hover:bg-accent active:opacity-70"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="font-semibold">
-                    #{v.numero ?? "—"} · {v.cliente}
+
+            <div className="space-y-2 md:hidden">
+              {data.vendas.slice(0, 100).map((v: any) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => setDetalheId(v.id)}
+                  className="w-full text-left border rounded-lg p-2 text-sm hover:bg-accent active:opacity-70"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-semibold">
+                      #{v.numero ?? "—"} · {v.cliente}
+                    </div>
+                    <div className="font-bold">{brl(v.total)}</div>
                   </div>
-                  <div className="font-bold">{brl(v.total)}</div>
-                </div>
-                <div className="text-xs text-muted-foreground truncate">
-                  {fmtData(v.criada_em)} · {v.material} · {v.motorista} · {v.forma_pagamento ?? "—"}{" "}
-                  · {v.status}
-                </div>
-              </button>
-            ))}
+                  <div className="text-xs text-muted-foreground truncate">
+                    {fmtData(v.criada_em)} · {v.material} · {v.motorista} ·{" "}
+                    {v.forma_pagamento ?? "—"} · {v.status}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {data.vendas.length > 0 && (
+              <div className="hidden md:block rounded-lg border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Venda</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Material</TableHead>
+                      <TableHead>Motorista</TableHead>
+                      <TableHead>Pagamento</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Valor</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {data.vendas.slice(0, 100).map((v: any) => (
+                      <TableRow key={v.id} className="cursor-pointer" onClick={() => setDetalheId(v.id)}>
+                        <TableCell className="font-medium">
+                          #{v.numero ?? "—"} · {v.cliente}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{fmtData(v.criada_em)}</TableCell>
+                        <TableCell className="max-w-48 truncate text-muted-foreground">
+                          {v.material}
+                        </TableCell>
+                        <TableCell>{v.motorista}</TableCell>
+                        <TableCell>{v.forma_pagamento ?? "—"}</TableCell>
+                        <TableCell>{v.status}</TableCell>
+                        <TableCell className="text-right font-semibold">{brl(v.total)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
             {data.vendas.length > 100 && (
               <div className="text-xs text-muted-foreground">
                 Mostrando 100 de {data.vendas.length}. Exporte PDF, Excel ou CSV para ver tudo.
@@ -723,57 +760,59 @@ function Page() {
             )}
           </Section>
 
-          <Section title="Por forma de pagamento">
-            {data.porPagamento.length === 0 && <Empty />}
-            {data.porPagamento.map((p: any, i: number) => (
-              <Row
-                key={p.id}
-                idx={i + 1}
-                title={p.nome}
-                sub={`${p.qtd} vendas`}
-                value={brl(p.receita)}
-              />
-            ))}
-          </Section>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Section title="Por forma de pagamento">
+              {data.porPagamento.length === 0 && <Empty />}
+              {data.porPagamento.map((p: any, i: number) => (
+                <Row
+                  key={p.id}
+                  idx={i + 1}
+                  title={p.nome}
+                  sub={`${p.qtd} vendas`}
+                  value={brl(p.receita)}
+                />
+              ))}
+            </Section>
 
-          <Section title="Ranking de motoristas">
-            {data.rankingMotoristas.length === 0 && <Empty />}
-            {data.rankingMotoristas.map((m: any, i: number) => (
-              <Row
-                key={m.id}
-                idx={i + 1}
-                title={m.nome}
-                sub={`${m.qtd} entregas`}
-                value={brl(m.receita)}
-              />
-            ))}
-          </Section>
+            <Section title="Ranking de motoristas">
+              {data.rankingMotoristas.length === 0 && <Empty />}
+              {data.rankingMotoristas.map((m: any, i: number) => (
+                <Row
+                  key={m.id}
+                  idx={i + 1}
+                  title={m.nome}
+                  sub={`${m.qtd} entregas`}
+                  value={brl(m.receita)}
+                />
+              ))}
+            </Section>
 
-          <Section title="Top clientes">
-            {data.topClientes.length === 0 && <Empty />}
-            {data.topClientes.map((c: any, i: number) => (
-              <Row
-                key={c.id}
-                idx={i + 1}
-                title={c.nome}
-                sub={`${c.qtd} pedidos`}
-                value={brl(c.receita)}
-              />
-            ))}
-          </Section>
+            <Section title="Top clientes">
+              {data.topClientes.length === 0 && <Empty />}
+              {data.topClientes.map((c: any, i: number) => (
+                <Row
+                  key={c.id}
+                  idx={i + 1}
+                  title={c.nome}
+                  sub={`${c.qtd} pedidos`}
+                  value={brl(c.receita)}
+                />
+              ))}
+            </Section>
 
-          <Section title="Materiais mais vendidos">
-            {data.topMateriais.length === 0 && <Empty />}
-            {data.topMateriais.map((m: any, i: number) => (
-              <Row
-                key={m.id}
-                idx={i + 1}
-                title={m.nome}
-                sub={`${m.qtd.toLocaleString("pt-BR")} un.`}
-                value={brl(m.receita)}
-              />
-            ))}
-          </Section>
+            <Section title="Materiais mais vendidos">
+              {data.topMateriais.length === 0 && <Empty />}
+              {data.topMateriais.map((m: any, i: number) => (
+                <Row
+                  key={m.id}
+                  idx={i + 1}
+                  title={m.nome}
+                  sub={`${m.qtd.toLocaleString("pt-BR")} un.`}
+                  value={brl(m.receita)}
+                />
+              ))}
+            </Section>
+          </div>
 
           <Section title="Consumo por caminhão">
             {data.consumoVeiculos.length === 0 && <Empty />}
