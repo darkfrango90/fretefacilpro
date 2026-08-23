@@ -28,11 +28,18 @@ function Page() {
   const { id } = useParams({ from: "/_authenticated/pneus/remover/$id" });
   const { data: prof } = useProfile();
   const navigate = useNavigate();
+  const empresaId = prof?.profile.empresa_id;
 
   const { data: pneu, isLoading } = useQuery({
-    queryKey: ["pneu", id],
+    queryKey: ["pneu", id, empresaId],
+    enabled: !!empresaId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("pneus").select("*").eq("id", id).maybeSingle();
+      const { data, error } = await (supabase as any)
+        .from("pneus")
+        .select("*")
+        .eq("id", id)
+        .eq("empresa_id", empresaId)
+        .maybeSingle();
       if (error) throw error;
       return data;
     },

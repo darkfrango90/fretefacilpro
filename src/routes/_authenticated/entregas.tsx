@@ -722,7 +722,7 @@ function Page() {
         ← Voltar
       </Link>
 
-      <EntregaDetalheDialog id={detalheId} onClose={() => setDetalheId(null)} />
+      <EntregaDetalheDialog id={detalheId} onClose={() => setDetalheId(null)} empresaId={prof?.profile.empresa_id} />
 
       <Dialog open={!!editar} onOpenChange={(o) => !o && setEditar(null)}>
         <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">

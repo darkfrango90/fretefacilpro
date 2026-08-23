@@ -304,7 +304,7 @@ function Page() {
         })}
       </div>
 
-      <EntregaDetalheDialog id={detalheId} onClose={() => setDetalheId(null)} />
+      <EntregaDetalheDialog id={detalheId} onClose={() => setDetalheId(null)} empresaId={empresaId} />
     </div>
   );
 }

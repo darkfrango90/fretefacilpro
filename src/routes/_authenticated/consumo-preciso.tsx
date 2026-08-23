@@ -49,6 +49,7 @@ function Page() {
       (await (supabase as any)
         .from("afericoes_tanque")
         .select("id, veiculo_id, data_hora, litros_aferidos, km_odometro")
+        .eq("empresa_id", empresaId)
         .order("data_hora", { ascending: true })).data ?? [],
   });
 
@@ -59,6 +60,7 @@ function Page() {
       (await (supabase as any)
         .from("abastecimentos")
         .select("id, veiculo_id, data_hora, litros, valor_total, km_atual")
+        .eq("empresa_id", empresaId)
         .order("data_hora", { ascending: true })).data ?? [],
   });
 
@@ -69,6 +71,7 @@ function Page() {
       (await (supabase as any)
         .from("entregas")
         .select("veiculo_id, criada_em, km_final")
+        .eq("empresa_id", empresaId)
         .not("km_final", "is", null)).data ?? [],
   });
 

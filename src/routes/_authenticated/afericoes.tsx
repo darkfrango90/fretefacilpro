@@ -57,6 +57,7 @@ function Page() {
       const { data } = await (supabase as any)
         .from("afericoes_tanque")
         .select("id, data_hora, litros_aferidos, km_odometro, observacao, veiculo_id, veiculos(placa)")
+        .eq("empresa_id", empresaId)
         .order("data_hora", { ascending: false })
         .limit(50);
       return data ?? [];
@@ -99,7 +100,11 @@ function Page() {
 
   async function remover(id: string) {
     if (!confirm("Excluir esta aferição?")) return;
-    const { error } = await (supabase as any).from("afericoes_tanque").delete().eq("id", id);
+    const { error } = await (supabase as any)
+      .from("afericoes_tanque")
+      .delete()
+      .eq("id", id)
+      .eq("empresa_id", empresaId);
     if (error) return toast.error(error.message);
     toast.success("Removida");
     qc.invalidateQueries({ queryKey: ["afericoes"] });

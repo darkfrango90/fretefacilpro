@@ -184,7 +184,7 @@ function MinhasEntregas() {
         </TabsContent>
       </Tabs>
 
-      <EntregaDetalheDialog id={detalheId} onClose={() => setDetalheId(null)} mostrarFinalizar />
+      <EntregaDetalheDialog id={detalheId} onClose={() => setDetalheId(null)} mostrarFinalizar empresaId={prof?.profile.empresa_id} />
     </div>
   );
 }

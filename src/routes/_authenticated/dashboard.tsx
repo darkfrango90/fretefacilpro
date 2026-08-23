@@ -49,10 +49,12 @@ function AdminDashboard({ empresaId }: { empresaId: string }) {
         (supabase as any)
           .from("abastecimentos")
           .select("valor_total, litros, km_atual, veiculo_id, data_hora")
+          .eq("empresa_id", empresaId)
           .gte("data_hora", sinceIso),
         (supabase as any)
           .from("despesas")
           .select("valor")
+          .eq("empresa_id", empresaId)
           .eq("status", "conferida")
           .gte("data", sinceIso.slice(0, 10)),
         (supabase as any).from("profiles").select("id, nome").eq("empresa_id", empresaId),

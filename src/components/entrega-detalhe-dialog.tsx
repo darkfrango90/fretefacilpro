@@ -51,24 +51,27 @@ export function EntregaDetalheDialog({
   id,
   onClose,
   mostrarFinalizar = false,
+  empresaId,
 }: {
   id: string | null;
   onClose: () => void;
   mostrarFinalizar?: boolean;
+  empresaId?: string;
 }) {
   const {
     data: item,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["entrega-admin-detalhe", id],
-    enabled: !!id,
+    queryKey: ["entrega-admin-detalhe", id, empresaId],
+    enabled: !!id && !!empresaId,
     staleTime: 30_000,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("entregas")
         .select(SELECT_DETAIL)
         .eq("id", id)
+        .eq("empresa_id", empresaId)
         .maybeSingle();
       if (error) throw error;
       return data;

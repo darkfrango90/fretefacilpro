@@ -73,7 +73,9 @@ function Page() {
     enabled: !!empresaId,
     queryFn: async () => {
       const { data } = await (supabase as any)
-        .from("abastecimentos").select("veiculo_id, km_atual");
+        .from("abastecimentos")
+        .select("veiculo_id, km_atual")
+        .eq("empresa_id", empresaId);
       const m = new Map<string, number>();
       (data ?? []).forEach((a: any) => {
         const v = Number(a.km_atual ?? 0);

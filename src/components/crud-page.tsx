@@ -116,7 +116,7 @@ export function CrudPage({
         return;
       }
       if (editing?.id) {
-        const { error } = await (supabase as any).from(table).update(row).eq("id", editing.id);
+        const { error } = await (supabase as any).from(table).update(row).eq("id", editing.id).eq("empresa_id", empresaId);
         if (error) throw error;
       } else {
         const { error } = await (supabase as any).from(table).insert(row);
@@ -134,7 +134,7 @@ export function CrudPage({
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any).from(table).delete().eq("id", id);
+      const { error } = await (supabase as any).from(table).delete().eq("id", id).eq("empresa_id", empresaId);
       if (error) throw error;
     },
     onSuccess: () => {

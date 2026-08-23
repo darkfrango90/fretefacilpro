@@ -107,10 +107,12 @@ function Page() {
         );
       let qAb = (supabase as any)
         .from("abastecimentos")
-        .select("valor_total, litros, km_atual, veiculo_id, data_hora");
+        .select("valor_total, litros, km_atual, veiculo_id, data_hora")
+        .eq("empresa_id", empresaId);
       let qDesp = (supabase as any)
         .from("despesas")
         .select("valor, data")
+        .eq("empresa_id", empresaId)
         .eq("status", "conferida");
 
       if (sinceIso) {
@@ -861,7 +863,7 @@ function Page() {
         </>
       )}
 
-      <EntregaDetalheDialog id={detalheId} onClose={() => setDetalheId(null)} />
+      <EntregaDetalheDialog id={detalheId} onClose={() => setDetalheId(null)} empresaId={empresaId} />
     </div>
   );
 }

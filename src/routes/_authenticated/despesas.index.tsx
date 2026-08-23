@@ -83,6 +83,7 @@ function DespesasAdmin() {
       let q = (supabase as any)
         .from("despesas")
         .select("*")
+        .eq("empresa_id", empresaId)
         .gte("data", de)
         .lte("data", ate)
         .order("data", { ascending: false })
@@ -135,7 +136,8 @@ function DespesasAdmin() {
     const { error } = await (supabase as any)
       .from("despesas")
       .update({ status: "conferida", conferida_em: new Date().toISOString(), conferida_por: prof?.profile.id })
-      .eq("id", id);
+      .eq("id", id)
+      .eq("empresa_id", empresaId);
     if (error) return toast.error(error.message);
     toast.success("Despesa conferida");
     qc.invalidateQueries({ queryKey: ["despesas-admin"] });

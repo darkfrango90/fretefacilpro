@@ -82,11 +82,12 @@ function Page() {
 
   // KM atual do veículo: maior km_atual de abastecimento
   const { data: kmAtual } = useQuery({
-    queryKey: ["veiculo-km-atual", veiculoId],
-    enabled: !!veiculoId,
+    queryKey: ["veiculo-km-atual", veiculoId, empresaId],
+    enabled: !!veiculoId && !!empresaId,
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("abastecimentos").select("km_atual")
+        .eq("empresa_id", empresaId)
         .eq("veiculo_id", veiculoId).order("km_atual", { ascending: false }).limit(1);
       return Number(data?.[0]?.km_atual ?? 0);
     },

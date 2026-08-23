@@ -79,7 +79,7 @@ function Page() {
     queryFn: async () => {
       try {
         const { data, error } = await (supabase as any)
-          .from("clientes").select("*").order("nome");
+          .from("clientes").select("*").eq("empresa_id", empresaId).order("nome");
         if (error) throw error;
         const result = data ?? [];
         try {
@@ -114,7 +114,7 @@ function Page() {
         nome_fantasia: f.tipo_pessoa === "juridica" ? (f.nome_fantasia || null) : null,
       };
       if (f.id) {
-        const { error } = await (supabase as any).from("clientes").update(row).eq("id", f.id);
+        const { error } = await (supabase as any).from("clientes").update(row).eq("id", f.id).eq("empresa_id", empresaId);
         if (error) throw error;
       } else {
         const { error } = await (supabase as any).from("clientes").insert(row);
@@ -131,7 +131,7 @@ function Page() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any).from("clientes").delete().eq("id", id);
+      const { error } = await (supabase as any).from("clientes").delete().eq("id", id).eq("empresa_id", empresaId);
       if (error) throw error;
     },
     onSuccess: () => {
