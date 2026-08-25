@@ -199,6 +199,12 @@ export function RelatorioMensalMotoristas({
                 </div>
               </div>
             </div>
+            <div className="flex items-center justify-between border-t pt-3 text-sm">
+              <span className="text-muted-foreground">Total (material + frete)</span>
+              <span className="font-semibold text-foreground">
+                {formatarMoeda(motorista.vendasMaterial + motorista.fretes)}
+              </span>
+            </div>
           </CardContent>
         </Card>
       ))}
