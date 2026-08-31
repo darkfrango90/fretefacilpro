@@ -51,6 +51,17 @@ export function entregaPossuiMaterial(entrega: EntregaComItens, materialId: stri
   return obterItensEntrega(entrega).some((item) => item.material_id === materialId);
 }
 
+/** Deriva o valor unitário (por m³/unidade) a partir do valor total digitado e da quantidade. */
+export function valorUnitarioDeTotal(
+  total: string | number | null | undefined,
+  quantidade: string | number | null | undefined,
+): string {
+  const t = Number(total || 0);
+  const q = Number(quantidade || 0);
+  if (!Number.isFinite(t) || !Number.isFinite(q) || q <= 0) return "0";
+  return String(t / q);
+}
+
 export function resumoMateriais(entrega: EntregaComItens): string {
   const itens = obterItensEntrega(entrega);
   if (itens.length === 0) return "Material não informado";

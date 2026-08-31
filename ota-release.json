@@ -2,9 +2,10 @@
   "nativeVersion": "1.6",
   "required": false,
   "notes": [
-    "Agora uma venda pode conter até 3 materiais diferentes.",
-    "Use o botão Adicionar outro material abaixo da lista para incluir novos itens.",
-    "Cada material possui quantidade e valor próprios; o frete continua único por venda.",
-    "Listas, detalhes, filtros, financeiro e relatórios foram adaptados para os vários materiais."
+    "Interface administrativa reorganizada para telas maiores (tabelas e filtros extras em Painel, Entregas, Financeiro, Relatórios, cadastros e frota).",
+    "Admin pode editar cliente, material e forma de pagamento de uma venda pendente ou entregue.",
+    "Entregas ganhou filtros por mês e motorista, disponíveis só para admin.",
+    "No cadastro e na edição de venda, informe o valor total do material em vez do valor por m³; o preço unitário aparece apenas como referência.",
+    "Corrigido o rótulo do material FRETE na lista de seleção."
   ]
 }

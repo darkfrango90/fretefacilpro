@@ -22,6 +22,7 @@ import { enqueue } from "@/lib/offline/queue";
 import { syncNow } from "@/lib/offline/sync";
 import { ClienteCombobox } from "@/components/cliente-combobox";
 import { MoneyInput } from "@/components/money-input";
+import { valorUnitarioDeTotal } from "@/lib/entrega-itens";
 
 export const Route = createFileRoute("/_authenticated/entrega/")({
   component: NovaVenda,
@@ -39,12 +40,20 @@ type MaterialVendaForm = {
   key: string;
   materialId: string;
   precoBase: number | null;
+  valorTotal: string;
   valorPraticado: string;
   quantidade: string;
 };
 
 function novoMaterial(key: string = crypto.randomUUID()): MaterialVendaForm {
-  return { key, materialId: "", precoBase: null, valorPraticado: "", quantidade: "1" };
+  return {
+    key,
+    materialId: "",
+    precoBase: null,
+    valorTotal: "",
+    valorPraticado: "",
+    quantidade: "1",
+  };
 }
 
 function NovaVenda() {
@@ -197,17 +206,20 @@ function NovaVenda() {
         if (itemIndex !== index) return item;
         if (!m) return { ...item, materialId: id, precoBase: null };
         const frete = materialEhFrete(m);
-        const manterValor = item.valorPraticado && Number(item.valorPraticado) !== 0;
+        const qtdAtual = frete ? 1 : Number(item.quantidade || 1) || 1;
+        const manterValor = item.valorTotal && Number(item.valorTotal) !== 0;
+        const novoTotal = frete
+          ? "0"
+          : !perms.pode_alterar_valor_produto || !manterValor
+            ? String((base ?? 0) * qtdAtual)
+            : item.valorTotal;
         return {
           ...item,
           materialId: id,
           precoBase: base,
           quantidade: frete ? "1" : item.quantidade,
-          valorPraticado: frete
-            ? "0"
-            : !perms.pode_alterar_valor_produto || !manterValor
-              ? String(base)
-              : item.valorPraticado,
+          valorTotal: novoTotal,
+          valorPraticado: frete ? "0" : valorUnitarioDeTotal(novoTotal, qtdAtual),
         };
       }),
     );
@@ -215,7 +227,15 @@ function NovaVenda() {
 
   function atualizarItem(index: number, patch: Partial<MaterialVendaForm>) {
     setItens((atuais) =>
-      atuais.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)),
+      atuais.map((item, itemIndex) => {
+        if (itemIndex !== index) return item;
+        const atualizado = { ...item, ...patch };
+        atualizado.valorPraticado = valorUnitarioDeTotal(
+          atualizado.valorTotal,
+          atualizado.quantidade,
+        );
+        return atualizado;
+      }),
     );
   }
 
@@ -243,7 +263,7 @@ function NovaVenda() {
     for (const item of itens) {
       const material = (materiaisAll ?? []).find((m: any) => m.id === item.materialId);
       const itemFrete = materialEhFrete(material);
-      if (!itemFrete && !item.valorPraticado) return "Informe o valor de todos os materiais";
+      if (!itemFrete && !item.valorTotal) return "Informe o valor total de todos os materiais";
       const vp = itemFrete ? 0 : Number(item.valorPraticado);
       const qtd = itemFrete ? 1 : Number(item.quantidade || 0);
       if (!Number.isFinite(vp) || vp < 0) return "Valor praticado inválido";
@@ -420,7 +440,9 @@ function NovaVenda() {
                             (itens.length > 1 && materialEhFrete(m))
                           }
                         >
-                          {m.nome} · R$ {Number(m.preco_base).toFixed(2)}/{m.unidade}
+                          {materialEhFrete(m)
+                            ? m.nome
+                            : `${m.nome} · R$ ${Number(m.preco_base).toFixed(2)}/${m.unidade}`}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -430,30 +452,46 @@ function NovaVenda() {
                       FRETE selecionado: informe somente o valor do frete da venda.
                     </p>
                   ) : (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label>Quantidade</Label>
-                        <Input
-                          type="number"
-                          step="0.001"
-                          value={item.quantidade}
-                          onChange={(event) =>
-                            atualizarItem(index, { quantidade: event.target.value })
-                          }
-                        />
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label>Quantidade</Label>
+                          <Input
+                            type="number"
+                            step="0.001"
+                            value={item.quantidade}
+                            onChange={(event) => {
+                              const quantidade = event.target.value;
+                              if (valorTravado && item.precoBase != null) {
+                                atualizarItem(index, {
+                                  quantidade,
+                                  valorTotal: String(item.precoBase * (Number(quantidade || 0) || 0)),
+                                });
+                              } else {
+                                atualizarItem(index, { quantidade });
+                              }
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <Label className="flex items-center gap-1">
+                            Valor total do material *
+                            {valorTravado ? (
+                              <Lock className="h-3 w-3 text-muted-foreground" />
+                            ) : null}
+                          </Label>
+                          <MoneyInput
+                            value={item.valorTotal}
+                            readOnly={valorTravado}
+                            onValueChange={(value) => atualizarItem(index, { valorTotal: value })}
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <Label className="flex items-center gap-1">
-                          Valor praticado *
-                          {valorTravado ? <Lock className="h-3 w-3 text-muted-foreground" /> : null}
-                        </Label>
-                        <MoneyInput
-                          value={item.valorPraticado}
-                          readOnly={valorTravado}
-                          onValueChange={(value) => atualizarItem(index, { valorPraticado: value })}
-                        />
-                      </div>
-                    </div>
+                      <p className="text-xs text-muted-foreground">
+                        Equivale a R$ {Number(item.valorPraticado || 0).toFixed(2)} /{" "}
+                        {material?.unidade ?? "un"} (informativo)
+                      </p>
+                    </>
                   )}
                   {diff && !valorTravado ? (
                     <p className="text-xs text-amber-500">

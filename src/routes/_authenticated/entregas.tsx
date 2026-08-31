@@ -70,7 +70,12 @@ import { SwipeToAction } from "@/components/swipe-to-action";
 import { EntregaDetalheDialog } from "@/components/entrega-detalhe-dialog";
 import { ClienteCombobox } from "@/components/cliente-combobox";
 import { MoneyInput } from "@/components/money-input";
-import { calcularValorMateriais, obterItensEntrega, resumoMateriais } from "@/lib/entrega-itens";
+import {
+  calcularValorMateriais,
+  obterItensEntrega,
+  resumoMateriais,
+  valorUnitarioDeTotal,
+} from "@/lib/entrega-itens";
 
 import { AdminOnly } from "@/components/role-guard";
 
@@ -230,6 +235,7 @@ function Page() {
     cliente_id: string;
     material_id: string;
     quantidade: string;
+    valor_total: string;
     valor_praticado: string;
     valor_frete: string;
     forma_pagamento: string;
@@ -240,11 +246,13 @@ function Page() {
   const [salvando, setSalvando] = useState(false);
 
   function abrirEdicao(r: any) {
+    const quantidade = String(r.quantidade ?? "");
     setEditar({
       id: r.id,
       cliente_id: r.cliente_id ?? "",
       material_id: r.material_id ?? "",
-      quantidade: String(r.quantidade ?? ""),
+      quantidade,
+      valor_total: String(Number(r.valor_praticado ?? 0) * Number(r.quantidade ?? 1)),
       valor_praticado: String(r.valor_praticado ?? ""),
       valor_frete: String(r.valor_frete ?? ""),
       forma_pagamento: r.forma_pagamento ?? "",
@@ -258,11 +266,16 @@ function Page() {
     if (!editar) return;
     const material = (materiaisEdicao ?? []).find((m: any) => m.id === materialId);
     const frete = materialEhFrete(material?.nome);
+    const quantidade = frete ? "1" : editar.quantidade;
+    const valorTotal = frete
+      ? "0"
+      : String(Number(material?.preco_base ?? 0) * (Number(quantidade || 1) || 1));
     setEditar({
       ...editar,
       material_id: materialId,
-      quantidade: frete ? "1" : editar.quantidade,
-      valor_praticado: frete ? "0" : String(material?.preco_base ?? editar.valor_praticado),
+      quantidade,
+      valor_total: valorTotal,
+      valor_praticado: frete ? "0" : valorUnitarioDeTotal(valorTotal, quantidade),
     });
   }
 
@@ -280,6 +293,8 @@ function Page() {
     if (!editar.forma_pagamento) return toast.error("Selecione a forma de pagamento");
     if (!editar.multiplosMateriais && !isFrete && (!Number.isFinite(quantidade) || quantidade <= 0))
       return toast.error("Quantidade inválida");
+    if (!editar.multiplosMateriais && !isFrete && !editar.valor_total)
+      return toast.error("Informe o valor total do material");
     if (
       !editar.multiplosMateriais &&
       !isFrete &&
@@ -790,16 +805,33 @@ function Page() {
                         type="number"
                         inputMode="decimal"
                         value={editar.quantidade}
-                        onChange={(e) => setEditar({ ...editar, quantidade: e.target.value })}
+                        onChange={(e) => {
+                          const quantidade = e.target.value;
+                          setEditar({
+                            ...editar,
+                            quantidade,
+                            valor_praticado: valorUnitarioDeTotal(editar.valor_total, quantidade),
+                          });
+                        }}
                       />
                     </div>
                     <div>
-                      <Label>Valor praticado (R$)</Label>
+                      <Label>Valor total do material (R$)</Label>
                       <MoneyInput
-                        value={editar.valor_praticado}
-                        onValueChange={(value) => setEditar({ ...editar, valor_praticado: value })}
+                        value={editar.valor_total}
+                        onValueChange={(value) =>
+                          setEditar({
+                            ...editar,
+                            valor_total: value,
+                            valor_praticado: valorUnitarioDeTotal(value, editar.quantidade),
+                          })
+                        }
                       />
                     </div>
+                    <p className="text-xs text-muted-foreground -mt-1">
+                      Equivale a R$ {Number(editar.valor_praticado || 0).toFixed(2)} /{" "}
+                      {materialSelecionado?.unidade ?? "un"} (informativo)
+                    </p>
                   </>
                 );
               })()}
