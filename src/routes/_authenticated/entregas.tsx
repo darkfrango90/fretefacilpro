@@ -117,6 +117,7 @@ function Page() {
   const [filtro, setFiltro] = useState<StatusFiltro>("todos");
   const [mes, setMes] = useState<string>("");
   const [motoristaFiltro, setMotoristaFiltro] = useState<string>("todos");
+  const [clienteFiltro, setClienteFiltro] = useState<string>("todos");
   const [detalheId, setDetalheId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
@@ -147,7 +148,7 @@ function Page() {
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: ["entregas", empresaId, filtro, mes, motoristaFiltro],
+    queryKey: ["entregas", empresaId, filtro, mes, motoristaFiltro, clienteFiltro],
     enabled: !!empresaId,
     queryFn: async () => {
       let q = (supabase as any)
@@ -167,16 +168,19 @@ function Page() {
           `motorista_venda_id.eq.${motoristaFiltro},motorista_entrega_id.eq.${motoristaFiltro}`,
         );
       }
+      if (clienteFiltro !== "todos") q = q.eq("cliente_id", clienteFiltro);
       const { data, error } = await q;
       if (error) throw error;
       return data ?? [];
     },
   });
 
-  const filtrosExtrasAtivos = (mes ? 1 : 0) + (motoristaFiltro !== "todos" ? 1 : 0);
+  const filtrosExtrasAtivos =
+    (mes ? 1 : 0) + (motoristaFiltro !== "todos" ? 1 : 0) + (clienteFiltro !== "todos" ? 1 : 0);
   function limparFiltrosExtras() {
     setMes("");
     setMotoristaFiltro("todos");
+    setClienteFiltro("todos");
   }
 
   const { data: clientesEdicao } = useQuery({
@@ -466,6 +470,24 @@ function Page() {
               {(motoristas ?? []).map((m: any) => (
                 <SelectItem key={m.id} value={m.id}>
                   {m.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="hidden md:block space-y-1.5">
+          <Label htmlFor="entregas-filtro-cliente" className="text-xs">
+            Cliente
+          </Label>
+          <Select value={clienteFiltro} onValueChange={setClienteFiltro}>
+            <SelectTrigger id="entregas-filtro-cliente" className="w-52">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os clientes</SelectItem>
+              {(clientesEdicao ?? []).map((c: any) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.nome}
                 </SelectItem>
               ))}
             </SelectContent>
