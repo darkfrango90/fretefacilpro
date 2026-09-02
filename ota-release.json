@@ -2,6 +2,7 @@
   "nativeVersion": "1.6",
   "required": false,
   "notes": [
+    "Painel agora mostra o mês calendário completo (não mais só os últimos 30 dias), com seletor de mês no canto superior direito.",
     "Interface administrativa reorganizada para telas maiores (tabelas e filtros extras em Painel, Entregas, Financeiro, Relatórios, cadastros e frota).",
     "Admin pode editar cliente, material e forma de pagamento de uma venda pendente ou entregue.",
     "Entregas ganhou filtros por mês e motorista, disponíveis só para admin.",

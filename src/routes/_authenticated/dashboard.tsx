@@ -1,9 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { useProfile } from "@/hooks/use-session";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { calcularValorMateriais } from "@/lib/entrega-itens";
+import { competenciaAtual, obterIntervaloCompetencia } from "@/lib/competencia-mensal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   ClipboardList,
   Fuel,
@@ -32,12 +36,15 @@ function Home() {
 }
 
 function AdminDashboard({ empresaId }: { empresaId: string }) {
+  const mesAtual = competenciaAtual();
+  const [competencia, setCompetencia] = useState(mesAtual);
+  const intervalo = obterIntervaloCompetencia(competencia);
+
   const { data: stats } = useQuery({
-    queryKey: ["admin-stats-30d", empresaId],
+    queryKey: ["admin-stats-mes", empresaId, competencia],
     queryFn: async () => {
-      const since = new Date();
-      since.setDate(since.getDate() - 30);
-      const sinceIso = since.toISOString();
+      const inicioIso = intervalo.inicioIso;
+      const fimIso = intervalo.fimIso;
 
       const [entregasRes, abastRes, despesasRes, profilesRes, veiculosRes] = await Promise.all([
         (supabase as any)
@@ -45,18 +52,21 @@ function AdminDashboard({ empresaId }: { empresaId: string }) {
           .select(
             "id, material_id, itens, valor_praticado, valor_frete, quantidade, motorista_venda_id, motorista_entrega_id, status, criada_em",
           )
-          .gte("criada_em", sinceIso),
+          .gte("criada_em", inicioIso)
+          .lte("criada_em", fimIso),
         (supabase as any)
           .from("abastecimentos")
           .select("valor_total, litros, km_atual, veiculo_id, data_hora")
           .eq("empresa_id", empresaId)
-          .gte("data_hora", sinceIso),
+          .gte("data_hora", inicioIso)
+          .lte("data_hora", fimIso),
         (supabase as any)
           .from("despesas")
           .select("valor")
           .eq("empresa_id", empresaId)
           .eq("status", "conferida")
-          .gte("data", sinceIso.slice(0, 10)),
+          .gte("data", inicioIso.slice(0, 10))
+          .lte("data", fimIso.slice(0, 10)),
         (supabase as any).from("profiles").select("id, nome").eq("empresa_id", empresaId),
         (supabase as any)
           .from("veiculos")
@@ -160,9 +170,31 @@ function AdminDashboard({ empresaId }: { empresaId: string }) {
     },
   });
 
+  const labelMes = new Date(`${competencia}-01T00:00:00`).toLocaleDateString("pt-BR", {
+    month: "long",
+    year: "numeric",
+  });
+
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold">Painel · últimos 30 dias</h1>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold">Painel</h1>
+          <p className="text-xs text-muted-foreground capitalize">{labelMes}</p>
+        </div>
+        <div className="w-36 shrink-0">
+          <Label htmlFor="dashboard-competencia" className="sr-only">
+            Mês
+          </Label>
+          <Input
+            id="dashboard-competencia"
+            type="month"
+            value={competencia}
+            max={mesAtual}
+            onChange={(e) => setCompetencia(e.target.value || mesAtual)}
+          />
+        </div>
+      </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
         <StatCard
           label="Vendas"
