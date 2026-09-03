@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -88,6 +89,7 @@ function Page() {
   const [dataFim, setDataFim] = useState("");
   const [formaPagamento, setFormaPagamento] = useState("todas");
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("todos");
+  const [ocultarPagamento, setOcultarPagamento] = useState(false);
   const [detalheId, setDetalheId] = useState<string | null>(null);
 
   const { data: clientes } = useQuery({
@@ -301,6 +303,20 @@ function Page() {
               </Select>
             </div>
           </div>
+
+          <div className="hidden items-center gap-2 pt-1 md:flex">
+            <Checkbox
+              id="relatorio-cliente-ocultar-pagamento"
+              checked={ocultarPagamento}
+              onCheckedChange={(v) => setOcultarPagamento(v === true)}
+            />
+            <Label
+              htmlFor="relatorio-cliente-ocultar-pagamento"
+              className="text-xs font-normal text-muted-foreground"
+            >
+              Ocultar status e data de recebimento (mostra só o valor total de cada venda)
+            </Label>
+          </div>
         </CardContent>
       </Card>
 
@@ -312,11 +328,15 @@ function Page() {
 
       {clienteId && (
         <>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className={`grid grid-cols-2 gap-3 ${ocultarPagamento ? "" : "md:grid-cols-4"}`}>
             <StatTile label="Vendas" value={String(resumo.qtd)} />
             <StatTile label="Total geral" value={brl(resumo.total)} />
-            <StatTile label="A receber" value={brl(resumo.aReceber)} tone="warn" />
-            <StatTile label="Recebido" value={brl(resumo.recebido)} tone="ok" />
+            {!ocultarPagamento && (
+              <>
+                <StatTile label="A receber" value={brl(resumo.aReceber)} tone="warn" />
+                <StatTile label="Recebido" value={brl(resumo.recebido)} tone="ok" />
+              </>
+            )}
           </div>
 
           {isLoading && <p className="text-sm text-muted-foreground">Carregando...</p>}
@@ -329,7 +349,12 @@ function Page() {
 
           <div className="space-y-2 md:hidden">
             {(vendas ?? []).map((v: any) => (
-              <VendaCard key={v.id} v={v} onClick={() => setDetalheId(v.id)} />
+              <VendaCard
+                key={v.id}
+                v={v}
+                ocultarPagamento={ocultarPagamento}
+                onClick={() => setDetalheId(v.id)}
+              />
             ))}
           </div>
 
@@ -342,9 +367,13 @@ function Page() {
                     <TableHead>Data</TableHead>
                     <TableHead>Frete / Materiais</TableHead>
                     <TableHead>Forma de pagamento</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Vencimento</TableHead>
-                    <TableHead>Recebida em</TableHead>
+                    {!ocultarPagamento && (
+                      <>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Vencimento</TableHead>
+                        <TableHead>Recebida em</TableHead>
+                      </>
+                    )}
                     <TableHead className="text-right">Valor</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -371,23 +400,29 @@ function Page() {
                             {FORMA_LABEL[v.forma_pagamento] ?? v.forma_pagamento}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          {recebido ? (
-                            <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/15">
-                              Recebido
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-amber-500/15 text-amber-700 border-amber-500/30 hover:bg-amber-500/15">
-                              A receber
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {v.vencimento_pagamento ? formatarData(v.vencimento_pagamento) : "—"}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {v.pagamento_confirmado_em ? formatarData(v.pagamento_confirmado_em) : "—"}
-                        </TableCell>
+                        {!ocultarPagamento && (
+                          <>
+                            <TableCell>
+                              {recebido ? (
+                                <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/15">
+                                  Recebido
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-amber-500/15 text-amber-700 border-amber-500/30 hover:bg-amber-500/15">
+                                  A receber
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {v.vencimento_pagamento ? formatarData(v.vencimento_pagamento) : "—"}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {v.pagamento_confirmado_em
+                                ? formatarData(v.pagamento_confirmado_em)
+                                : "—"}
+                            </TableCell>
+                          </>
+                        )}
                         <TableCell className="text-right font-semibold">
                           {brl(totalEntrega(v))}
                         </TableCell>
@@ -421,19 +456,23 @@ function Page() {
             </div>
           </div>
 
-          <div className="mt-3 grid grid-cols-4 gap-2 text-xs">
+          <div className={`mt-3 grid gap-2 text-xs ${ocultarPagamento ? "grid-cols-2" : "grid-cols-4"}`}>
             <div>
               <strong>Vendas:</strong> {resumo.qtd}
             </div>
             <div>
               <strong>Total geral:</strong> {brl(resumo.total)}
             </div>
-            <div>
-              <strong>A receber:</strong> {brl(resumo.aReceber)}
-            </div>
-            <div>
-              <strong>Recebido:</strong> {brl(resumo.recebido)}
-            </div>
+            {!ocultarPagamento && (
+              <>
+                <div>
+                  <strong>A receber:</strong> {brl(resumo.aReceber)}
+                </div>
+                <div>
+                  <strong>Recebido:</strong> {brl(resumo.recebido)}
+                </div>
+              </>
+            )}
           </div>
 
           <table className="mt-4 w-full border-collapse text-xs">
@@ -443,9 +482,13 @@ function Page() {
                 <th className="border border-gray-400 p-1 text-left">Data</th>
                 <th className="border border-gray-400 p-1 text-left">Frete / Materiais</th>
                 <th className="border border-gray-400 p-1 text-left">Forma de pagamento</th>
-                <th className="border border-gray-400 p-1 text-left">Status</th>
-                <th className="border border-gray-400 p-1 text-left">Vencimento</th>
-                <th className="border border-gray-400 p-1 text-left">Recebida em</th>
+                {!ocultarPagamento && (
+                  <>
+                    <th className="border border-gray-400 p-1 text-left">Status</th>
+                    <th className="border border-gray-400 p-1 text-left">Vencimento</th>
+                    <th className="border border-gray-400 p-1 text-left">Recebida em</th>
+                  </>
+                )}
                 <th className="border border-gray-400 p-1 text-right">Valor</th>
               </tr>
             </thead>
@@ -462,15 +505,21 @@ function Page() {
                     <td className="border border-gray-400 p-1">
                       {FORMA_LABEL[v.forma_pagamento] ?? v.forma_pagamento}
                     </td>
-                    <td className="border border-gray-400 p-1">
-                      {recebido ? "Recebido" : "A receber"}
-                    </td>
-                    <td className="border border-gray-400 p-1">
-                      {v.vencimento_pagamento ? formatarData(v.vencimento_pagamento) : "—"}
-                    </td>
-                    <td className="border border-gray-400 p-1">
-                      {v.pagamento_confirmado_em ? formatarData(v.pagamento_confirmado_em) : "—"}
-                    </td>
+                    {!ocultarPagamento && (
+                      <>
+                        <td className="border border-gray-400 p-1">
+                          {recebido ? "Recebido" : "A receber"}
+                        </td>
+                        <td className="border border-gray-400 p-1">
+                          {v.vencimento_pagamento ? formatarData(v.vencimento_pagamento) : "—"}
+                        </td>
+                        <td className="border border-gray-400 p-1">
+                          {v.pagamento_confirmado_em
+                            ? formatarData(v.pagamento_confirmado_em)
+                            : "—"}
+                        </td>
+                      </>
+                    )}
                     <td className="border border-gray-400 p-1 text-right">
                       {brl(totalEntrega(v))}
                     </td>
@@ -505,7 +554,15 @@ function StatTile({
   );
 }
 
-function VendaCard({ v, onClick }: { v: any; onClick: () => void }) {
+function VendaCard({
+  v,
+  ocultarPagamento,
+  onClick,
+}: {
+  v: any;
+  ocultarPagamento: boolean;
+  onClick: () => void;
+}) {
   const recebido = v.status_pagamento === "confirmado";
   return (
     <button type="button" className="block w-full text-left" onClick={onClick}>
@@ -520,15 +577,16 @@ function VendaCard({ v, onClick }: { v: any; onClick: () => void }) {
             <span className="text-muted-foreground">
               {formatarData(v.criada_em)} · {FORMA_LABEL[v.forma_pagamento] ?? v.forma_pagamento}
             </span>
-            {recebido ? (
-              <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/15 text-[10px]">
-                Recebido
-              </Badge>
-            ) : (
-              <Badge className="bg-amber-500/15 text-amber-700 border-amber-500/30 hover:bg-amber-500/15 text-[10px]">
-                A receber
-              </Badge>
-            )}
+            {!ocultarPagamento &&
+              (recebido ? (
+                <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/15 text-[10px]">
+                  Recebido
+                </Badge>
+              ) : (
+                <Badge className="bg-amber-500/15 text-amber-700 border-amber-500/30 hover:bg-amber-500/15 text-[10px]">
+                  A receber
+                </Badge>
+              ))}
           </div>
         </CardContent>
       </Card>
