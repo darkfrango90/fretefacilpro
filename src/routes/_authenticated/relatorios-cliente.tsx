@@ -121,7 +121,7 @@ function Page() {
       let q = (supabase as any)
         .from("entregas")
         .select(
-          "id, numero, status, status_pagamento, forma_pagamento, valor_praticado, valor_frete, quantidade, itens, criada_em, vencimento_pagamento, pagamento_confirmado_em, observacoes",
+          "id, numero, status, status_pagamento, forma_pagamento, material_id, material:materiais(nome, unidade), preco_base_no_momento, valor_praticado, valor_frete, quantidade, itens, criada_em, vencimento_pagamento, pagamento_confirmado_em, observacoes",
         )
         .eq("empresa_id", empresaId)
         .eq("cliente_id", clienteId)
