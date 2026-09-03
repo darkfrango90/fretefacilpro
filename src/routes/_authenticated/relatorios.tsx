@@ -566,7 +566,7 @@ function Page() {
       </div>
 
       <Link
-        to="/relatorios/cliente"
+        to="/relatorios-cliente"
         className="flex items-center justify-between rounded-xl border bg-card p-3 hover:bg-accent transition"
       >
         <span className="flex items-center gap-2 text-sm font-medium">

@@ -28,7 +28,7 @@ import { ArrowLeft, Users, Filter, X } from "lucide-react";
 import { EntregaDetalheDialog } from "@/components/entrega-detalhe-dialog";
 import { calcularValorMateriais, resumoMateriais } from "@/lib/entrega-itens";
 
-export const Route = createFileRoute("/_authenticated/relatorios/cliente")({
+export const Route = createFileRoute("/_authenticated/relatorios-cliente")({
   component: () => (
     <AdminOnly>
       <Page />

@@ -17,6 +17,7 @@ import { Route as AuthenticatedTrocasOleoRouteImport } from './routes/_authentic
 import { Route as AuthenticatedTrocarSenhaRouteImport } from './routes/_authenticated/trocar-senha'
 import { Route as AuthenticatedSincronizacaoRouteImport } from './routes/_authenticated/sincronizacao'
 import { Route as AuthenticatedRelatoriosMotoristaRouteImport } from './routes/_authenticated/relatorios-motorista'
+import { Route as AuthenticatedRelatoriosClienteRouteImport } from './routes/_authenticated/relatorios-cliente'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedPermissoesRouteImport } from './routes/_authenticated/permissoes'
 import { Route as AuthenticatedPendentesRouteImport } from './routes/_authenticated/pendentes'
@@ -39,7 +40,6 @@ import { Route as AuthenticatedPneusIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedEntregaIndexRouteImport } from './routes/_authenticated/entrega.index'
 import { Route as AuthenticatedDespesasIndexRouteImport } from './routes/_authenticated/despesas.index'
 import { Route as AuthenticatedSincronizacaoHistoricoRouteImport } from './routes/_authenticated/sincronizacao.historico'
-import { Route as AuthenticatedRelatoriosClienteRouteImport } from './routes/_authenticated/relatorios.cliente'
 import { Route as AuthenticatedPneusRelatorioRouteImport } from './routes/_authenticated/pneus.relatorio'
 import { Route as AuthenticatedPneusInstalarRouteImport } from './routes/_authenticated/pneus.instalar'
 import { Route as AuthenticatedDespesasNovaRouteImport } from './routes/_authenticated/despesas.nova'
@@ -86,6 +86,12 @@ const AuthenticatedRelatoriosMotoristaRoute =
   AuthenticatedRelatoriosMotoristaRouteImport.update({
     id: '/relatorios-motorista',
     path: '/relatorios-motorista',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedRelatoriosClienteRoute =
+  AuthenticatedRelatoriosClienteRouteImport.update({
+    id: '/relatorios-cliente',
+    path: '/relatorios-cliente',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
@@ -207,12 +213,6 @@ const AuthenticatedSincronizacaoHistoricoRoute =
     path: '/historico',
     getParentRoute: () => AuthenticatedSincronizacaoRoute,
   } as any)
-const AuthenticatedRelatoriosClienteRoute =
-  AuthenticatedRelatoriosClienteRouteImport.update({
-    id: '/cliente',
-    path: '/cliente',
-    getParentRoute: () => AuthenticatedRelatoriosRoute,
-  } as any)
 const AuthenticatedPneusRelatorioRoute =
   AuthenticatedPneusRelatorioRouteImport.update({
     id: '/pneus/relatorio',
@@ -264,7 +264,8 @@ export interface FileRoutesByFullPath {
   '/operacao': typeof AuthenticatedOperacaoRoute
   '/pendentes': typeof AuthenticatedPendentesRoute
   '/permissoes': typeof AuthenticatedPermissoesRoute
-  '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
+  '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/relatorios-cliente': typeof AuthenticatedRelatoriosClienteRoute
   '/relatorios-motorista': typeof AuthenticatedRelatoriosMotoristaRoute
   '/sincronizacao': typeof AuthenticatedSincronizacaoRouteWithChildren
   '/trocar-senha': typeof AuthenticatedTrocarSenhaRoute
@@ -273,7 +274,6 @@ export interface FileRoutesByFullPath {
   '/despesas/nova': typeof AuthenticatedDespesasNovaRoute
   '/pneus/instalar': typeof AuthenticatedPneusInstalarRoute
   '/pneus/relatorio': typeof AuthenticatedPneusRelatorioRoute
-  '/relatorios/cliente': typeof AuthenticatedRelatoriosClienteRoute
   '/sincronizacao/historico': typeof AuthenticatedSincronizacaoHistoricoRoute
   '/despesas/': typeof AuthenticatedDespesasIndexRoute
   '/entrega/': typeof AuthenticatedEntregaIndexRoute
@@ -301,7 +301,8 @@ export interface FileRoutesByTo {
   '/operacao': typeof AuthenticatedOperacaoRoute
   '/pendentes': typeof AuthenticatedPendentesRoute
   '/permissoes': typeof AuthenticatedPermissoesRoute
-  '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
+  '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/relatorios-cliente': typeof AuthenticatedRelatoriosClienteRoute
   '/relatorios-motorista': typeof AuthenticatedRelatoriosMotoristaRoute
   '/sincronizacao': typeof AuthenticatedSincronizacaoRouteWithChildren
   '/trocar-senha': typeof AuthenticatedTrocarSenhaRoute
@@ -310,7 +311,6 @@ export interface FileRoutesByTo {
   '/despesas/nova': typeof AuthenticatedDespesasNovaRoute
   '/pneus/instalar': typeof AuthenticatedPneusInstalarRoute
   '/pneus/relatorio': typeof AuthenticatedPneusRelatorioRoute
-  '/relatorios/cliente': typeof AuthenticatedRelatoriosClienteRoute
   '/sincronizacao/historico': typeof AuthenticatedSincronizacaoHistoricoRoute
   '/despesas': typeof AuthenticatedDespesasIndexRoute
   '/entrega': typeof AuthenticatedEntregaIndexRoute
@@ -340,7 +340,8 @@ export interface FileRoutesById {
   '/_authenticated/operacao': typeof AuthenticatedOperacaoRoute
   '/_authenticated/pendentes': typeof AuthenticatedPendentesRoute
   '/_authenticated/permissoes': typeof AuthenticatedPermissoesRoute
-  '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
+  '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/_authenticated/relatorios-cliente': typeof AuthenticatedRelatoriosClienteRoute
   '/_authenticated/relatorios-motorista': typeof AuthenticatedRelatoriosMotoristaRoute
   '/_authenticated/sincronizacao': typeof AuthenticatedSincronizacaoRouteWithChildren
   '/_authenticated/trocar-senha': typeof AuthenticatedTrocarSenhaRoute
@@ -349,7 +350,6 @@ export interface FileRoutesById {
   '/_authenticated/despesas/nova': typeof AuthenticatedDespesasNovaRoute
   '/_authenticated/pneus/instalar': typeof AuthenticatedPneusInstalarRoute
   '/_authenticated/pneus/relatorio': typeof AuthenticatedPneusRelatorioRoute
-  '/_authenticated/relatorios/cliente': typeof AuthenticatedRelatoriosClienteRoute
   '/_authenticated/sincronizacao/historico': typeof AuthenticatedSincronizacaoHistoricoRoute
   '/_authenticated/despesas/': typeof AuthenticatedDespesasIndexRoute
   '/_authenticated/entrega/': typeof AuthenticatedEntregaIndexRoute
@@ -380,6 +380,7 @@ export interface FileRouteTypes {
     | '/pendentes'
     | '/permissoes'
     | '/relatorios'
+    | '/relatorios-cliente'
     | '/relatorios-motorista'
     | '/sincronizacao'
     | '/trocar-senha'
@@ -388,7 +389,6 @@ export interface FileRouteTypes {
     | '/despesas/nova'
     | '/pneus/instalar'
     | '/pneus/relatorio'
-    | '/relatorios/cliente'
     | '/sincronizacao/historico'
     | '/despesas/'
     | '/entrega/'
@@ -417,6 +417,7 @@ export interface FileRouteTypes {
     | '/pendentes'
     | '/permissoes'
     | '/relatorios'
+    | '/relatorios-cliente'
     | '/relatorios-motorista'
     | '/sincronizacao'
     | '/trocar-senha'
@@ -425,7 +426,6 @@ export interface FileRouteTypes {
     | '/despesas/nova'
     | '/pneus/instalar'
     | '/pneus/relatorio'
-    | '/relatorios/cliente'
     | '/sincronizacao/historico'
     | '/despesas'
     | '/entrega'
@@ -455,6 +455,7 @@ export interface FileRouteTypes {
     | '/_authenticated/pendentes'
     | '/_authenticated/permissoes'
     | '/_authenticated/relatorios'
+    | '/_authenticated/relatorios-cliente'
     | '/_authenticated/relatorios-motorista'
     | '/_authenticated/sincronizacao'
     | '/_authenticated/trocar-senha'
@@ -463,7 +464,6 @@ export interface FileRouteTypes {
     | '/_authenticated/despesas/nova'
     | '/_authenticated/pneus/instalar'
     | '/_authenticated/pneus/relatorio'
-    | '/_authenticated/relatorios/cliente'
     | '/_authenticated/sincronizacao/historico'
     | '/_authenticated/despesas/'
     | '/_authenticated/entrega/'
@@ -534,6 +534,13 @@ declare module '@tanstack/react-router' {
       path: '/relatorios-motorista'
       fullPath: '/relatorios-motorista'
       preLoaderRoute: typeof AuthenticatedRelatoriosMotoristaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/relatorios-cliente': {
+      id: '/_authenticated/relatorios-cliente'
+      path: '/relatorios-cliente'
+      fullPath: '/relatorios-cliente'
+      preLoaderRoute: typeof AuthenticatedRelatoriosClienteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/relatorios': {
@@ -690,13 +697,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSincronizacaoHistoricoRouteImport
       parentRoute: typeof AuthenticatedSincronizacaoRoute
     }
-    '/_authenticated/relatorios/cliente': {
-      id: '/_authenticated/relatorios/cliente'
-      path: '/cliente'
-      fullPath: '/relatorios/cliente'
-      preLoaderRoute: typeof AuthenticatedRelatoriosClienteRouteImport
-      parentRoute: typeof AuthenticatedRelatoriosRoute
-    }
     '/_authenticated/pneus/relatorio': {
       id: '/_authenticated/pneus/relatorio'
       path: '/pneus/relatorio'
@@ -735,20 +735,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AuthenticatedRelatoriosRouteChildren {
-  AuthenticatedRelatoriosClienteRoute: typeof AuthenticatedRelatoriosClienteRoute
-}
-
-const AuthenticatedRelatoriosRouteChildren: AuthenticatedRelatoriosRouteChildren =
-  {
-    AuthenticatedRelatoriosClienteRoute: AuthenticatedRelatoriosClienteRoute,
-  }
-
-const AuthenticatedRelatoriosRouteWithChildren =
-  AuthenticatedRelatoriosRoute._addFileChildren(
-    AuthenticatedRelatoriosRouteChildren,
-  )
-
 interface AuthenticatedSincronizacaoRouteChildren {
   AuthenticatedSincronizacaoHistoricoRoute: typeof AuthenticatedSincronizacaoHistoricoRoute
 }
@@ -782,7 +768,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedOperacaoRoute: typeof AuthenticatedOperacaoRoute
   AuthenticatedPendentesRoute: typeof AuthenticatedPendentesRoute
   AuthenticatedPermissoesRoute: typeof AuthenticatedPermissoesRoute
-  AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRouteWithChildren
+  AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
+  AuthenticatedRelatoriosClienteRoute: typeof AuthenticatedRelatoriosClienteRoute
   AuthenticatedRelatoriosMotoristaRoute: typeof AuthenticatedRelatoriosMotoristaRoute
   AuthenticatedSincronizacaoRoute: typeof AuthenticatedSincronizacaoRouteWithChildren
   AuthenticatedTrocarSenhaRoute: typeof AuthenticatedTrocarSenhaRoute
@@ -816,7 +803,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOperacaoRoute: AuthenticatedOperacaoRoute,
   AuthenticatedPendentesRoute: AuthenticatedPendentesRoute,
   AuthenticatedPermissoesRoute: AuthenticatedPermissoesRoute,
-  AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRouteWithChildren,
+  AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
+  AuthenticatedRelatoriosClienteRoute: AuthenticatedRelatoriosClienteRoute,
   AuthenticatedRelatoriosMotoristaRoute: AuthenticatedRelatoriosMotoristaRoute,
   AuthenticatedSincronizacaoRoute: AuthenticatedSincronizacaoRouteWithChildren,
   AuthenticatedTrocarSenhaRoute: AuthenticatedTrocarSenhaRoute,
