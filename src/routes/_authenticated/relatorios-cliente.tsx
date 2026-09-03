@@ -24,7 +24,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { ArrowLeft, Users, Filter, X } from "lucide-react";
+import { ArrowLeft, Printer, Users, Filter, X } from "lucide-react";
 import { EntregaDetalheDialog } from "@/components/entrega-detalhe-dialog";
 import { calcularValorMateriais, resumoMateriais } from "@/lib/entrega-itens";
 
@@ -165,21 +165,60 @@ function Page() {
 
   const clienteSelecionado = (clientes ?? []).find((c: any) => c.id === clienteId);
 
+  const periodoLabel =
+    dataIni || dataFim
+      ? `${dataIni ? formatarData(dataIni) : "início"} até ${dataFim ? formatarData(dataFim) : "hoje"}`
+      : "Todo o período";
+
+  const filtrosImpressao = [
+    formaPagamento !== "todas"
+      ? `Forma de pagamento: ${FORMA_LABEL[formaPagamento] ?? formaPagamento}`
+      : null,
+    statusFiltro === "recebido"
+      ? "Status: Recebido"
+      : statusFiltro === "a_receber"
+        ? "Status: A receber"
+        : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <div className="space-y-4 pb-6">
-      <div>
-        <Link
-          to="/relatorios"
-          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+      <style>{`
+        @media print {
+          @page { margin: 14mm; }
+          body * { visibility: hidden; }
+          #relatorio-cliente-print, #relatorio-cliente-print * { visibility: visible; }
+          #relatorio-cliente-print { position: absolute; inset: 0; }
+        }
+      `}</style>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <Link
+            to="/relatorios"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Voltar para Relatórios
+          </Link>
+          <h1 className="mt-1 text-xl font-bold flex items-center gap-2">
+            <Users className="h-5 w-5 text-primary" /> Relatório por cliente
+          </h1>
+          <p className="text-xs text-muted-foreground">
+            Frete e vendas de um cliente em um período, com status de recebimento.
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="hidden shrink-0 items-center gap-2 md:inline-flex"
+          disabled={!clienteId || (vendas?.length ?? 0) === 0}
+          onClick={() => window.print()}
         >
-          <ArrowLeft className="h-3.5 w-3.5" /> Voltar para Relatórios
-        </Link>
-        <h1 className="mt-1 text-xl font-bold flex items-center gap-2">
-          <Users className="h-5 w-5 text-primary" /> Relatório por cliente
-        </h1>
-        <p className="text-xs text-muted-foreground">
-          Frete e vendas de um cliente em um período, com status de recebimento.
-        </p>
+          <Printer className="h-4 w-4" /> Imprimir
+        </Button>
       </div>
 
       <Card>
@@ -360,6 +399,87 @@ function Page() {
             </Card>
           )}
         </>
+      )}
+
+      {clienteId && (vendas?.length ?? 0) > 0 && (
+        <div id="relatorio-cliente-print" className="hidden print:block">
+          <h1 className="text-lg font-bold">Relatório por cliente</h1>
+          <div className="mt-1 text-sm">
+            <div>
+              <strong>Cliente:</strong> {clienteSelecionado?.nome ?? "—"}
+            </div>
+            <div>
+              <strong>Período:</strong> {periodoLabel}
+            </div>
+            {filtrosImpressao && (
+              <div>
+                <strong>Filtros:</strong> {filtrosImpressao}
+              </div>
+            )}
+            <div className="text-xs text-muted-foreground">
+              Emitido em {new Date().toLocaleString("pt-BR")}
+            </div>
+          </div>
+
+          <div className="mt-3 grid grid-cols-4 gap-2 text-xs">
+            <div>
+              <strong>Vendas:</strong> {resumo.qtd}
+            </div>
+            <div>
+              <strong>Total geral:</strong> {brl(resumo.total)}
+            </div>
+            <div>
+              <strong>A receber:</strong> {brl(resumo.aReceber)}
+            </div>
+            <div>
+              <strong>Recebido:</strong> {brl(resumo.recebido)}
+            </div>
+          </div>
+
+          <table className="mt-4 w-full border-collapse text-xs">
+            <thead>
+              <tr>
+                <th className="border border-gray-400 p-1 text-left">Venda</th>
+                <th className="border border-gray-400 p-1 text-left">Data</th>
+                <th className="border border-gray-400 p-1 text-left">Frete / Materiais</th>
+                <th className="border border-gray-400 p-1 text-left">Forma de pagamento</th>
+                <th className="border border-gray-400 p-1 text-left">Status</th>
+                <th className="border border-gray-400 p-1 text-left">Vencimento</th>
+                <th className="border border-gray-400 p-1 text-left">Recebida em</th>
+                <th className="border border-gray-400 p-1 text-right">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(vendas ?? []).map((v: any) => {
+                const recebido = v.status_pagamento === "confirmado";
+                return (
+                  <tr key={v.id}>
+                    <td className="border border-gray-400 p-1">
+                      {v.numero != null ? `#${v.numero}` : "—"}
+                    </td>
+                    <td className="border border-gray-400 p-1">{formatarData(v.criada_em)}</td>
+                    <td className="border border-gray-400 p-1">{resumoMateriais(v)}</td>
+                    <td className="border border-gray-400 p-1">
+                      {FORMA_LABEL[v.forma_pagamento] ?? v.forma_pagamento}
+                    </td>
+                    <td className="border border-gray-400 p-1">
+                      {recebido ? "Recebido" : "A receber"}
+                    </td>
+                    <td className="border border-gray-400 p-1">
+                      {v.vencimento_pagamento ? formatarData(v.vencimento_pagamento) : "—"}
+                    </td>
+                    <td className="border border-gray-400 p-1">
+                      {v.pagamento_confirmado_em ? formatarData(v.pagamento_confirmado_em) : "—"}
+                    </td>
+                    <td className="border border-gray-400 p-1 text-right">
+                      {brl(totalEntrega(v))}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <EntregaDetalheDialog id={detalheId} onClose={() => setDetalheId(null)} empresaId={empresaId} />
