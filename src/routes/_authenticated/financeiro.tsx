@@ -33,10 +33,12 @@ import {
   Clock,
   Filter,
   MapPin,
+  Pencil,
   Wallet,
   X,
 } from "lucide-react";
 import { calcularValorMateriais, obterItensEntrega, resumoMateriais } from "@/lib/entrega-itens";
+import { EntregaEditarDialog } from "@/components/entrega-editar-dialog";
 import {
   Table,
   TableHeader,
@@ -121,6 +123,7 @@ function Page() {
   const qc = useQueryClient();
   const [tab, setTab] = useState("a_confirmar");
   const [selecionadaId, setSelecionadaId] = useState<string | null>(null);
+  const [editarId, setEditarId] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [dataIni, setDataIni] = useState("");
   const [dataFim, setDataFim] = useState("");
@@ -177,6 +180,7 @@ function Page() {
   });
 
   const selecionada = (rows ?? []).find((e: any) => e.id === selecionadaId) ?? null;
+  const entregaParaEditar = (rows ?? []).find((e: any) => e.id === editarId) ?? null;
 
   const clienteOptions = useMemo(() => {
     const mapa = new Map<string, string>();
@@ -502,6 +506,17 @@ function Page() {
         onSalvarVencimento={salvarVencimento}
         onAlterarFormaPagamento={alterarFormaPagamento}
         onReverter={reverter}
+        onEditar={(id) => {
+          setSelecionadaId(null);
+          setEditarId(id);
+        }}
+      />
+
+      <EntregaEditarDialog
+        entrega={entregaParaEditar}
+        empresaId={empresaId}
+        onClose={() => setEditarId(null)}
+        onSaved={() => qc.invalidateQueries({ queryKey: ["financeiro", empresaId] })}
       />
     </div>
   );
@@ -680,6 +695,7 @@ function FinanceiroDetalheDialog({
   onSalvarVencimento,
   onAlterarFormaPagamento,
   onReverter,
+  onEditar,
 }: {
   entrega: any | null;
   salvando: boolean;
@@ -688,6 +704,7 @@ function FinanceiroDetalheDialog({
   onSalvarVencimento: (id: string, vencimento: string) => Promise<void>;
   onAlterarFormaPagamento: (id: string, formaPagamento: string) => Promise<void>;
   onReverter: (id: string) => Promise<void>;
+  onEditar: (id: string) => void;
 }) {
   const [vencimento, setVencimento] = useState("");
   const [formaPagamento, setFormaPagamento] = useState("");
@@ -731,6 +748,16 @@ function FinanceiroDetalheDialog({
             </Badge>
           </div>
         </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="hidden w-full items-center gap-2 md:flex"
+          onClick={() => onEditar(entrega.id)}
+        >
+          <Pencil className="h-4 w-4" /> Editar cliente, material e valor
+        </Button>
 
         <section className="space-y-2">
           <h3 className="text-sm font-semibold">Itens da venda</h3>

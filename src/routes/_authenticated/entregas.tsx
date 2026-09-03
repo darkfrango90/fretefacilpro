@@ -7,13 +7,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -62,20 +55,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { pendingByType } from "@/lib/offline/queue";
 import type { OutboxItem } from "@/lib/offline/db";
 import { SwipeToAction } from "@/components/swipe-to-action";
 import { EntregaDetalheDialog } from "@/components/entrega-detalhe-dialog";
-import { ClienteCombobox } from "@/components/cliente-combobox";
-import { MoneyInput } from "@/components/money-input";
-import {
-  calcularValorMateriais,
-  obterItensEntrega,
-  resumoMateriais,
-  valorUnitarioDeTotal,
-} from "@/lib/entrega-itens";
+import { EntregaEditarDialog } from "@/components/entrega-editar-dialog";
+import { calcularValorMateriais, resumoMateriais } from "@/lib/entrega-itens";
 
 import { AdminOnly } from "@/components/role-guard";
 
@@ -95,20 +81,6 @@ const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   entregue: { label: "Entregue", cls: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30" },
   cancelada: { label: "Cancelada", cls: "bg-rose-500/15 text-rose-700 border-rose-500/30" },
 };
-
-const FORMAS_PAGAMENTO_EDICAO = [
-  { value: "dinheiro", label: "Dinheiro" },
-  { value: "pix", label: "Pix" },
-  { value: "deposito", label: "Depósito" },
-  { value: "cartao_credito", label: "Cartão de crédito" },
-  { value: "permuta", label: "Permuta" },
-  { value: "boleto", label: "Boleto" },
-  { value: "carteira", label: "Carteira" },
-];
-
-function materialEhFrete(nome?: string | null) {
-  return String(nome ?? "").trim().toLocaleUpperCase("pt-BR") === "FRETE";
-}
 
 function Page() {
   const { data: prof } = useProfile();
@@ -197,21 +169,6 @@ function Page() {
     },
   });
 
-  const { data: materiaisEdicao } = useQuery({
-    queryKey: ["entregas-materiais-edicao", empresaId],
-    enabled: !!empresaId,
-    queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("materiais")
-        .select("id, nome, preco_base, unidade")
-        .eq("empresa_id", empresaId)
-        .eq("ativo", true)
-        .order("nome");
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
   const [pending, setPending] = useState<OutboxItem[]>([]);
   useEffect(() => {
     const load = () => {
@@ -234,113 +191,8 @@ function Page() {
   const [excluindo, setExcluindo] = useState(false);
   const [concluindoId, setConcluindoId] = useState<string | null>(null);
 
-  const [editar, setEditar] = useState<{
-    id: string;
-    cliente_id: string;
-    material_id: string;
-    quantidade: string;
-    valor_total: string;
-    valor_praticado: string;
-    valor_frete: string;
-    forma_pagamento: string;
-    endereco: string;
-    observacoes: string;
-    multiplosMateriais: boolean;
-  } | null>(null);
-  const [salvando, setSalvando] = useState(false);
-
-  function abrirEdicao(r: any) {
-    const quantidade = String(r.quantidade ?? "");
-    setEditar({
-      id: r.id,
-      cliente_id: r.cliente_id ?? "",
-      material_id: r.material_id ?? "",
-      quantidade,
-      valor_total: String(Number(r.valor_praticado ?? 0) * Number(r.quantidade ?? 1)),
-      valor_praticado: String(r.valor_praticado ?? ""),
-      valor_frete: String(r.valor_frete ?? ""),
-      forma_pagamento: r.forma_pagamento ?? "",
-      endereco: r.endereco ?? "",
-      observacoes: r.observacoes ?? "",
-      multiplosMateriais: obterItensEntrega(r).length > 1,
-    });
-  }
-
-  function onSelecionarMaterialEdicao(materialId: string) {
-    if (!editar) return;
-    const material = (materiaisEdicao ?? []).find((m: any) => m.id === materialId);
-    const frete = materialEhFrete(material?.nome);
-    const quantidade = frete ? "1" : editar.quantidade;
-    const valorTotal = frete
-      ? "0"
-      : String(Number(material?.preco_base ?? 0) * (Number(quantidade || 1) || 1));
-    setEditar({
-      ...editar,
-      material_id: materialId,
-      quantidade,
-      valor_total: valorTotal,
-      valor_praticado: frete ? "0" : valorUnitarioDeTotal(valorTotal, quantidade),
-    });
-  }
-
-  async function salvarEdicao() {
-    if (!editar) return;
-    const materialSelecionado = (materiaisEdicao ?? []).find(
-      (m: any) => m.id === editar.material_id,
-    );
-    const isFrete = !editar.multiplosMateriais && materialEhFrete(materialSelecionado?.nome);
-    const quantidade = isFrete ? 1 : Number(editar.quantidade);
-    const valorPraticado = isFrete ? 0 : Number(editar.valor_praticado);
-    const valorFrete = Number(editar.valor_frete || 0);
-    if (!editar.cliente_id) return toast.error("Selecione o cliente");
-    if (!editar.multiplosMateriais && !editar.material_id) return toast.error("Selecione o material");
-    if (!editar.forma_pagamento) return toast.error("Selecione a forma de pagamento");
-    if (!editar.multiplosMateriais && !isFrete && (!Number.isFinite(quantidade) || quantidade <= 0))
-      return toast.error("Quantidade inválida");
-    if (!editar.multiplosMateriais && !isFrete && !editar.valor_total)
-      return toast.error("Informe o valor total do material");
-    if (
-      !editar.multiplosMateriais &&
-      !isFrete &&
-      (!Number.isFinite(valorPraticado) || valorPraticado < 0)
-    )
-      return toast.error("Valor inválido");
-    if (!Number.isFinite(valorFrete) || valorFrete < 0) return toast.error("Frete inválido");
-    if (isFrete && valorFrete <= 0) return toast.error("Informe o valor do frete");
-
-    setSalvando(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("sync-entrega", {
-        body: {
-          action: "editar_entrega",
-          entrega_id: editar.id,
-          ...(editar.multiplosMateriais
-            ? {}
-            : { material_id: editar.material_id, quantidade, valor_praticado: valorPraticado }),
-          valor_frete: valorFrete,
-          endereco: editar.endereco,
-          observacoes: editar.observacoes,
-          cliente_id: editar.cliente_id,
-          forma_pagamento: editar.forma_pagamento,
-        },
-      });
-      if (error) return toast.error(error.message);
-      if (data?.erro) {
-        const mensagens: Record<string, string> = {
-          SEM_PERMISSAO: "Sem permissão para editar esta venda",
-          CLIENTE_INVALIDO: "Cliente inválido",
-          MATERIAL_INVALIDO: "Material inválido",
-          FORMA_PAGAMENTO_INVALIDA: "Forma de pagamento inválida",
-        };
-        return toast.error(mensagens[data.erro] ?? data.erro);
-      }
-      toast.success("Venda atualizada");
-      setEditar(null);
-      await invalidarListas();
-    } finally {
-      setSalvando(false);
-    }
-  }
+  const [editarId, setEditarId] = useState<string | null>(null);
+  const entregaParaEditar = (rows ?? []).find((r: any) => r.id === editarId) ?? null;
 
   async function invalidarListas() {
     await Promise.all([
@@ -550,7 +402,7 @@ function Page() {
                       aria-label="Editar venda"
                       onClick={(e) => {
                         e.stopPropagation();
-                        abrirEdicao(r);
+                        setEditarId(r.id);
                       }}
                     >
                       <Pencil className="h-4 w-4" />
@@ -713,7 +565,7 @@ function Page() {
                           <Eye className="h-4 w-4 mr-2" /> Ver detalhes
                         </DropdownMenuItem>
                         {podeEditar && (
-                          <DropdownMenuItem onClick={() => abrirEdicao(r)}>
+                          <DropdownMenuItem onClick={() => setEditarId(r.id)}>
                             <Pencil className="h-4 w-4 mr-2" /> Editar
                           </DropdownMenuItem>
                         )}
@@ -761,160 +613,12 @@ function Page() {
 
       <EntregaDetalheDialog id={detalheId} onClose={() => setDetalheId(null)} empresaId={prof?.profile.empresa_id} />
 
-      <Dialog open={!!editar} onOpenChange={(o) => !o && setEditar(null)}>
-        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Editar venda</DialogTitle>
-            <DialogDescription>Corrija os dados preenchidos incorretamente.</DialogDescription>
-          </DialogHeader>
-          {editar && (
-            <div className="space-y-3">
-              <div>
-                <Label>Cliente</Label>
-                <ClienteCombobox
-                  clientes={clientesEdicao ?? []}
-                  value={editar.cliente_id}
-                  onValueChange={(clienteId) => setEditar({ ...editar, cliente_id: clienteId })}
-                />
-              </div>
-
-              {editar.multiplosMateriais && (
-                <p className="rounded-lg bg-muted p-2 text-xs text-muted-foreground">
-                  Esta venda possui vários materiais. Para preservar os itens, o material, a
-                  quantidade e o valor não podem ser alterados aqui — apenas cliente, frete, forma
-                  de pagamento, endereço e observações.
-                </p>
-              )}
-
-              {!editar.multiplosMateriais && (
-                <div>
-                  <Label>Material</Label>
-                  <Select value={editar.material_id} onValueChange={onSelecionarMaterialEdicao}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o material" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(materiaisEdicao ?? []).map((m: any) => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {(() => {
-                const materialSelecionado = (materiaisEdicao ?? []).find(
-                  (m: any) => m.id === editar.material_id,
-                );
-                const isFrete =
-                  !editar.multiplosMateriais && materialEhFrete(materialSelecionado?.nome);
-                if (editar.multiplosMateriais) return null;
-                if (isFrete) {
-                  return (
-                    <p className="text-xs text-muted-foreground">
-                      Material FRETE: quantidade e valor do produto não se aplicam. Informe apenas
-                      o valor do frete abaixo.
-                    </p>
-                  );
-                }
-                return (
-                  <>
-                    <div>
-                      <Label>Quantidade</Label>
-                      <Input
-                        type="number"
-                        inputMode="decimal"
-                        value={editar.quantidade}
-                        onChange={(e) => {
-                          const quantidade = e.target.value;
-                          setEditar({
-                            ...editar,
-                            quantidade,
-                            valor_praticado: valorUnitarioDeTotal(editar.valor_total, quantidade),
-                          });
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <Label>Valor total do material (R$)</Label>
-                      <MoneyInput
-                        value={editar.valor_total}
-                        onValueChange={(value) =>
-                          setEditar({
-                            ...editar,
-                            valor_total: value,
-                            valor_praticado: valorUnitarioDeTotal(value, editar.quantidade),
-                          })
-                        }
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground -mt-1">
-                      Equivale a R$ {Number(editar.valor_praticado || 0).toFixed(2)} /{" "}
-                      {materialSelecionado?.unidade ?? "un"} (informativo)
-                    </p>
-                  </>
-                );
-              })()}
-
-              <div>
-                <Label>Valor do frete (R$)</Label>
-                <MoneyInput
-                  value={editar.valor_frete}
-                  onValueChange={(value) => setEditar({ ...editar, valor_frete: value })}
-                />
-              </div>
-              <div>
-                <Label>Forma de pagamento</Label>
-                <Select
-                  value={editar.forma_pagamento}
-                  onValueChange={(v) => setEditar({ ...editar, forma_pagamento: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {FORMAS_PAGAMENTO_EDICAO.map((f) => (
-                      <SelectItem key={f.value} value={f.value}>
-                        {f.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Endereço</Label>
-                <Input
-                  value={editar.endereco}
-                  onChange={(e) => setEditar({ ...editar, endereco: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>Observações</Label>
-                <Textarea
-                  rows={2}
-                  value={editar.observacoes}
-                  onChange={(e) => setEditar({ ...editar, observacoes: e.target.value })}
-                />
-              </div>
-              <div className="flex gap-2 pt-1">
-                <Button variant="outline" className="flex-1" onClick={() => setEditar(null)}>
-                  Cancelar
-                </Button>
-                <Button
-                  variant="action"
-                  className="flex-1"
-                  onClick={salvarEdicao}
-                  disabled={salvando}
-                >
-                  {salvando ? "Salvando..." : "Salvar"}
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <EntregaEditarDialog
+        entrega={entregaParaEditar}
+        empresaId={empresaId}
+        onClose={() => setEditarId(null)}
+        onSaved={invalidarListas}
+      />
 
       <AlertDialog
         open={!!confirmarExcluirId}
