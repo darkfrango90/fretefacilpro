@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { AdminOnly } from "@/components/role-guard";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -16,7 +16,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BarChart3, Download, FileSpreadsheet, FileText, Filter, Loader2, X } from "lucide-react";
+import {
+  BarChart3,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  Filter,
+  Loader2,
+  Users,
+  X,
+} from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -555,6 +564,18 @@ function Page() {
           </Button>
         </div>
       </div>
+
+      <Link
+        to="/relatorios/cliente"
+        className="flex items-center justify-between rounded-xl border bg-card p-3 hover:bg-accent transition"
+      >
+        <span className="flex items-center gap-2 text-sm font-medium">
+          <Users className="h-4 w-4 text-primary" /> Relatório por cliente
+        </span>
+        <span className="text-xs text-muted-foreground">
+          Frete e vendas por cliente, período e status de pagamento →
+        </span>
+      </Link>
 
       {empresaId ? (
         <RelatorioMensalMotoristas

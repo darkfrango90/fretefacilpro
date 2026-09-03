@@ -2,10 +2,12 @@
   "nativeVersion": "1.6",
   "required": false,
   "notes": [
+    "Novo Relatório por cliente em Relatórios: frete e vendas de um cliente por período, forma de pagamento e status (a receber ou recebido).",
+    "Admin pode editar cliente, material e forma de pagamento também pela tela do Financeiro.",
     "Painel agora mostra o mês calendário completo (não mais só os últimos 30 dias), com seletor de mês no canto superior direito.",
     "Interface administrativa reorganizada para telas maiores (tabelas e filtros extras em Painel, Entregas, Financeiro, Relatórios, cadastros e frota).",
     "Admin pode editar cliente, material e forma de pagamento de uma venda pendente ou entregue.",
-    "Entregas ganhou filtros por mês e motorista, disponíveis só para admin.",
+    "Entregas ganhou filtros por mês, motorista e cliente, disponíveis só para admin.",
     "No cadastro e na edição de venda, informe o valor total do material em vez do valor por m³; o preço unitário aparece apenas como referência.",
     "Corrigido o rótulo do material FRETE na lista de seleção."
   ]

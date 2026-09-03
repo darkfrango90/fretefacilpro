@@ -39,6 +39,7 @@ import { Route as AuthenticatedPneusIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedEntregaIndexRouteImport } from './routes/_authenticated/entrega.index'
 import { Route as AuthenticatedDespesasIndexRouteImport } from './routes/_authenticated/despesas.index'
 import { Route as AuthenticatedSincronizacaoHistoricoRouteImport } from './routes/_authenticated/sincronizacao.historico'
+import { Route as AuthenticatedRelatoriosClienteRouteImport } from './routes/_authenticated/relatorios.cliente'
 import { Route as AuthenticatedPneusRelatorioRouteImport } from './routes/_authenticated/pneus.relatorio'
 import { Route as AuthenticatedPneusInstalarRouteImport } from './routes/_authenticated/pneus.instalar'
 import { Route as AuthenticatedDespesasNovaRouteImport } from './routes/_authenticated/despesas.nova'
@@ -206,6 +207,12 @@ const AuthenticatedSincronizacaoHistoricoRoute =
     path: '/historico',
     getParentRoute: () => AuthenticatedSincronizacaoRoute,
   } as any)
+const AuthenticatedRelatoriosClienteRoute =
+  AuthenticatedRelatoriosClienteRouteImport.update({
+    id: '/cliente',
+    path: '/cliente',
+    getParentRoute: () => AuthenticatedRelatoriosRoute,
+  } as any)
 const AuthenticatedPneusRelatorioRoute =
   AuthenticatedPneusRelatorioRouteImport.update({
     id: '/pneus/relatorio',
@@ -257,7 +264,7 @@ export interface FileRoutesByFullPath {
   '/operacao': typeof AuthenticatedOperacaoRoute
   '/pendentes': typeof AuthenticatedPendentesRoute
   '/permissoes': typeof AuthenticatedPermissoesRoute
-  '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/relatorios-motorista': typeof AuthenticatedRelatoriosMotoristaRoute
   '/sincronizacao': typeof AuthenticatedSincronizacaoRouteWithChildren
   '/trocar-senha': typeof AuthenticatedTrocarSenhaRoute
@@ -266,6 +273,7 @@ export interface FileRoutesByFullPath {
   '/despesas/nova': typeof AuthenticatedDespesasNovaRoute
   '/pneus/instalar': typeof AuthenticatedPneusInstalarRoute
   '/pneus/relatorio': typeof AuthenticatedPneusRelatorioRoute
+  '/relatorios/cliente': typeof AuthenticatedRelatoriosClienteRoute
   '/sincronizacao/historico': typeof AuthenticatedSincronizacaoHistoricoRoute
   '/despesas/': typeof AuthenticatedDespesasIndexRoute
   '/entrega/': typeof AuthenticatedEntregaIndexRoute
@@ -293,7 +301,7 @@ export interface FileRoutesByTo {
   '/operacao': typeof AuthenticatedOperacaoRoute
   '/pendentes': typeof AuthenticatedPendentesRoute
   '/permissoes': typeof AuthenticatedPermissoesRoute
-  '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/relatorios-motorista': typeof AuthenticatedRelatoriosMotoristaRoute
   '/sincronizacao': typeof AuthenticatedSincronizacaoRouteWithChildren
   '/trocar-senha': typeof AuthenticatedTrocarSenhaRoute
@@ -302,6 +310,7 @@ export interface FileRoutesByTo {
   '/despesas/nova': typeof AuthenticatedDespesasNovaRoute
   '/pneus/instalar': typeof AuthenticatedPneusInstalarRoute
   '/pneus/relatorio': typeof AuthenticatedPneusRelatorioRoute
+  '/relatorios/cliente': typeof AuthenticatedRelatoriosClienteRoute
   '/sincronizacao/historico': typeof AuthenticatedSincronizacaoHistoricoRoute
   '/despesas': typeof AuthenticatedDespesasIndexRoute
   '/entrega': typeof AuthenticatedEntregaIndexRoute
@@ -331,7 +340,7 @@ export interface FileRoutesById {
   '/_authenticated/operacao': typeof AuthenticatedOperacaoRoute
   '/_authenticated/pendentes': typeof AuthenticatedPendentesRoute
   '/_authenticated/permissoes': typeof AuthenticatedPermissoesRoute
-  '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/_authenticated/relatorios-motorista': typeof AuthenticatedRelatoriosMotoristaRoute
   '/_authenticated/sincronizacao': typeof AuthenticatedSincronizacaoRouteWithChildren
   '/_authenticated/trocar-senha': typeof AuthenticatedTrocarSenhaRoute
@@ -340,6 +349,7 @@ export interface FileRoutesById {
   '/_authenticated/despesas/nova': typeof AuthenticatedDespesasNovaRoute
   '/_authenticated/pneus/instalar': typeof AuthenticatedPneusInstalarRoute
   '/_authenticated/pneus/relatorio': typeof AuthenticatedPneusRelatorioRoute
+  '/_authenticated/relatorios/cliente': typeof AuthenticatedRelatoriosClienteRoute
   '/_authenticated/sincronizacao/historico': typeof AuthenticatedSincronizacaoHistoricoRoute
   '/_authenticated/despesas/': typeof AuthenticatedDespesasIndexRoute
   '/_authenticated/entrega/': typeof AuthenticatedEntregaIndexRoute
@@ -378,6 +388,7 @@ export interface FileRouteTypes {
     | '/despesas/nova'
     | '/pneus/instalar'
     | '/pneus/relatorio'
+    | '/relatorios/cliente'
     | '/sincronizacao/historico'
     | '/despesas/'
     | '/entrega/'
@@ -414,6 +425,7 @@ export interface FileRouteTypes {
     | '/despesas/nova'
     | '/pneus/instalar'
     | '/pneus/relatorio'
+    | '/relatorios/cliente'
     | '/sincronizacao/historico'
     | '/despesas'
     | '/entrega'
@@ -451,6 +463,7 @@ export interface FileRouteTypes {
     | '/_authenticated/despesas/nova'
     | '/_authenticated/pneus/instalar'
     | '/_authenticated/pneus/relatorio'
+    | '/_authenticated/relatorios/cliente'
     | '/_authenticated/sincronizacao/historico'
     | '/_authenticated/despesas/'
     | '/_authenticated/entrega/'
@@ -677,6 +690,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSincronizacaoHistoricoRouteImport
       parentRoute: typeof AuthenticatedSincronizacaoRoute
     }
+    '/_authenticated/relatorios/cliente': {
+      id: '/_authenticated/relatorios/cliente'
+      path: '/cliente'
+      fullPath: '/relatorios/cliente'
+      preLoaderRoute: typeof AuthenticatedRelatoriosClienteRouteImport
+      parentRoute: typeof AuthenticatedRelatoriosRoute
+    }
     '/_authenticated/pneus/relatorio': {
       id: '/_authenticated/pneus/relatorio'
       path: '/pneus/relatorio'
@@ -715,6 +735,20 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedRelatoriosRouteChildren {
+  AuthenticatedRelatoriosClienteRoute: typeof AuthenticatedRelatoriosClienteRoute
+}
+
+const AuthenticatedRelatoriosRouteChildren: AuthenticatedRelatoriosRouteChildren =
+  {
+    AuthenticatedRelatoriosClienteRoute: AuthenticatedRelatoriosClienteRoute,
+  }
+
+const AuthenticatedRelatoriosRouteWithChildren =
+  AuthenticatedRelatoriosRoute._addFileChildren(
+    AuthenticatedRelatoriosRouteChildren,
+  )
+
 interface AuthenticatedSincronizacaoRouteChildren {
   AuthenticatedSincronizacaoHistoricoRoute: typeof AuthenticatedSincronizacaoHistoricoRoute
 }
@@ -748,7 +782,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedOperacaoRoute: typeof AuthenticatedOperacaoRoute
   AuthenticatedPendentesRoute: typeof AuthenticatedPendentesRoute
   AuthenticatedPermissoesRoute: typeof AuthenticatedPermissoesRoute
-  AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
+  AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRouteWithChildren
   AuthenticatedRelatoriosMotoristaRoute: typeof AuthenticatedRelatoriosMotoristaRoute
   AuthenticatedSincronizacaoRoute: typeof AuthenticatedSincronizacaoRouteWithChildren
   AuthenticatedTrocarSenhaRoute: typeof AuthenticatedTrocarSenhaRoute
@@ -782,7 +816,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOperacaoRoute: AuthenticatedOperacaoRoute,
   AuthenticatedPendentesRoute: AuthenticatedPendentesRoute,
   AuthenticatedPermissoesRoute: AuthenticatedPermissoesRoute,
-  AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
+  AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRouteWithChildren,
   AuthenticatedRelatoriosMotoristaRoute: AuthenticatedRelatoriosMotoristaRoute,
   AuthenticatedSincronizacaoRoute: AuthenticatedSincronizacaoRouteWithChildren,
   AuthenticatedTrocarSenhaRoute: AuthenticatedTrocarSenhaRoute,
