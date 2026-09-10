@@ -26,19 +26,28 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
+  AlertTriangle,
   BanknoteIcon,
   CalendarClock,
   CheckCircle2,
   ChevronRight,
   Clock,
+  Eye,
   Filter,
   MapPin,
+  MoreHorizontal,
+  Paperclip,
   Pencil,
+  Plus,
+  Smartphone,
+  Trash2,
+  Undo2,
   Wallet,
   X,
 } from "lucide-react";
 import { calcularValorMateriais, obterItensEntrega, resumoMateriais } from "@/lib/entrega-itens";
 import { EntregaEditarDialog } from "@/components/entrega-editar-dialog";
+import { ContaReceberDialog } from "@/components/conta-receber-dialog";
 import {
   Table,
   TableHeader,
@@ -47,6 +56,13 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export const Route = createFileRoute("/_authenticated/financeiro")({
   component: () => (
@@ -117,6 +133,30 @@ function totalEntrega(e: any) {
   return calcularValorMateriais(e) + Number(e.valor_frete || 0);
 }
 
+/** Aberta = ainda não recebida (a confirmar ou pendente). */
+function estaAberta(e: any) {
+  return e.status_pagamento !== "confirmado";
+}
+
+function estaVencida(e: any) {
+  return !!(estaAberta(e) && e.vencimento_pagamento && e.vencimento_pagamento < hojeLocalISO());
+}
+
+type VencimentoAlvo = {
+  tipo: "entrega" | "conta";
+  id: string;
+  titulo: string;
+  subtitulo: string;
+  vencimento: string | null;
+};
+
+function diasDeAtraso(e: any) {
+  if (!estaVencida(e)) return 0;
+  const vencimento = new Date(`${e.vencimento_pagamento}T00:00:00`).getTime();
+  const hoje = new Date(`${hojeLocalISO()}T00:00:00`).getTime();
+  return Math.max(0, Math.round((hoje - vencimento) / 86_400_000));
+}
+
 function Page() {
   const { data: prof } = useProfile();
   const empresaId = prof?.profile.empresa_id;
@@ -129,6 +169,10 @@ function Page() {
   const [dataFim, setDataFim] = useState("");
   const [clienteFiltro, setClienteFiltro] = useState("todos");
   const [motoristaFiltro, setMotoristaFiltro] = useState("todos");
+  const [formaFiltro, setFormaFiltro] = useState("todas");
+  const [numeroFiltro, setNumeroFiltro] = useState("");
+  const [vencimentoAlvo, setVencimentoAlvo] = useState<VencimentoAlvo | null>(null);
+  const [contaDialogAberto, setContaDialogAberto] = useState(false);
 
   const { data: rows, isLoading } = useQuery({
     queryKey: ["financeiro", empresaId, dataIni, dataFim],
@@ -179,6 +223,24 @@ function Page() {
     },
   });
 
+  const { data: contas } = useQuery({
+    queryKey: ["financeiro-contas-receber", empresaId],
+    enabled: !!empresaId,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("contas_receber")
+        .select(
+          "id, cliente_id, descricao, valor, vencimento, documento_url, status_pagamento, forma_pagamento, pagamento_confirmado_em, criado_em, clientes(nome)",
+        )
+        .eq("empresa_id", empresaId)
+        .order("vencimento", { ascending: true });
+      if (error) throw error;
+      // Normaliza o nome do campo de vencimento para reaproveitar os
+      // helpers de atraso usados pelas entregas.
+      return (data ?? []).map((c: any) => ({ ...c, vencimento_pagamento: c.vencimento }));
+    },
+  });
+
   const selecionada = (rows ?? []).find((e: any) => e.id === selecionadaId) ?? null;
   const entregaParaEditar = (rows ?? []).find((e: any) => e.id === editarId) ?? null;
 
@@ -208,23 +270,35 @@ function Page() {
   }, [rows]);
 
   const rowsFiltradas = useMemo(() => {
+    const numeroBusca = numeroFiltro.trim();
     return (rows ?? []).filter((e: any) => {
       const clienteOk = clienteFiltro === "todos" || e.cliente_id === clienteFiltro;
       const motoristaOk =
         motoristaFiltro === "todos" ||
         e.motorista_venda_id === motoristaFiltro ||
         e.motorista_entrega_id === motoristaFiltro;
-      return clienteOk && motoristaOk;
+      const formaOk = formaFiltro === "todas" || e.forma_pagamento === formaFiltro;
+      const numeroOk = !numeroBusca || String(e.numero ?? "").includes(numeroBusca);
+      return clienteOk && motoristaOk && formaOk && numeroOk;
     });
-  }, [rows, clienteFiltro, motoristaFiltro]);
+  }, [rows, clienteFiltro, motoristaFiltro, formaFiltro, numeroFiltro]);
 
-  const filtrosAtivos = [dataIni, dataFim, clienteFiltro !== "todos", motoristaFiltro !== "todos"].filter(Boolean).length;
+  const filtrosAtivos = [
+    dataIni,
+    dataFim,
+    clienteFiltro !== "todos",
+    motoristaFiltro !== "todos",
+    formaFiltro !== "todas",
+    numeroFiltro.trim(),
+  ].filter(Boolean).length;
 
   function limparFiltros() {
     setDataIni("");
     setDataFim("");
     setClienteFiltro("todos");
     setMotoristaFiltro("todos");
+    setFormaFiltro("todas");
+    setNumeroFiltro("");
   }
 
   async function confirmar(id: string) {
@@ -266,13 +340,42 @@ function Page() {
         .update({ vencimento_pagamento: vencimento })
         .eq("id", id)
         .eq("empresa_id", empresaId)
-        .eq("status_pagamento", "pendente")
+        .neq("status_pagamento", "confirmado")
         .neq("status", "cancelada");
       if (error) {
         toast.error(error.message);
         return;
       }
       toast.success("Data de vencimento salva");
+      setVencimentoAlvo(null);
+      await qc.invalidateQueries({ queryKey: ["financeiro", empresaId] });
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  /** Dá baixa registrando como o pagamento realmente entrou (dinheiro ou pix). */
+  async function confirmarComForma(id: string, formaRecebida: string) {
+    if (!prof || !empresaId) return;
+    setSalvando(true);
+    try {
+      const { error } = await (supabase as any)
+        .from("entregas")
+        .update({
+          forma_pagamento: formaRecebida,
+          status_pagamento: "confirmado",
+          pagamento_confirmado_em: new Date().toISOString(),
+          pagamento_confirmado_por: prof.profile.id,
+        })
+        .eq("id", id)
+        .eq("empresa_id", empresaId)
+        .neq("status", "cancelada");
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success(`Recebimento confirmado em ${FORMA_LABEL[formaRecebida] ?? formaRecebida}`);
+      setSelecionadaId(null);
       await qc.invalidateQueries({ queryKey: ["financeiro", empresaId] });
     } finally {
       setSalvando(false);
@@ -317,13 +420,14 @@ function Page() {
     setSalvando(true);
     try {
       const novoStatus = statusPagamentoPorForma(formaPagamento);
+      // O vencimento é mantido: agora qualquer venda em aberto pode ter data
+      // de vencimento, independente da forma de pagamento escolhida.
       const patch: Record<string, unknown> = {
         forma_pagamento: formaPagamento,
         status_pagamento: novoStatus,
         pagamento_confirmado_em: null,
         pagamento_confirmado_por: null,
       };
-      if (novoStatus !== "pendente") patch.vencimento_pagamento = null;
 
       const { error } = await (supabase as any)
         .from("entregas")
@@ -342,21 +446,141 @@ function Page() {
     }
   }
 
+  const contasFiltradas = useMemo(() => {
+    return (contas ?? []).filter((c: any) => {
+      const clienteOk = clienteFiltro === "todos" || c.cliente_id === clienteFiltro;
+      const iniOk = !dataIni || c.vencimento >= dataIni;
+      const fimOk = !dataFim || c.vencimento <= dataFim;
+      return clienteOk && iniOk && fimOk;
+    });
+  }, [contas, clienteFiltro, dataIni, dataFim]);
+
+  const contasAbertas = contasFiltradas.filter(estaAberta);
+
+  async function confirmarContaComForma(id: string, formaRecebida: string) {
+    if (!prof || !empresaId) return;
+    setSalvando(true);
+    try {
+      const { error } = await (supabase as any)
+        .from("contas_receber")
+        .update({
+          status_pagamento: "confirmado",
+          forma_pagamento: formaRecebida,
+          pagamento_confirmado_em: new Date().toISOString(),
+          pagamento_confirmado_por: prof.profile.id,
+        })
+        .eq("id", id)
+        .eq("empresa_id", empresaId);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success(`Recebimento confirmado em ${FORMA_LABEL[formaRecebida] ?? formaRecebida}`);
+      await qc.invalidateQueries({ queryKey: ["financeiro-contas-receber", empresaId] });
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function reverterConta(id: string) {
+    if (!empresaId) return;
+    setSalvando(true);
+    try {
+      const { error } = await (supabase as any)
+        .from("contas_receber")
+        .update({
+          status_pagamento: "pendente",
+          forma_pagamento: null,
+          pagamento_confirmado_em: null,
+          pagamento_confirmado_por: null,
+        })
+        .eq("id", id)
+        .eq("empresa_id", empresaId);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success("Recebimento revertido");
+      await qc.invalidateQueries({ queryKey: ["financeiro-contas-receber", empresaId] });
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function salvarVencimentoConta(id: string, novoVencimento: string) {
+    if (!empresaId) return;
+    if (!novoVencimento) {
+      toast.error("Informe a data de vencimento");
+      return;
+    }
+    setSalvando(true);
+    try {
+      const { error } = await (supabase as any)
+        .from("contas_receber")
+        .update({ vencimento: novoVencimento })
+        .eq("id", id)
+        .eq("empresa_id", empresaId)
+        .neq("status_pagamento", "confirmado");
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success("Vencimento atualizado");
+      setVencimentoAlvo(null);
+      await qc.invalidateQueries({ queryKey: ["financeiro-contas-receber", empresaId] });
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function excluirConta(id: string) {
+    if (!empresaId) return;
+    if (!confirm("Excluir esta conta a receber? Esta ação não pode ser desfeita.")) return;
+    setSalvando(true);
+    try {
+      const { error } = await (supabase as any)
+        .from("contas_receber")
+        .delete()
+        .eq("id", id)
+        .eq("empresa_id", empresaId);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success("Conta a receber excluída");
+      await qc.invalidateQueries({ queryKey: ["financeiro-contas-receber", empresaId] });
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   const aConfirmar = rowsFiltradas.filter((e: any) => e.status_pagamento === "a_confirmar");
   const pendentes = rowsFiltradas.filter((e: any) => e.status_pagamento === "pendente");
   const confirmados = rowsFiltradas.filter((e: any) => e.status_pagamento === "confirmado");
+  const vencidas = rowsFiltradas.filter(estaVencida);
+  const emAberto = rowsFiltradas.filter(estaAberta);
 
   const sum = (arr: any[]) => arr.reduce((s, e) => s + totalEntrega(e), 0);
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-bold flex items-center gap-2">
-          <Wallet className="h-5 w-5" /> Financeiro
-        </h1>
-        <p className="text-xs text-muted-foreground">
-          Abra uma venda para conferir os dados e registrar o recebimento.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-xl font-bold flex items-center gap-2">
+            <Wallet className="h-5 w-5" /> Financeiro
+          </h1>
+          <p className="text-xs text-muted-foreground">
+            Abra uma venda para conferir os dados e registrar o recebimento.
+          </p>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          className="hidden shrink-0 items-center gap-2 md:inline-flex"
+          onClick={() => setContaDialogAberto(true)}
+        >
+          <Plus className="h-4 w-4" /> Cadastrar conta a receber
+        </Button>
       </div>
 
       <Card>
@@ -371,7 +595,7 @@ function Page() {
               </Button>
             )}
           </div>
-          <div className="grid gap-3 md:grid-cols-4">
+          <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
             <div className="space-y-1.5">
               <Label htmlFor="financeiro-data-inicial">Data inicial</Label>
               <Input
@@ -422,14 +646,52 @@ function Page() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="hidden space-y-1.5 md:block">
+              <Label>Condição de pagamento</Label>
+              <Select value={formaFiltro} onValueChange={setFormaFiltro}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas</SelectItem>
+                  {FORMAS_PAGAMENTO.map((forma) => (
+                    <SelectItem key={forma.value} value={forma.value}>
+                      {forma.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="hidden space-y-1.5 md:block">
+              <Label htmlFor="financeiro-numero">Nº da venda</Label>
+              <Input
+                id="financeiro-numero"
+                inputMode="numeric"
+                placeholder="Ex.: 254"
+                value={numeroFiltro}
+                onChange={(event) => setNumeroFiltro(event.target.value)}
+              />
+            </div>
           </div>
           <div className="text-[11px] text-muted-foreground">
             Exibindo {rowsFiltradas.length} de {(rows ?? []).length} venda(s) carregada(s).
+            <span className="hidden md:inline">
+              {" "}
+              · Em aberto: <strong>{brl(sum(emAberto))}</strong> em {emAberto.length} venda(s)
+              {vencidas.length > 0 && (
+                <>
+                  {" "}
+                  · <span className="font-medium text-destructive">
+                    {vencidas.length} vencida(s) ({brl(sum(vencidas))})
+                  </span>
+                </>
+              )}
+            </span>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-2 lg:grid-cols-6">
         <SummaryCard
           label="A confirmar"
           value={brl(sum(aConfirmar))}
@@ -445,19 +707,49 @@ function Page() {
           onClick={() => setTab("pendente")}
         />
         <SummaryCard
+          label="Vencidas"
+          value={brl(sum(vencidas))}
+          qty={vencidas.length}
+          tone="alerta"
+          className="hidden md:block"
+          onClick={() => setTab("vencidas")}
+        />
+        <SummaryCard
           label="Recebidas"
           value={brl(sum(confirmados))}
           qty={confirmados.length}
           tone="ok"
           onClick={() => setTab("confirmado")}
         />
+        <SummaryCard
+          label="Total em aberto"
+          value={brl(sum(emAberto))}
+          qty={emAberto.length}
+          tone="neutro"
+          className="hidden md:block"
+          onClick={() => setTab("a_confirmar")}
+        />
+        <SummaryCard
+          label="Contas avulsas"
+          value={brl(contasAbertas.reduce((s: number, c: any) => s + Number(c.valor || 0), 0))}
+          qty={contasAbertas.length}
+          tone="info"
+          className="hidden md:block"
+          onClick={() => setTab("contas")}
+        />
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="grid grid-cols-3 w-full">
+        <TabsList className="grid grid-cols-3 w-full md:grid-cols-5">
           <TabsTrigger value="a_confirmar">A confirmar</TabsTrigger>
           <TabsTrigger value="pendente">Pendentes</TabsTrigger>
+          <TabsTrigger value="vencidas" className="hidden md:inline-flex">
+            Vencidas{vencidas.length > 0 ? ` (${vencidas.length})` : ""}
+          </TabsTrigger>
           <TabsTrigger value="confirmado">Recebidas</TabsTrigger>
+          <TabsTrigger value="contas" className="hidden md:inline-flex">
+            Contas avulsas{contasAbertas.length > 0 ? ` (${contasAbertas.length})` : ""}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="a_confirmar" className="space-y-2 pt-2">
@@ -470,7 +762,14 @@ function Page() {
               <EntregaCard key={e.id} e={e} onClick={() => setSelecionadaId(e.id)} />
             ))}
           </div>
-          <FinanceiroTable rows={aConfirmar} onClickRow={(id) => setSelecionadaId(id)} />
+          <FinanceiroTable
+            rows={aConfirmar}
+            salvando={salvando}
+            onClickRow={(id) => setSelecionadaId(id)}
+            onDefinirVencimento={setVencimentoAlvo}
+            onConfirmarForma={confirmarComForma}
+            onReverter={reverter}
+          />
         </TabsContent>
 
         <TabsContent value="pendente" className="space-y-2 pt-2">
@@ -482,7 +781,28 @@ function Page() {
               <EntregaCard key={e.id} e={e} onClick={() => setSelecionadaId(e.id)} />
             ))}
           </div>
-          <FinanceiroTable rows={pendentes} onClickRow={(id) => setSelecionadaId(id)} />
+          <FinanceiroTable
+            rows={pendentes}
+            salvando={salvando}
+            onClickRow={(id) => setSelecionadaId(id)}
+            onDefinirVencimento={setVencimentoAlvo}
+            onConfirmarForma={confirmarComForma}
+            onReverter={reverter}
+          />
+        </TabsContent>
+
+        <TabsContent value="vencidas" className="space-y-2 pt-2">
+          {!isLoading && vencidas.length === 0 && (
+            <Empty msg="Nenhuma venda vencida. Tudo em dia." />
+          )}
+          <FinanceiroTable
+            rows={vencidas}
+            salvando={salvando}
+            onClickRow={(id) => setSelecionadaId(id)}
+            onDefinirVencimento={setVencimentoAlvo}
+            onConfirmarForma={confirmarComForma}
+            onReverter={reverter}
+          />
         </TabsContent>
 
         <TabsContent value="confirmado" className="space-y-2 pt-2">
@@ -494,7 +814,33 @@ function Page() {
               <EntregaCard key={e.id} e={e} onClick={() => setSelecionadaId(e.id)} />
             ))}
           </div>
-          <FinanceiroTable rows={confirmados} onClickRow={(id) => setSelecionadaId(id)} />
+          <FinanceiroTable
+            rows={confirmados}
+            salvando={salvando}
+            onClickRow={(id) => setSelecionadaId(id)}
+            onDefinirVencimento={setVencimentoAlvo}
+            onConfirmarForma={confirmarComForma}
+            onReverter={reverter}
+          />
+        </TabsContent>
+
+        <TabsContent value="contas" className="space-y-2 pt-2">
+          <div className="hidden items-center justify-between gap-2 md:flex">
+            <p className="text-xs text-muted-foreground">
+              Dívidas lançadas manualmente, vindas de outro sistema.
+            </p>
+            <Button type="button" size="sm" variant="outline" onClick={() => setContaDialogAberto(true)}>
+              <Plus className="h-4 w-4" /> Nova conta
+            </Button>
+          </div>
+          <ContasReceberTable
+            rows={contasFiltradas}
+            salvando={salvando}
+            onDefinirVencimento={setVencimentoAlvo}
+            onConfirmarForma={confirmarContaComForma}
+            onReverter={reverterConta}
+            onExcluir={excluirConta}
+          />
         </TabsContent>
       </Tabs>
 
@@ -503,12 +849,35 @@ function Page() {
         salvando={salvando}
         onClose={() => setSelecionadaId(null)}
         onConfirmar={confirmar}
+        onConfirmarForma={confirmarComForma}
         onSalvarVencimento={salvarVencimento}
         onAlterarFormaPagamento={alterarFormaPagamento}
         onReverter={reverter}
         onEditar={(id) => {
           setSelecionadaId(null);
           setEditarId(id);
+        }}
+      />
+
+      <VencimentoDialog
+        alvo={vencimentoAlvo}
+        salvando={salvando}
+        onClose={() => setVencimentoAlvo(null)}
+        onSalvar={(alvo, novoVencimento) =>
+          alvo.tipo === "conta"
+            ? salvarVencimentoConta(alvo.id, novoVencimento)
+            : salvarVencimento(alvo.id, novoVencimento)
+        }
+      />
+
+      <ContaReceberDialog
+        aberto={contaDialogAberto}
+        empresaId={empresaId}
+        criadoPor={prof?.profile.id}
+        onClose={() => setContaDialogAberto(false)}
+        onSaved={() => {
+          setTab("contas");
+          return qc.invalidateQueries({ queryKey: ["financeiro-contas-receber", empresaId] });
         }}
       />
 
@@ -527,19 +896,43 @@ function SummaryCard({
   value,
   qty,
   tone,
+  className,
   onClick,
 }: {
   label: string;
   value: string;
   qty: number;
-  tone: "warn" | "info" | "ok";
+  tone: "warn" | "info" | "ok" | "alerta" | "neutro";
+  className?: string;
   onClick: () => void;
 }) {
   const color =
-    tone === "warn" ? "text-amber-600" : tone === "info" ? "text-sky-600" : "text-emerald-600";
-  const Icon = tone === "ok" ? CheckCircle2 : tone === "info" ? Clock : BanknoteIcon;
+    tone === "warn"
+      ? "text-amber-600"
+      : tone === "info"
+        ? "text-sky-600"
+        : tone === "alerta"
+          ? "text-destructive"
+          : tone === "neutro"
+            ? "text-muted-foreground"
+            : "text-emerald-600";
+  const Icon =
+    tone === "ok"
+      ? CheckCircle2
+      : tone === "info"
+        ? Clock
+        : tone === "alerta"
+          ? AlertTriangle
+          : tone === "neutro"
+            ? Wallet
+            : BanknoteIcon;
   return (
-    <button type="button" className="text-left" onClick={onClick} aria-label={`Ver ${label}`}>
+    <button
+      type="button"
+      className={`text-left ${className ?? ""}`}
+      onClick={onClick}
+      aria-label={`Ver ${label}`}
+    >
       <Card className="h-full transition-colors hover:bg-muted/40">
         <CardContent className="p-3">
           <div className={`flex items-center gap-1 text-[10px] uppercase tracking-wide ${color}`}>
@@ -617,12 +1010,49 @@ function EntregaCard({ e, onClick }: { e: any; onClick: () => void }) {
   );
 }
 
+function StatusPagamentoBadge({ e }: { e: any }) {
+  if (e.status_pagamento === "confirmado") {
+    return (
+      <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/15">
+        Recebida
+      </Badge>
+    );
+  }
+  if (estaVencida(e)) {
+    return (
+      <Badge className="bg-rose-500/15 text-rose-700 border-rose-500/30 hover:bg-rose-500/15">
+        Vencida
+      </Badge>
+    );
+  }
+  if (e.status_pagamento === "pendente") {
+    return (
+      <Badge className="bg-sky-500/15 text-sky-700 border-sky-500/30 hover:bg-sky-500/15">
+        Pendente
+      </Badge>
+    );
+  }
+  return (
+    <Badge className="bg-amber-500/15 text-amber-700 border-amber-500/30 hover:bg-amber-500/15">
+      A confirmar
+    </Badge>
+  );
+}
+
 function FinanceiroTable({
   rows,
+  salvando,
   onClickRow,
+  onDefinirVencimento,
+  onConfirmarForma,
+  onReverter,
 }: {
   rows: any[];
+  salvando: boolean;
   onClickRow: (id: string) => void;
+  onDefinirVencimento: (alvo: VencimentoAlvo) => void;
+  onConfirmarForma: (id: string, forma: string) => void;
+  onReverter: (id: string) => void;
 }) {
   return (
     <Card className="hidden md:block">
@@ -632,20 +1062,21 @@ function FinanceiroTable({
             <TableHead>Venda</TableHead>
             <TableHead>Valor</TableHead>
             <TableHead>Forma de pagamento</TableHead>
+            <TableHead>Pagamento</TableHead>
             <TableHead>Motorista</TableHead>
             <TableHead>Status entrega</TableHead>
             <TableHead>Criada em</TableHead>
             <TableHead>Vencimento</TableHead>
             <TableHead>Recebida em</TableHead>
+            <TableHead className="w-14 text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map((e: any) => {
             const motorista = e.motorista_entrega_nome || e.motorista_venda_nome || "—";
-            const vencida =
-              e.status_pagamento === "pendente" &&
-              e.vencimento_pagamento &&
-              e.vencimento_pagamento < hojeLocalISO();
+            const vencida = estaVencida(e);
+            const atraso = diasDeAtraso(e);
+            const aberta = estaAberta(e);
             return (
               <TableRow
                 key={e.id}
@@ -662,21 +1093,83 @@ function FinanceiroTable({
                 <TableCell>
                   <Badge variant="outline">{FORMA_LABEL[e.forma_pagamento] ?? e.forma_pagamento}</Badge>
                 </TableCell>
+                <TableCell>
+                  <StatusPagamentoBadge e={e} />
+                </TableCell>
                 <TableCell>{motorista}</TableCell>
                 <TableCell>{STATUS_ENTREGA_LABEL[e.status] ?? e.status}</TableCell>
                 <TableCell className="text-muted-foreground">{formatarData(e.criada_em)}</TableCell>
                 <TableCell className={vencida ? "font-medium text-destructive" : "text-muted-foreground"}>
                   {e.vencimento_pagamento ? formatarData(e.vencimento_pagamento) : "—"}
+                  {vencida && (
+                    <div className="text-[10px] font-normal">
+                      {atraso} dia{atraso === 1 ? "" : "s"} em atraso
+                    </div>
+                  )}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {e.pagamento_confirmado_em ? formatarData(e.pagamento_confirmado_em) : "—"}
+                </TableCell>
+                <TableCell className="text-right" onClick={(event) => event.stopPropagation()}>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="icon" variant="ghost" aria-label="Ações da venda">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => onClickRow(e.id)}>
+                        <Eye className="h-4 w-4 mr-2" /> Ver detalhes
+                      </DropdownMenuItem>
+                      {aberta && (
+                        <>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              onDefinirVencimento({
+                                tipo: "entrega",
+                                id: e.id,
+                                titulo:
+                                  e.numero != null ? `Venda #${e.numero}` : "Venda",
+                                subtitulo: `${e.clientes?.nome ?? "Cliente"} · ${brl(totalEntrega(e))}`,
+                                vencimento: e.vencimento_pagamento ?? null,
+                              })
+                            }
+                          >
+                            <CalendarClock className="h-4 w-4 mr-2" />
+                            {e.vencimento_pagamento ? "Alterar vencimento" : "Definir vencimento"}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            disabled={salvando}
+                            onClick={() => onConfirmarForma(e.id, "dinheiro")}
+                          >
+                            <BanknoteIcon className="h-4 w-4 mr-2" /> Receber em dinheiro
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={salvando}
+                            onClick={() => onConfirmarForma(e.id, "pix")}
+                          >
+                            <Smartphone className="h-4 w-4 mr-2" /> Receber via Pix
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      {!aberta && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem disabled={salvando} onClick={() => onReverter(e.id)}>
+                            <Undo2 className="h-4 w-4 mr-2" /> Reverter recebimento
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             );
           })}
           {rows.length === 0 && (
             <TableRow>
-              <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-8">
+              <TableCell colSpan={10} className="text-center text-sm text-muted-foreground py-8">
                 Nenhuma venda encontrada.
               </TableCell>
             </TableRow>
@@ -687,11 +1180,235 @@ function FinanceiroTable({
   );
 }
 
+function DocumentoLink({ caminho }: { caminho?: string | null }) {
+  const limpo = caminho?.trim() || null;
+  const ehHttp = !!limpo && /^https?:\/\//i.test(limpo);
+  const { data: assinado } = useQuery({
+    queryKey: ["conta-receber-documento", limpo],
+    enabled: !!limpo && !ehHttp,
+    staleTime: 50 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.storage
+        .from("contas-receber")
+        .createSignedUrl(limpo!, 60 * 60);
+      if (error) throw error;
+      return data.signedUrl;
+    },
+  });
+  const url = ehHttp ? limpo : assinado;
+  if (!limpo) return <span className="text-muted-foreground">—</span>;
+  if (!url) return <span className="text-muted-foreground">Carregando…</span>;
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex items-center gap-1 text-primary hover:underline"
+      onClick={(event) => event.stopPropagation()}
+    >
+      <Paperclip className="h-3.5 w-3.5" /> Abrir
+    </a>
+  );
+}
+
+function ContasReceberTable({
+  rows,
+  salvando,
+  onDefinirVencimento,
+  onConfirmarForma,
+  onReverter,
+  onExcluir,
+}: {
+  rows: any[];
+  salvando: boolean;
+  onDefinirVencimento: (alvo: VencimentoAlvo) => void;
+  onConfirmarForma: (id: string, forma: string) => void;
+  onReverter: (id: string) => void;
+  onExcluir: (id: string) => void;
+}) {
+  return (
+    <Card className="hidden md:block">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Cliente</TableHead>
+            <TableHead>Descrição / origem</TableHead>
+            <TableHead>Valor</TableHead>
+            <TableHead>Vencimento</TableHead>
+            <TableHead>Situação</TableHead>
+            <TableHead>Documento</TableHead>
+            <TableHead>Recebida em</TableHead>
+            <TableHead className="w-14 text-right">Ações</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((c: any) => {
+            const vencida = estaVencida(c);
+            const atraso = diasDeAtraso(c);
+            const aberta = estaAberta(c);
+            return (
+              <TableRow key={c.id}>
+                <TableCell className="font-medium">{c.clientes?.nome ?? "Cliente"}</TableCell>
+                <TableCell className="max-w-64 truncate text-muted-foreground">
+                  {c.descricao || "—"}
+                </TableCell>
+                <TableCell className="font-semibold">{brl(Number(c.valor || 0))}</TableCell>
+                <TableCell
+                  className={vencida ? "font-medium text-destructive" : "text-muted-foreground"}
+                >
+                  {formatarData(c.vencimento)}
+                  {vencida && (
+                    <div className="text-[10px] font-normal">
+                      {atraso} dia{atraso === 1 ? "" : "s"} em atraso
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <StatusPagamentoBadge e={c} />
+                </TableCell>
+                <TableCell>
+                  <DocumentoLink caminho={c.documento_url} />
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {c.pagamento_confirmado_em ? formatarData(c.pagamento_confirmado_em) : "—"}
+                  {c.forma_pagamento && (
+                    <div className="text-[10px]">
+                      {FORMA_LABEL[c.forma_pagamento] ?? c.forma_pagamento}
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="icon" variant="ghost" aria-label="Ações da conta">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {aberta && (
+                        <>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              onDefinirVencimento({
+                                tipo: "conta",
+                                id: c.id,
+                                titulo: c.clientes?.nome ?? "Conta a receber",
+                                subtitulo: `${c.descricao || "Conta avulsa"} · ${brl(Number(c.valor || 0))}`,
+                                vencimento: c.vencimento ?? null,
+                              })
+                            }
+                          >
+                            <CalendarClock className="h-4 w-4 mr-2" /> Alterar vencimento
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            disabled={salvando}
+                            onClick={() => onConfirmarForma(c.id, "dinheiro")}
+                          >
+                            <BanknoteIcon className="h-4 w-4 mr-2" /> Receber em dinheiro
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={salvando}
+                            onClick={() => onConfirmarForma(c.id, "pix")}
+                          >
+                            <Smartphone className="h-4 w-4 mr-2" /> Receber via Pix
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      {!aberta && (
+                        <DropdownMenuItem disabled={salvando} onClick={() => onReverter(c.id)}>
+                          <Undo2 className="h-4 w-4 mr-2" /> Reverter recebimento
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        disabled={salvando}
+                        onClick={() => onExcluir(c.id)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+          {rows.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-8">
+                Nenhuma conta a receber cadastrada.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </Card>
+  );
+}
+
+function VencimentoDialog({
+  alvo,
+  salvando,
+  onClose,
+  onSalvar,
+}: {
+  alvo: VencimentoAlvo | null;
+  salvando: boolean;
+  onClose: () => void;
+  onSalvar: (alvo: VencimentoAlvo, vencimento: string) => void;
+}) {
+  const [vencimento, setVencimento] = useState("");
+
+  useEffect(() => {
+    setVencimento(alvo?.vencimento ?? "");
+  }, [alvo?.id, alvo?.vencimento]);
+
+  if (!alvo) return null;
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Vencimento do pagamento</DialogTitle>
+          <DialogDescription>
+            {alvo.titulo} · {alvo.subtitulo}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-1.5">
+          <Label htmlFor="vencimento-rapido">Data de vencimento</Label>
+          <Input
+            id="vencimento-rapido"
+            type="date"
+            value={vencimento}
+            onChange={(event) => setVencimento(event.target.value)}
+            disabled={salvando}
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            className="flex-1"
+            disabled={salvando || !vencimento}
+            onClick={() => onSalvar(alvo, vencimento)}
+          >
+            {salvando ? "Salvando..." : "Salvar"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function FinanceiroDetalheDialog({
   entrega,
   salvando,
   onClose,
   onConfirmar,
+  onConfirmarForma,
   onSalvarVencimento,
   onAlterarFormaPagamento,
   onReverter,
@@ -701,6 +1418,7 @@ function FinanceiroDetalheDialog({
   salvando: boolean;
   onClose: () => void;
   onConfirmar: (id: string) => Promise<void>;
+  onConfirmarForma: (id: string, forma: string) => Promise<void>;
   onSalvarVencimento: (id: string, vencimento: string) => Promise<void>;
   onAlterarFormaPagamento: (id: string, formaPagamento: string) => Promise<void>;
   onReverter: (id: string) => Promise<void>;
@@ -847,8 +1565,27 @@ function FinanceiroDetalheDialog({
           </p>
         </div>
 
-        {entrega.status_pagamento === "pendente" && (
-          <div className="space-y-3 rounded-xl border border-sky-500/30 bg-sky-500/5 p-3">
+        {estaVencida(entrega) && (
+          <div className="hidden items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm md:flex">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+            <div>
+              <div className="font-semibold text-destructive">
+                Vencida há {diasDeAtraso(entrega)} dia
+                {diasDeAtraso(entrega) === 1 ? "" : "s"}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Vencimento em {formatarData(entrega.vencimento_pagamento)}.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {estaAberta(entrega) && (
+          <div
+            className={`space-y-3 rounded-xl border border-sky-500/30 bg-sky-500/5 p-3 ${
+              entrega.status_pagamento === "pendente" ? "" : "hidden md:block"
+            }`}
+          >
             <div className="flex items-center gap-2 text-sm font-semibold">
               <CalendarClock className="h-4 w-4 text-sky-600" /> Vencimento do pagamento
             </div>
@@ -874,16 +1611,53 @@ function FinanceiroDetalheDialog({
           </div>
         )}
 
+        {estaAberta(entrega) && (
+          <div className="hidden gap-2 md:flex">
+            <Button
+              type="button"
+              className="flex-1"
+              disabled={salvando}
+              onClick={() => onConfirmarForma(entrega.id, "dinheiro")}
+            >
+              <BanknoteIcon className="h-4 w-4" /> Receber em dinheiro
+            </Button>
+            <Button
+              type="button"
+              className="flex-1"
+              disabled={salvando}
+              onClick={() => onConfirmarForma(entrega.id, "pix")}
+            >
+              <Smartphone className="h-4 w-4" /> Receber via Pix
+            </Button>
+          </div>
+        )}
+
         {entrega.status_pagamento !== "confirmado" ? (
-          <Button
-            type="button"
-            className="w-full"
-            disabled={salvando}
-            onClick={() => onConfirmar(entrega.id)}
-          >
-            <CheckCircle2 className="h-4 w-4" />
-            {salvando ? "Salvando..." : "Marcar como recebido"}
-          </Button>
+          <>
+            {/* Mobile: botão original, sem alteração. */}
+            <Button
+              type="button"
+              className="w-full md:hidden"
+              disabled={salvando}
+              onClick={() => onConfirmar(entrega.id)}
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              {salvando ? "Salvando..." : "Marcar como recebido"}
+            </Button>
+            {/* Desktop: alternativa a receber em dinheiro/pix, mantendo a forma atual. */}
+            <Button
+              type="button"
+              variant="outline"
+              className="hidden w-full md:flex"
+              disabled={salvando}
+              onClick={() => onConfirmar(entrega.id)}
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              {salvando
+                ? "Salvando..."
+                : `Marcar como recebido (manter ${FORMA_LABEL[entrega.forma_pagamento] ?? "forma atual"})`}
+            </Button>
+          </>
         ) : (
           <Button
             type="button"
