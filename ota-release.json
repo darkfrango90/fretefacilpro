@@ -2,6 +2,7 @@
   "nativeVersion": "1.6",
   "required": false,
   "notes": [
+    "Datas dos relatórios passam a mostrar o ano completo (dd/mm/aaaa), como no resto do sistema.",
     "Novo Relatório por cliente em Relatórios: frete e vendas de um cliente por período, forma de pagamento e status (a receber ou recebido).",
     "Admin pode editar cliente, material e forma de pagamento também pela tela do Financeiro.",
     "Painel agora mostra o mês calendário completo (não mais só os últimos 30 dias), com seletor de mês no canto superior direito.",

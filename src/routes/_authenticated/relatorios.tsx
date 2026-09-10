@@ -435,7 +435,7 @@ function Page() {
 
   const periodoExportacao =
     periodo === "custom"
-      ? `${dataIni ? fmtDiaLonga(dataIni) : "início"} a ${dataFim ? fmtDiaLonga(dataFim) : "hoje"}`
+      ? `${dataIni ? fmtDia(dataIni) : "início"} a ${dataFim ? fmtDia(dataFim) : "hoje"}`
       : periodo === "365"
         ? "Últimos 12 meses"
         : `Últimos ${periodo} dias`;
@@ -945,11 +945,6 @@ function brl(n?: number) {
 
 function fmtDia(iso: string) {
   const [y, m, d] = iso.split("-");
-  return `${d}/${m}/${y.slice(2)}`;
-}
-
-function fmtDiaLonga(iso: string) {
-  const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
 }
 
@@ -958,7 +953,7 @@ function fmtData(iso: string) {
   return d.toLocaleString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
-    year: "2-digit",
+    year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
   });
