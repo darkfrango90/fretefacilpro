@@ -40,6 +40,7 @@ import type { OutboxItem } from "@/lib/offline/db";
 import { formatarQuilometragem, parseQuilometragem } from "@/lib/quilometragem";
 import { MoneyInput } from "@/components/money-input";
 import { formatarMoeda } from "@/lib/moeda";
+import { DateTimeField, dataHoraLocal } from "@/components/date-field";
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -506,7 +507,7 @@ function Page() {
                           litros: item.litros == null ? "" : String(item.litros),
                           valor_total: item.valor_total == null ? "" : String(item.valor_total),
                           km_atual: String(item.km_atual),
-                          data_hora: new Date(item.data_hora).toISOString().slice(0, 16),
+                          data_hora: dataHoraLocal(new Date(item.data_hora)),
                           observacoes: item.observacoes ?? "",
                         })
                       }
@@ -580,7 +581,7 @@ function Page() {
                               valor_total:
                                 item.valor_total == null ? "" : String(item.valor_total),
                               km_atual: String(item.km_atual),
-                              data_hora: new Date(item.data_hora).toISOString().slice(0, 16),
+                              data_hora: dataHoraLocal(new Date(item.data_hora)),
                               observacoes: item.observacoes ?? "",
                             })
                           }
@@ -636,10 +637,9 @@ function Page() {
               </div>
               <div>
                 <Label>Data e hora</Label>
-                <Input
-                  type="datetime-local"
+                <DateTimeField
                   value={editando.data_hora}
-                  onChange={(event) => setEditando({ ...editando, data_hora: event.target.value })}
+                  onValueChange={(valor) => setEditando({ ...editando, data_hora: valor })}
                   required
                 />
               </div>

@@ -13,6 +13,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { ClienteCombobox } from "@/components/cliente-combobox";
+import { DateField } from "@/components/date-field";
 import { MoneyInput } from "@/components/money-input";
 import { Paperclip } from "lucide-react";
 import { toast } from "sonner";
@@ -143,11 +144,10 @@ export function ContaReceberDialog({
 
           <div>
             <Label htmlFor="conta-receber-vencimento">Vencimento original *</Label>
-            <Input
+            <DateField
               id="conta-receber-vencimento"
-              type="date"
               value={vencimento}
-              onChange={(event) => setVencimento(event.target.value)}
+              onValueChange={setVencimento}
             />
             <p className="mt-1 text-[11px] text-muted-foreground">
               Use a data original da dívida, mesmo que já tenha vencido.

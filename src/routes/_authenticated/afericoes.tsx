@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/table";
 
 import { AdminOnly } from "@/components/role-guard";
+import { DateTimeField, dataHoraLocal } from "@/components/date-field";
 
 export const Route = createFileRoute("/_authenticated/afericoes")({
   component: () => (
@@ -38,7 +39,7 @@ function Page() {
   const [litros, setLitros] = useState("");
   const [km, setKm] = useState("");
   const [obs, setObs] = useState("");
-  const [data, setData] = useState(() => new Date().toISOString().slice(0, 16));
+  const [data, setData] = useState(() => dataHoraLocal(new Date()));
 
   const empresaId = prof?.profile.empresa_id;
   const isAdmin = prof?.roles.includes("admin");
@@ -142,7 +143,7 @@ function Page() {
             </div>
             <div>
               <Label>Data/hora *</Label>
-              <Input type="datetime-local" value={data} onChange={(e) => setData(e.target.value)} required />
+              <DateTimeField value={data} onValueChange={setData} required />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>

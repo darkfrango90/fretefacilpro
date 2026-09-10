@@ -28,6 +28,7 @@ import {
 import { ArrowLeft, Printer, Users, Filter, X } from "lucide-react";
 import { EntregaDetalheDialog } from "@/components/entrega-detalhe-dialog";
 import { calcularValorMateriais, resumoMateriais } from "@/lib/entrega-itens";
+import { DateField } from "@/components/date-field";
 
 export const Route = createFileRoute("/_authenticated/relatorios-cliente")({
   component: () => (
@@ -254,20 +255,18 @@ function Page() {
           <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
             <div className="space-y-1.5">
               <Label htmlFor="relatorio-cliente-data-ini">Data inicial</Label>
-              <Input
+              <DateField
                 id="relatorio-cliente-data-ini"
-                type="date"
                 value={dataIni}
-                onChange={(e) => setDataIni(e.target.value)}
+                onValueChange={setDataIni}
               />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="relatorio-cliente-data-fim">Data final</Label>
-              <Input
+              <DateField
                 id="relatorio-cliente-data-fim"
-                type="date"
                 value={dataFim}
-                onChange={(e) => setDataFim(e.target.value)}
+                onValueChange={setDataFim}
               />
             </div>
             <div className="space-y-1.5">

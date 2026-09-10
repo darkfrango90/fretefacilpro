@@ -80,6 +80,7 @@ import {
   Cell,
   Legend,
 } from "recharts";
+import { DateField } from "@/components/date-field";
 
 export const Route = createFileRoute("/_authenticated/master")({
   component: () => (
@@ -731,10 +732,9 @@ function NovaEmpresaDialog({ onCreated }: { onCreated: () => void }) {
         <form onSubmit={submit} className="space-y-3">
           <Field label="Nome da empresa" name="nome" required />
           <div className="grid grid-cols-2 gap-3">
-            <Field
+            <CampoData
               label="Vencimento"
               name="data_vencimento"
-              type="date"
               required
               defaultValue={new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)}
             />
@@ -804,10 +804,9 @@ function EditarEmpresaDialog({ empresa, onSaved }: { empresa: Empresa; onSaved: 
           }}
           className="space-y-3"
         >
-          <Field
+          <CampoData
             label="Vencimento"
             name="data_vencimento"
-            type="date"
             defaultValue={empresa.data_vencimento}
             required
           />
@@ -828,6 +827,27 @@ function EditarEmpresaDialog({ empresa, onSaved }: { empresa: Empresa; onSaved: 
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function CampoData({
+  label,
+  name,
+  defaultValue,
+  required,
+}: {
+  label: string;
+  name: string;
+  defaultValue?: string;
+  required?: boolean;
+}) {
+  const [valor, setValor] = useState(defaultValue ?? "");
+  return (
+    <div className="space-y-1">
+      <Label htmlFor={name}>{label}</Label>
+      <DateField id={name} value={valor} onValueChange={setValor} required={required} />
+      <input type="hidden" name={name} value={valor} />
+    </div>
   );
 }
 

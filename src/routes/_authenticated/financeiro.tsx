@@ -63,6 +63,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DateField } from "@/components/date-field";
 
 export const Route = createFileRoute("/_authenticated/financeiro")({
   component: () => (
@@ -598,20 +599,18 @@ function Page() {
           <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
             <div className="space-y-1.5">
               <Label htmlFor="financeiro-data-inicial">Data inicial</Label>
-              <Input
+              <DateField
                 id="financeiro-data-inicial"
-                type="date"
                 value={dataIni}
-                onChange={(event) => setDataIni(event.target.value)}
+                onValueChange={setDataIni}
               />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="financeiro-data-final">Data final</Label>
-              <Input
+              <DateField
                 id="financeiro-data-final"
-                type="date"
                 value={dataFim}
-                onChange={(event) => setDataFim(event.target.value)}
+                onValueChange={setDataFim}
               />
             </div>
             <div className="space-y-1.5">
@@ -1377,11 +1376,10 @@ function VencimentoDialog({
         </DialogHeader>
         <div className="space-y-1.5">
           <Label htmlFor="vencimento-rapido">Data de vencimento</Label>
-          <Input
+          <DateField
             id="vencimento-rapido"
-            type="date"
             value={vencimento}
-            onChange={(event) => setVencimento(event.target.value)}
+            onValueChange={setVencimento}
             disabled={salvando}
           />
         </div>
@@ -1591,11 +1589,10 @@ function FinanceiroDetalheDialog({
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="vencimento-pagamento">Data de vencimento</Label>
-              <Input
+              <DateField
                 id="vencimento-pagamento"
-                type="date"
                 value={vencimento}
-                onChange={(event) => setVencimento(event.target.value)}
+                onValueChange={setVencimento}
                 disabled={salvando}
               />
             </div>

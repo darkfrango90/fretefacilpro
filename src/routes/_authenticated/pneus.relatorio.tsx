@@ -20,6 +20,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
+import { DateField } from "@/components/date-field";
 
 export const Route = createFileRoute("/_authenticated/pneus/relatorio")({
   component: () => <AdminOnly><Page /></AdminOnly>,
@@ -132,8 +133,8 @@ function Page() {
 
       <Card><CardContent className="p-3 space-y-3">
         <div className="grid grid-cols-2 gap-2">
-          <div><Label className="text-xs">De</Label><Input type="date" value={de} onChange={(e) => setDe(e.target.value)} /></div>
-          <div><Label className="text-xs">Até</Label><Input type="date" value={ate} onChange={(e) => setAte(e.target.value)} /></div>
+          <div><Label className="text-xs">De</Label><DateField value={de} onValueChange={setDe} /></div>
+          <div><Label className="text-xs">Até</Label><DateField value={ate} onValueChange={setAte} /></div>
         </div>
         <div className="grid grid-cols-3 gap-2">
           <div>

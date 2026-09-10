@@ -21,6 +21,7 @@ import { capturarFoto } from "@/lib/native";
 import { enqueue, fileToPhoto } from "@/lib/offline/queue";
 import { syncNow } from "@/lib/offline/sync";
 import { MoneyInput } from "@/components/money-input";
+import { DateField } from "@/components/date-field";
 
 export const Route = createFileRoute("/_authenticated/despesas/nova")({
   component: Page,
@@ -191,7 +192,7 @@ function Page() {
             </div>
             <div>
               <Label>Data *</Label>
-              <Input type="date" value={data} onChange={(e) => setData(e.target.value)} required />
+              <DateField value={data} onValueChange={setData} required />
             </div>
           </div>
 

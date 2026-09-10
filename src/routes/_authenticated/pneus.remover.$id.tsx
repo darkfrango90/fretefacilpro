@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { enqueue } from "@/lib/offline/queue";
 import { syncNow } from "@/lib/offline/sync";
 import { MOTIVOS_REMOCAO, labelPosicao } from "@/lib/pneus-constants";
+import { DateField } from "@/components/date-field";
 
 export const Route = createFileRoute("/_authenticated/pneus/remover/$id")({
   component: Page,
@@ -118,7 +119,7 @@ function Page() {
           </div>
           <div>
             <Label>Data *</Label>
-            <Input type="date" value={data} onChange={(e) => setData(e.target.value)} required />
+            <DateField value={data} onValueChange={setData} required />
           </div>
         </div>
         <div>

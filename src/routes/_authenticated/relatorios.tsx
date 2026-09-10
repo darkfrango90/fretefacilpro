@@ -47,6 +47,7 @@ import {
   exportarRelatorioPdf,
   type DadosRelatorioExportacao,
 } from "@/lib/relatorio-export";
+import { DateField } from "@/components/date-field";
 
 export const Route = createFileRoute("/_authenticated/relatorios")({
   component: () => (
@@ -622,11 +623,11 @@ function Page() {
         <div className="grid grid-cols-2 gap-2">
           <div>
             <Label className="text-xs">De</Label>
-            <Input type="date" value={dataIni} onChange={(e) => setDataIni(e.target.value)} />
+            <DateField value={dataIni} onValueChange={setDataIni} />
           </div>
           <div>
             <Label className="text-xs">Até</Label>
-            <Input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} />
+            <DateField value={dataFim} onValueChange={setDataFim} />
           </div>
         </div>
       )}

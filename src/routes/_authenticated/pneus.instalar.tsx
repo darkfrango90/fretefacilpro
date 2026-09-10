@@ -23,6 +23,7 @@ import { enqueue, fileToPhoto } from "@/lib/offline/queue";
 import { syncNow } from "@/lib/offline/sync";
 import { MoneyInput } from "@/components/money-input";
 import { POSICOES_PNEU, labelPosicao, getPosicoesPorVeiculo } from "@/lib/pneus-constants";
+import { DateField } from "@/components/date-field";
 
 const searchSchema = z.object({
   veiculo_id: z.string().optional(),
@@ -222,10 +223,9 @@ function Page() {
             </div>
             <div>
               <Label>Data *</Label>
-              <Input
-                type="date"
+              <DateField
                 value={data}
-                onChange={(e) => setData(e.target.value)}
+                onValueChange={setData}
                 required
                 className="rounded-xl"
               />

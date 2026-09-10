@@ -32,6 +32,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
+import { DateField } from "@/components/date-field";
 
 export const Route = createFileRoute("/_authenticated/trocas-oleo")({
   component: TrocasOleoPage,
@@ -220,12 +221,7 @@ function TrocasOleoPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Data *</Label>
-                <Input
-                  type="date"
-                  value={data}
-                  onChange={(event) => setData(event.target.value)}
-                  required
-                />
+                <DateField value={data} onValueChange={setData} required />
               </div>
               <div>
                 <Label>Valor *</Label>
