@@ -271,10 +271,11 @@ function Page() {
         cur.receita += calcularValorMateriais(e) + Number(e.valor_frete || 0);
         porCli.set(e.cliente_id, cur);
       }
-      const topClientes = Array.from(porCli.entries())
+      // Lista completa vai para as exportações; a tela mostra só os 10 maiores.
+      const rankingClientes = Array.from(porCli.entries())
         .map(([id, v]) => ({ id, nome: nameCli.get(id) ?? "—", ...v }))
-        .sort((a, b) => b.receita - a.receita)
-        .slice(0, 10);
+        .sort((a, b) => b.receita - a.receita);
+      const topClientes = rankingClientes.slice(0, 10);
 
       const porMat = new Map<string, { qtd: number; receita: number }>();
       for (const e of vendasValidas) {
@@ -403,6 +404,7 @@ function Page() {
         margemLucroReal,
         rankingMotoristas,
         topClientes,
+        rankingClientes,
         topMateriais,
         porPagamento,
         consumoVeiculos,
@@ -505,7 +507,8 @@ function Page() {
       lines.push(`${csv(m.nome)},${m.qtd},${m.receita.toFixed(2)}`);
     lines.push("");
     lines.push("Cliente,Pedidos,Receita");
-    for (const c of data.topClientes) lines.push(`${csv(c.nome)},${c.qtd},${c.receita.toFixed(2)}`);
+    for (const c of data.rankingClientes)
+      lines.push(`${csv(c.nome)},${c.qtd},${c.receita.toFixed(2)}`);
     lines.push("");
     lines.push("Material,Quantidade,Receita");
     for (const m of data.topMateriais)

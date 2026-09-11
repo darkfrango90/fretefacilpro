@@ -44,6 +44,7 @@ export type DadosRelatorioExportacao = {
   vendas: LinhaVenda[];
   rankingMotoristas: LinhaRanking[];
   topClientes: LinhaRanking[];
+  rankingClientes: LinhaRanking[];
   topMateriais: LinhaRanking[];
   porPagamento: LinhaRanking[];
   consumoVeiculos: Array<{
@@ -244,7 +245,7 @@ export async function exportarRelatorioExcel({ dados, periodo }: OpcoesExportaca
   aplicarZebra(vendas, 2, vendas.rowCount, 1, 12);
 
   criarPlanilhaRanking(workbook, "Motoristas", "Motorista", "Entregas", dados.rankingMotoristas);
-  criarPlanilhaRanking(workbook, "Clientes", "Cliente", "Pedidos", dados.topClientes);
+  criarPlanilhaRanking(workbook, "Clientes", "Cliente", "Pedidos", dados.rankingClientes);
   criarPlanilhaRanking(
     workbook,
     "Materiais",
