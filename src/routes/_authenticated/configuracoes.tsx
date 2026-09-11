@@ -17,6 +17,7 @@ import {
   Fuel,
   Download,
   Droplet,
+  ClipboardCheck,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
@@ -68,6 +69,12 @@ function AdminConfig() {
           icon={<ShieldCheck className="h-5 w-5" />}
           label="Permissões"
           hint="Padrões da empresa e por motorista"
+        />
+        <Item
+          to="/checklists"
+          icon={<ClipboardCheck className="h-5 w-5" />}
+          label="Checklists semanais"
+          hint="Acompanhar o checklist obrigatório dos motoristas"
         />
       </Section>
 

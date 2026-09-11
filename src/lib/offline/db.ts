@@ -4,6 +4,7 @@ export type OutboxType =
   | "entrega" // cadastro de venda (status pendente) - legado também
   | "abastecimento"
   | "troca_oleo"
+  | "checklist_semanal"
   | "despesa"
   | "pneu_instalacao"
   | "pneu_remocao"

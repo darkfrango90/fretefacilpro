@@ -23,9 +23,14 @@ import { syncNow } from "@/lib/offline/sync";
 import { ClienteCombobox } from "@/components/cliente-combobox";
 import { MoneyInput } from "@/components/money-input";
 import { valorUnitarioDeTotal } from "@/lib/entrega-itens";
+import { ChecklistGate } from "@/components/checklist-gate";
 
 export const Route = createFileRoute("/_authenticated/entrega/")({
-  component: NovaVenda,
+  component: () => (
+    <ChecklistGate acao="cadastrar uma venda">
+      <NovaVenda />
+    </ChecklistGate>
+  ),
 });
 
 function materialEhFrete(material: { nome?: unknown } | undefined): boolean {

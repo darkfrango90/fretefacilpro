@@ -32,6 +32,8 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedConsumoPrecisoRouteImport } from './routes/_authenticated/consumo-preciso'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedClientesRouteImport } from './routes/_authenticated/clientes'
+import { Route as AuthenticatedChecklistsRouteImport } from './routes/_authenticated/checklists'
+import { Route as AuthenticatedChecklistRouteImport } from './routes/_authenticated/checklist'
 import { Route as AuthenticatedAtualizacaoRouteImport } from './routes/_authenticated/atualizacao'
 import { Route as AuthenticatedAfericoesRouteImport } from './routes/_authenticated/afericoes'
 import { Route as AuthenticatedAcessoExpiradoRouteImport } from './routes/_authenticated/acesso-expirado'
@@ -167,6 +169,16 @@ const AuthenticatedClientesRoute = AuthenticatedClientesRouteImport.update({
   path: '/clientes',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedChecklistsRoute = AuthenticatedChecklistsRouteImport.update({
+  id: '/checklists',
+  path: '/checklists',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedChecklistRoute = AuthenticatedChecklistRouteImport.update({
+  id: '/checklist',
+  path: '/checklist',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAtualizacaoRoute =
   AuthenticatedAtualizacaoRouteImport.update({
     id: '/atualizacao',
@@ -251,6 +263,8 @@ export interface FileRoutesByFullPath {
   '/acesso-expirado': typeof AuthenticatedAcessoExpiradoRoute
   '/afericoes': typeof AuthenticatedAfericoesRoute
   '/atualizacao': typeof AuthenticatedAtualizacaoRoute
+  '/checklist': typeof AuthenticatedChecklistRoute
+  '/checklists': typeof AuthenticatedChecklistsRoute
   '/clientes': typeof AuthenticatedClientesRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/consumo-preciso': typeof AuthenticatedConsumoPrecisoRoute
@@ -288,6 +302,8 @@ export interface FileRoutesByTo {
   '/acesso-expirado': typeof AuthenticatedAcessoExpiradoRoute
   '/afericoes': typeof AuthenticatedAfericoesRoute
   '/atualizacao': typeof AuthenticatedAtualizacaoRoute
+  '/checklist': typeof AuthenticatedChecklistRoute
+  '/checklists': typeof AuthenticatedChecklistsRoute
   '/clientes': typeof AuthenticatedClientesRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/consumo-preciso': typeof AuthenticatedConsumoPrecisoRoute
@@ -327,6 +343,8 @@ export interface FileRoutesById {
   '/_authenticated/acesso-expirado': typeof AuthenticatedAcessoExpiradoRoute
   '/_authenticated/afericoes': typeof AuthenticatedAfericoesRoute
   '/_authenticated/atualizacao': typeof AuthenticatedAtualizacaoRoute
+  '/_authenticated/checklist': typeof AuthenticatedChecklistRoute
+  '/_authenticated/checklists': typeof AuthenticatedChecklistsRoute
   '/_authenticated/clientes': typeof AuthenticatedClientesRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/consumo-preciso': typeof AuthenticatedConsumoPrecisoRoute
@@ -366,6 +384,8 @@ export interface FileRouteTypes {
     | '/acesso-expirado'
     | '/afericoes'
     | '/atualizacao'
+    | '/checklist'
+    | '/checklists'
     | '/clientes'
     | '/configuracoes'
     | '/consumo-preciso'
@@ -403,6 +423,8 @@ export interface FileRouteTypes {
     | '/acesso-expirado'
     | '/afericoes'
     | '/atualizacao'
+    | '/checklist'
+    | '/checklists'
     | '/clientes'
     | '/configuracoes'
     | '/consumo-preciso'
@@ -441,6 +463,8 @@ export interface FileRouteTypes {
     | '/_authenticated/acesso-expirado'
     | '/_authenticated/afericoes'
     | '/_authenticated/atualizacao'
+    | '/_authenticated/checklist'
+    | '/_authenticated/checklists'
     | '/_authenticated/clientes'
     | '/_authenticated/configuracoes'
     | '/_authenticated/consumo-preciso'
@@ -641,6 +665,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedClientesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/checklists': {
+      id: '/_authenticated/checklists'
+      path: '/checklists'
+      fullPath: '/checklists'
+      preLoaderRoute: typeof AuthenticatedChecklistsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/checklist': {
+      id: '/_authenticated/checklist'
+      path: '/checklist'
+      fullPath: '/checklist'
+      preLoaderRoute: typeof AuthenticatedChecklistRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/atualizacao': {
       id: '/_authenticated/atualizacao'
       path: '/atualizacao'
@@ -755,6 +793,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAcessoExpiradoRoute: typeof AuthenticatedAcessoExpiradoRoute
   AuthenticatedAfericoesRoute: typeof AuthenticatedAfericoesRoute
   AuthenticatedAtualizacaoRoute: typeof AuthenticatedAtualizacaoRoute
+  AuthenticatedChecklistRoute: typeof AuthenticatedChecklistRoute
+  AuthenticatedChecklistsRoute: typeof AuthenticatedChecklistsRoute
   AuthenticatedClientesRoute: typeof AuthenticatedClientesRoute
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedConsumoPrecisoRoute: typeof AuthenticatedConsumoPrecisoRoute
@@ -790,6 +830,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAcessoExpiradoRoute: AuthenticatedAcessoExpiradoRoute,
   AuthenticatedAfericoesRoute: AuthenticatedAfericoesRoute,
   AuthenticatedAtualizacaoRoute: AuthenticatedAtualizacaoRoute,
+  AuthenticatedChecklistRoute: AuthenticatedChecklistRoute,
+  AuthenticatedChecklistsRoute: AuthenticatedChecklistsRoute,
   AuthenticatedClientesRoute: AuthenticatedClientesRoute,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedConsumoPrecisoRoute: AuthenticatedConsumoPrecisoRoute,

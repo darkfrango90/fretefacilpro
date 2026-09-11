@@ -43,6 +43,8 @@ import { OdometroOcrField } from "@/components/odometro-ocr-field";
 import type { ConfiancaOdometro } from "@/lib/ocr-odometro";
 import { MoneyInput } from "@/components/money-input";
 import { calcularValorMateriais, obterItensEntrega, resumoMateriais } from "@/lib/entrega-itens";
+import { ChecklistAviso } from "@/components/checklist-gate";
+import { useChecklistSemanal } from "@/lib/checklist-semanal";
 
 export const Route = createFileRoute("/_authenticated/pendentes")({
   component: Pendentes,
@@ -61,6 +63,7 @@ function Pendentes() {
     empresaId && userId ? `entregas:pendentes:${empresaId}:${isAdmin ? "admin" : userId}` : null;
   const veiculosCacheKey = empresaId ? `veiculos:ativos:${empresaId}` : null;
 
+  const checklist = useChecklistSemanal();
   const [iniciandoIds, setIniciandoIds] = useState<string[]>([]);
 
   // Carrega IDs já enfileirados localmente para esconder do pool
@@ -146,6 +149,11 @@ function Pendentes() {
   });
 
   function abrir(r: any) {
+    if (checklist.exigido && !checklist.feito) {
+      toast.error("Preencha o checklist semanal antes de iniciar a entrega");
+      navigate({ to: "/checklist", search: { voltar: "/pendentes" } });
+      return;
+    }
     setSel(r);
     setVeiculoId("");
     setKmInicial("");
@@ -291,6 +299,7 @@ function Pendentes() {
 
   return (
     <div className="space-y-3">
+      <ChecklistAviso />
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-bold flex items-center gap-2">
           <PackageCheck className="h-5 w-5" />

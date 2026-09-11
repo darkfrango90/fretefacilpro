@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Fuel, Receipt, CircleDot, ChevronRight, Droplet } from "lucide-react";
+import { Fuel, Receipt, CircleDot, ChevronRight, Droplet, ClipboardCheck } from "lucide-react";
 import { useProfile } from "@/hooks/use-session";
 
 export const Route = createFileRoute("/_authenticated/operacao")({
@@ -21,6 +21,16 @@ function Page() {
   const isAdmin = !!prof?.roles.includes("admin");
 
   const itens: Item[] = [
+    ...(isAdmin
+      ? []
+      : [
+          {
+            to: "/checklist",
+            titulo: "Checklist semanal",
+            descricao: "Obrigatório toda semana, a partir de segunda-feira",
+            icone: <ClipboardCheck className="h-6 w-6" />,
+          },
+        ]),
     {
       to: "/abastecimento",
       titulo: "Abastecimento",

@@ -17,9 +17,14 @@ import { readOfflineCache } from "@/lib/offline/cache";
 import { OdometroOcrField } from "@/components/odometro-ocr-field";
 import type { ConfiancaOdometro } from "@/lib/ocr-odometro";
 import { resumoMateriais } from "@/lib/entrega-itens";
+import { ChecklistGate } from "@/components/checklist-gate";
 
 export const Route = createFileRoute("/_authenticated/entrega/$id/finalizar")({
-  component: Finalizar,
+  component: () => (
+    <ChecklistGate acao="finalizar a entrega">
+      <Finalizar />
+    </ChecklistGate>
+  ),
 });
 
 function Finalizar() {

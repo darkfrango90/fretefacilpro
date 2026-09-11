@@ -160,6 +160,13 @@ async function pushOne(item: OutboxItem, identity: SyncIdentity): Promise<void> 
     if (kmAtual == null || kmAtual <= 0) throw new Error("KM_ATUAL_INVALIDO");
     payload.km_atual = kmAtual;
   }
+  if (item.type === "checklist_semanal") {
+    const { error } = await (supabase as any).from("checklists_semanais").insert(payload);
+    // 23505: o checklist desta semana já está no servidor (reenvio ou outro
+    // aparelho). Não há o que corrigir, então a pendência é descartada.
+    if (error && error.code !== "23505") throw error;
+    return;
+  }
   if (item.type === "troca_oleo") {
     const { error } = await (supabase as any)
       .from("trocas_oleo")
