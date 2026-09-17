@@ -2,6 +2,8 @@
   "nativeVersion": "1.6",
   "required": false,
   "notes": [
+    "Vendas cadastradas e entregas iniciadas aparecem na hora em Pendentes e Em rota, sem precisar fechar e abrir o app.",
+    "Fluxo completo sem internet: cadastrar a venda, iniciar e finalizar a entrega; tudo é enviado na ordem certa quando a conexão volta.",
     "Novo checklist semanal obrigatório para o motorista (em Operação): 14 itens com Ótima, Não verificado ou Ruim. A partir de segunda, vendas e entregas ficam bloqueadas até o envio.",
     "Datas de todo o sistema agora aparecem sempre em dd/mm/aaaa.",
     "Datas dos relatórios passam a mostrar o ano completo (dd/mm/aaaa), como no resto do sistema.",

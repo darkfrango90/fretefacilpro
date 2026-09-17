@@ -8,6 +8,7 @@ let syncing = false;
 let syncPromise: Promise<SyncResult> | null = null;
 let initialized = false;
 const LAST_SYNC_KEY = "offline.last_sync_at";
+let ultimaExecucao: { identity: NonNullable<SyncIdentity>; tentados: Set<string> } | null = null;
 
 type SyncIdentity = {
   userId: string;
@@ -68,13 +69,47 @@ async function syncEntrega(
   return data;
 }
 
+async function entregaJaEstaComMotorista(entregaId: string, userId: string): Promise<boolean> {
+  const { data, error } = await (supabase as any)
+    .from("entregas")
+    .select("id")
+    .eq("id", entregaId)
+    .eq("motorista_entrega_id", userId)
+    .in("status", ["em_rota", "entregue"])
+    .maybeSingle();
+  if (error) throw error;
+  return !!data;
+}
+
+/** Entrega a que o item pertence, para respeitar a ordem venda → início → fim. */
+function entregaDoItem(item: OutboxItem): string | null {
+  if (item.type === "entrega") return item.id;
+  if (item.type === "iniciar_entrega" || item.type === "finalizar_entrega") {
+    return (item.payload.entrega_id as string | undefined) ?? null;
+  }
+  return null;
+}
+
 async function pushOne(item: OutboxItem, identity: SyncIdentity): Promise<void> {
   if (item.type === "iniciar_entrega") {
     const payload: Record<string, any> = { ...item.payload };
     for (let i = 0; i < item.photos.length; i++) {
       payload[item.photos[i].field] = await uploadOnePhoto(item, i);
     }
-    await syncEntrega("iniciar_entrega", payload);
+    try {
+      await syncEntrega("iniciar_entrega", payload);
+    } catch (e: any) {
+      // Reenvio de um início que o servidor já aplicou (a resposta se perdeu
+      // na rede): a entrega já está com este motorista, então não é recusa.
+      if (
+        identity &&
+        /ENTREGA_JA_INICIADA/.test(e?.message ?? "") &&
+        (await entregaJaEstaComMotorista(payload.entrega_id, identity.userId))
+      ) {
+        return;
+      }
+      throw e;
+    }
     return;
   }
 
@@ -188,20 +223,37 @@ export interface SyncResult {
 }
 
 function isRecusaDefinitiva(msg: string): boolean {
-  return /PERMISSAO_NEGADA|ENTREGA_JA_INICIADA|CAMINHO_ARQUIVO_INVALIDO|KM_(INICIAL|FINAL)_INVALIDO|FOTO_ODOMETRO_INICIAL_OBRIGATORIA/i.test(
+  return /PERMISSAO_NEGADA|ENTREGA_JA_INICIADA|ENTREGA_NAO_ENCONTRADA|CAMINHO_ARQUIVO_INVALIDO|KM_(INICIAL|FINAL)_INVALIDO|FOTO_ODOMETRO_INICIAL_OBRIGATORIA/i.test(
     msg,
   );
 }
 
-export async function syncNow(opts: { silent?: boolean } = {}): Promise<SyncResult> {
-  if (syncPromise) return syncPromise;
+export function syncNow(opts: { silent?: boolean } = {}): Promise<SyncResult> {
+  if (syncPromise) {
+    // Uma sincronização já está rodando e pode ter listado a fila antes do item
+    // que acabou de ser enfileirado. Espera terminar e roda de novo se sobrou
+    // item que ela não tentou; sem isso o item ficava parado até o próximo
+    // gatilho (até 60s) e sumia das listas de Pendentes e Em rota.
+    return syncPromise.then(async (anterior) => {
+      if (!(await temItemNaoTentado())) return anterior;
+      return syncNow(opts);
+    });
+  }
 
   syncPromise = runSync(opts);
   return syncPromise;
 }
 
+async function temItemNaoTentado(): Promise<boolean> {
+  if (!ultimaExecucao) return false;
+  const { identity, tentados } = ultimaExecucao;
+  const itens = await listPending(identity.userId, identity.empresaId);
+  return itens.some((i) => !i.recusado && !tentados.has(i.id));
+}
+
 async function runSync(opts: { silent?: boolean } = {}): Promise<SyncResult> {
   syncing = true;
+  let result: SyncResult = { sent: 0, failed: 0, total: 0, recusados: 0 };
   const started = Date.now();
   let sent = 0;
   let failed = 0;
@@ -210,8 +262,11 @@ async function runSync(opts: { silent?: boolean } = {}): Promise<SyncResult> {
   try {
     const identity = await getSyncIdentity();
     if (!identity) {
-      return { sent: 0, failed: 0, total: 0, recusados: 0 };
+      ultimaExecucao = null;
+      return result;
     }
+    const tentados = new Set<string>();
+    ultimaExecucao = { identity, tentados };
     try {
       await refreshPermissoesCache(identity.userId);
     } catch {}
@@ -219,7 +274,28 @@ async function runSync(opts: { silent?: boolean } = {}): Promise<SyncResult> {
     const items = (await listPending(identity.userId, identity.empresaId)).filter(
       (i) => !i.recusado,
     );
+    // Venda, início e finalização feitos offline dependem um do outro. Se uma
+    // etapa não subiu nesta rodada, as seguintes da mesma entrega esperam a
+    // próxima; enviadas fora de ordem, o servidor as recusaria em definitivo.
+    const entregasTravadas = new Set<string>();
+    const entregasRecusadas = new Set<string>();
     for (const item of items) {
+      tentados.add(item.id);
+      const entregaId = entregaDoItem(item);
+      if (entregaId && entregasRecusadas.has(entregaId)) {
+        recusados++;
+        await getDB().outbox.update(item.id, {
+          recusado: true,
+          last_error: "ETAPA_ANTERIOR_RECUSADA",
+          attempts: (item.attempts ?? 0) + 1,
+        });
+        continue;
+      }
+      if (entregaId && entregasTravadas.has(entregaId)) {
+        failed++;
+        if (!firstError) firstError = "Aguardando etapa anterior da entrega";
+        continue;
+      }
       try {
         await pushOne(item, identity);
         await removePending(item.id);
@@ -227,6 +303,7 @@ async function runSync(opts: { silent?: boolean } = {}): Promise<SyncResult> {
       } catch (e: any) {
         const msg = e?.message ?? String(e);
         if (isRecusaDefinitiva(msg)) {
+          if (entregaId) entregasRecusadas.add(entregaId);
           recusados++;
           await getDB().outbox.update(item.id, {
             recusado: true,
@@ -234,6 +311,7 @@ async function runSync(opts: { silent?: boolean } = {}): Promise<SyncResult> {
             attempts: (item.attempts ?? 0) + 1,
           });
         } else {
+          if (entregaId) entregasTravadas.add(entregaId);
           failed++;
           if (!firstError) firstError = msg;
           await markAttempt(item.id, msg);
@@ -253,12 +331,28 @@ async function runSync(opts: { silent?: boolean } = {}): Promise<SyncResult> {
     } else if (!opts.silent) {
       setLastSyncAt(Date.now());
     }
-    return { sent, failed, total, recusados };
+    result = { sent, failed, total, recusados };
+    return result;
   } finally {
     syncing = false;
     syncPromise = null;
-    if (typeof window !== "undefined") window.dispatchEvent(new Event("offline-sync-finished"));
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent<SyncResult>("offline-sync-finished", { detail: result }),
+      );
+    }
   }
+}
+
+/**
+ * Sincroniza, mas não prende a tela quando a rede está lenta: depois de
+ * `limiteMs` devolve `null` e o envio segue em segundo plano.
+ */
+export function syncNowComLimite(limiteMs = 8000): Promise<SyncResult | null> {
+  return Promise.race([
+    syncNow({ silent: true }),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), limiteMs)),
+  ]);
 }
 
 export function initSyncEngine() {
@@ -271,6 +365,11 @@ export function initSyncEngine() {
 
   window.addEventListener("online", trigger);
   window.addEventListener("focus", trigger);
+  // No Android (Capacitor) voltar do segundo plano não dispara "focus" de forma
+  // confiável; a mudança de visibilidade sim.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") trigger();
+  });
   window.addEventListener("offline-outbox-changed", trigger);
 
   setTimeout(trigger, 500);

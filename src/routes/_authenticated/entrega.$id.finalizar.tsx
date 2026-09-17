@@ -11,7 +11,8 @@ import { toast } from "sonner";
 import { Camera, MapPin, ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { capturarFoto, obterCoordenadas } from "@/lib/native";
 import { enqueue, fileToPhoto } from "@/lib/offline/queue";
-import { syncNow } from "@/lib/offline/sync";
+import { syncNowComLimite } from "@/lib/offline/sync";
+import { entregaIniciadaNaFila } from "@/lib/offline/entregas-locais";
 import { SignaturePad } from "@/components/signature-pad";
 import { readOfflineCache } from "@/lib/offline/cache";
 import { OdometroOcrField } from "@/components/odometro-ocr-field";
@@ -37,21 +38,35 @@ function Finalizar() {
     ? readOfflineCache<any[]>(`entregas:em-rota:${prof.profile.id}`)
     : undefined;
 
+  const empresaId = prof?.profile.empresa_id;
+  const uid = prof?.profile.id;
   const { data: entrega, isLoading } = useQuery({
     queryKey: ["entrega-finalizar", id],
+    enabled: !!uid,
     retry: false,
     networkMode: "offlineFirst",
     initialData: () => cachedEmRota?.find((item) => item.id === id),
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("entregas")
-        .select(
-          "id, km_inicial, status, material_id, itens, cliente:clientes(nome), material:materiais(nome, unidade), quantidade",
-        )
-        .eq("id", id)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
+      // Início feito offline e ainda na fila: o servidor não sabe dele, então
+      // os dados vêm do aparelho. A finalização entra na fila depois do início.
+      const local = await entregaIniciadaNaFila(id, empresaId, uid);
+      if (local) return local;
+      try {
+        const { data, error } = await (supabase as any)
+          .from("entregas")
+          .select(
+            "id, km_inicial, status, material_id, itens, cliente:clientes(nome), material:materiais(nome, unidade), quantidade",
+          )
+          .eq("id", id)
+          .maybeSingle();
+        if (error) throw error;
+        return data;
+      } catch (e) {
+        // Sem internet: usa o último "Em rota" carregado.
+        const cache = cachedEmRota?.find((item) => item.id === id);
+        if (cache) return cache;
+        throw e;
+      }
     },
   });
 
@@ -73,7 +88,8 @@ function Finalizar() {
 
   const [submitting, setSubmitting] = useState(false);
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Carregando...</p>;
+  if (isLoading || (!entrega && !uid))
+    return <p className="text-sm text-muted-foreground">Carregando...</p>;
   if (!entrega) return <p className="text-sm text-destructive">Entrega não encontrada.</p>;
 
   async function tirarFotoMat() {
@@ -140,14 +156,15 @@ function Finalizar() {
         payload,
         photos,
       });
-      if (navigator.onLine) {
-        toast.success("Entrega finalizada! Sincronizando...");
-        const res = await syncNow({ silent: true });
-        if (res.failed > 0) {
-          toast.warning("Entrega salva, mas a sincronização ainda está pendente.");
-        }
+      // Com sinal fraco a tela não fica presa: após alguns segundos segue e o
+      // envio continua em segundo plano.
+      const res = navigator.onLine ? await syncNowComLimite() : null;
+      if (res && res.failed === 0 && res.recusados === 0) {
+        toast.success("Entrega finalizada!");
+      } else if (res && res.recusados > 0) {
+        toast.error("O servidor recusou uma operação da fila. Veja em Sincronização.");
       } else {
-        toast.success("Finalizada offline. Sincronizará quando houver conexão.");
+        toast.success("Entrega finalizada. Será sincronizada quando houver conexão.");
       }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["minhas-entregas"] }),

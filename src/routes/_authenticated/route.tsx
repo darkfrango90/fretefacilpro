@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-router";
 import React, { useEffect } from "react";
 import { toast } from "sonner";
+import { isAuthRetryableFetchError } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/use-session";
 import {
@@ -131,6 +132,12 @@ function AuthedLayout() {
       if (typeof navigator !== "undefined" && !navigator.onLine) return;
       const { data: u, error } = await supabase.auth.getUser();
       if (cancelado) return;
+      // Sinal fraco: o aparelho se diz online, mas a requisição falha. Isso não
+      // prova que a sessão é inválida; deslogar aqui deixaria o motorista sem
+      // acesso ao app offline. Só sai quando o servidor recusa a sessão.
+      if (error && (isAuthRetryableFetchError(error) || !error.status || error.status >= 500)) {
+        return;
+      }
       if (error || !u.user) {
         await supabase.auth.signOut();
         navigate({ to: "/auth", replace: true });

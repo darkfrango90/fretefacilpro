@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/use-session";
@@ -33,10 +33,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { MapPin, Truck, PackageCheck, RefreshCw, Trash2, Pencil } from "lucide-react";
+import { MapPin, Truck, PackageCheck, RefreshCw, Trash2, Pencil, CloudUpload } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { enqueue, fileToPhoto, listPending } from "@/lib/offline/queue";
-import { syncNow } from "@/lib/offline/sync";
+import { enqueue, fileToPhoto, removePending } from "@/lib/offline/queue";
+import { useEntregasNaFila } from "@/hooks/use-offline";
+import { syncNow, syncNowComLimite } from "@/lib/offline/sync";
+import { vendaDaFilaParaLinha } from "@/lib/offline/entregas-locais";
 import { SwipeToAction } from "@/components/swipe-to-action";
 import { readOfflineCache, writeOfflineCache } from "@/lib/offline/cache";
 import { OdometroOcrField } from "@/components/odometro-ocr-field";
@@ -64,30 +66,12 @@ function Pendentes() {
   const veiculosCacheKey = empresaId ? `veiculos:ativos:${empresaId}` : null;
 
   const checklist = useChecklistSemanal();
-  const [iniciandoIds, setIniciandoIds] = useState<string[]>([]);
-
-  // Carrega IDs já enfileirados localmente para esconder do pool
-  useEffect(() => {
-    let alive = true;
-    const refresh = async () => {
-      try {
-        if (!userId || !empresaId) return setIniciandoIds([]);
-        const all = await listPending(userId, empresaId);
-        const ids = all
-          .filter((i) => i.type === "iniciar_entrega" && !i.recusado)
-          .map((i) => i.payload.entrega_id as string);
-        if (alive) setIniciandoIds(ids);
-      } catch {}
-    };
-    refresh();
-    window.addEventListener("offline-outbox-changed", refresh);
-    window.addEventListener("offline-sync-finished", refresh);
-    return () => {
-      alive = false;
-      window.removeEventListener("offline-outbox-changed", refresh);
-      window.removeEventListener("offline-sync-finished", refresh);
-    };
-  }, [userId, empresaId]);
+  const naFila = useEntregasNaFila();
+  // Vendas que o motorista já pegou, mas cujo início ainda não chegou ao
+  // servidor: somem daqui e aparecem em "Minhas entregas" como em rota.
+  const iniciandoIds = naFila
+    .filter((i) => i.type === "iniciar_entrega")
+    .map((i) => i.payload.entrega_id as string);
 
   const {
     data: rows,
@@ -96,9 +80,12 @@ function Pendentes() {
   } = useQuery({
     queryKey: ["pendentes", empresaId, isAdmin ? "admin" : userId],
     enabled: !!empresaId && !!userId,
-    retry: false,
+    retry: 2,
     networkMode: "offlineFirst",
     initialData: () => readOfflineCache<any[]>(pendentesCacheKey),
+    // O cache local é só um ponto de partida: trata como desatualizado para
+    // buscar o servidor ao abrir/voltar para o app.
+    initialDataUpdatedAt: 0,
     queryFn: async () => {
       let query = (supabase as any)
         .from("entregas")
@@ -186,15 +173,15 @@ function Pendentes() {
         photos: [foto],
       });
       setOpen(false);
-      if (navigator.onLine) {
-        const res = await syncNow({ silent: true });
-        if (res.recusados > 0) {
-          toast.error("Esta entrega já foi iniciada por outro motorista.");
-        } else {
-          toast.success("Entrega iniciada!");
-        }
+      // Com sinal fraco a tela não fica presa: após alguns segundos segue e o
+      // envio continua em segundo plano.
+      const res = navigator.onLine ? await syncNowComLimite() : null;
+      if (res && res.recusados > 0) {
+        toast.error("Esta entrega já foi iniciada por outro motorista.");
+      } else if (res && res.failed === 0) {
+        toast.success("Entrega iniciada!");
       } else {
-        toast.success("Entrega iniciada offline. Confirmará ao sincronizar.");
+        toast.success("Entrega iniciada. Será sincronizada quando houver conexão.");
       }
       await Promise.all([
         refetch(),
@@ -247,6 +234,7 @@ function Pendentes() {
       return toast.error("Valor inválido");
     if (!Number.isFinite(valorFrete) || valorFrete < 0) return toast.error("Frete inválido");
 
+    if (!navigator.onLine) return toast.error("Sem internet. Tente editar quando reconectar.");
     setSalvando(true);
     try {
       const { data, error } = await supabase.functions.invoke("sync-entrega", {
@@ -276,6 +264,15 @@ function Pendentes() {
   }
 
   async function excluir(id: string) {
+    const vendaNaFila = naFila.find((i) => i.type === "entrega" && i.id === id);
+    if (vendaNaFila) {
+      // Ainda não foi para o servidor: basta tirar da fila deste aparelho.
+      await removePending(vendaNaFila.id);
+      toast.success("Venda removida");
+      setConfirmarExcluirId(null);
+      return;
+    }
+    if (!navigator.onLine) return toast.error("Sem internet. Tente excluir quando reconectar.");
     setExcluindo(true);
     try {
       const { data, error } = await supabase.functions.invoke("sync-entrega", {
@@ -295,7 +292,15 @@ function Pendentes() {
     }
   }
 
-  const visible = (rows ?? []).filter((r: any) => !iniciandoIds.includes(r.id));
+  const idsServidor = new Set((rows ?? []).map((r: any) => r.id));
+  // Vendas cadastradas neste aparelho que ainda não chegaram ao servidor.
+  const vendasNaFila = naFila
+    .filter((i) => i.type === "entrega" && !idsServidor.has(i.id) && !iniciandoIds.includes(i.id))
+    .map((i) => vendaDaFilaParaLinha(i, empresaId));
+  const visible = [
+    ...(rows ?? []).filter((r: any) => !iniciandoIds.includes(r.id)),
+    ...vendasNaFila,
+  ];
 
   return (
     <div className="space-y-3">
@@ -344,11 +349,24 @@ function Pendentes() {
                   <MapPin className="h-3 w-3 mt-0.5 shrink-0" /> {r.endereco}
                 </div>
               )}
+              {r._naFila && (
+                <div className="flex items-center gap-1 text-xs text-amber-600">
+                  <CloudUpload className="h-4 w-4 shrink-0" /> Venda aguardando sincronização
+                  <button
+                    type="button"
+                    className="ml-auto underline disabled:opacity-50"
+                    disabled={!navigator.onLine}
+                    onClick={() => void syncNow({ silent: true })}
+                  >
+                    Sincronizar
+                  </button>
+                </div>
+              )}
               <div className="flex gap-2">
                 <Button size="sm" variant="action" className="flex-1" onClick={() => abrir(r)}>
                   <Truck className="h-4 w-4 mr-1" /> Iniciar entrega
                 </Button>
-                {(isAdmin || r.motorista_id === prof?.profile.id) && (
+                {!r._naFila && (isAdmin || r.motorista_id === prof?.profile.id) && (
                   <Button
                     size="sm"
                     variant="outline"

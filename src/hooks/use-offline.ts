@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
-import { countPending, onChanged } from "@/lib/offline/queue";
+import { countPending, listPending, onChanged } from "@/lib/offline/queue";
+import type { OutboxItem } from "@/lib/offline/db";
 import { getLastSyncAt, isSyncing, syncNow } from "@/lib/offline/sync";
 import { useProfile } from "@/hooks/use-session";
 
@@ -48,6 +49,51 @@ export function usePendingCount() {
   }, [refresh]);
 
   return count;
+}
+
+/**
+ * Vendas cadastradas, entregas iniciadas e finalizadas que ainda estão na fila
+ * local (não recusadas). As telas usam isso para mostrar o estado real do
+ * motorista enquanto o servidor ainda não recebeu a operação.
+ */
+export function useEntregasNaFila() {
+  const [itens, setItens] = useState<OutboxItem[]>([]);
+  const { data: profile } = useProfile();
+  const motoristaId = profile?.profile.id;
+  const empresaId = profile?.profile.empresa_id;
+
+  useEffect(() => {
+    let vivo = true;
+    const refresh = async () => {
+      if (!motoristaId || !empresaId) {
+        if (vivo) setItens([]);
+        return;
+      }
+      try {
+        const todos = await listPending(motoristaId, empresaId);
+        if (!vivo) return;
+        setItens(
+          todos.filter(
+            (i) =>
+              !i.recusado &&
+              (i.type === "entrega" ||
+                i.type === "iniciar_entrega" ||
+                i.type === "finalizar_entrega"),
+          ),
+        );
+      } catch {}
+    };
+    void refresh();
+    const off = onChanged(refresh);
+    window.addEventListener("offline-sync-finished", refresh);
+    return () => {
+      vivo = false;
+      off();
+      window.removeEventListener("offline-sync-finished", refresh);
+    };
+  }, [motoristaId, empresaId]);
+
+  return itens;
 }
 
 export function useSyncStatus() {

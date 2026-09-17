@@ -138,7 +138,9 @@ A fila suporta venda, início/finalização, abastecimento, troca de óleo, desp
 
 No início da entrega, a foto do painel e o KM confirmado ficam na mesma operação da fila. Ao reconectar, a foto é enviada primeiro ao bucket privado `odometros` e somente depois a entrega é iniciada. A leitura por IA exige conexão, mas a captura e o preenchimento manual continuam disponíveis offline.
 
-As listas críticas de entregas pendentes/em rota, veículos, abastecimentos e trocas de óleo possuem último resultado persistido por usuário/empresa. A sincronização roda ao recuperar conexão, receber foco, alterar a fila, iniciar a aplicação e a cada 60 segundos. Uploads usam caminhos `empresa/usuario/arquivo` e `upsert` para retry idempotente.
+As listas críticas de entregas pendentes/em rota, veículos, abastecimentos e trocas de óleo possuem último resultado persistido por usuário/empresa. A sincronização roda ao recuperar conexão, receber foco, voltar a ficar visível (retorno do segundo plano no Android), alterar a fila, iniciar a aplicação e a cada 60 segundos. Se `syncNow` for chamado com outra sincronização em andamento, ele aguarda o término e roda de novo quando há item da identidade ativa que a execução anterior não tentou. O `OfflineProvider` invalida as consultas de entregas quando a fila muda ou quando uma sincronização envia/recusa algo; "Pendentes" mostra vendas ainda na fila e "Minhas entregas" mostra inícios/finalizações ainda na fila, marcados como aguardando sincronização.
+
+Fluxo totalmente offline: a venda recebe o UUID local, que `criar_venda` usa como id no servidor; ela pode ser iniciada ainda na fila, e o início ainda na fila pode ser finalizado (`src/lib/offline/entregas-locais.ts` monta os dados a partir da fila e dos caches). A sincronização respeita a ordem venda → início → finalização da mesma entrega: se uma etapa falha por rede, as seguintes aguardam a próxima rodada; se é recusada em definitivo, as seguintes são marcadas `ETAPA_ANTERIOR_RECUSADA`. Um reenvio de início que o servidor já aplicou (`ENTREGA_JA_INICIADA` com a entrega já do próprio motorista) é tratado como sucesso. Venda ou início ainda na fila podem ser desfeitos localmente. Iniciar e finalizar aguardam no máximo 8 s pela sincronização (`syncNowComLimite`) e seguem em segundo plano. A revalidação de sessão só desloga quando o servidor recusa a sessão, nunca por falha de rede. O último resultado persistido serve só de ponto de partida (`initialDataUpdatedAt: 0`) e é sempre revalidado no servidor. Uploads usam caminhos `empresa/usuario/arquivo` e `upsert` para retry idempotente.
 
 Limite conhecido: o modo offline depende de ao menos um carregamento online anterior para popular listas de referência. Conflitos e violações de permissão são decididos pelo servidor; recusas definitivas permanecem visíveis na tela de sincronização.
 
@@ -590,3 +592,27 @@ Limite: OTA atualiza somente HTML, CSS e JavaScript. Mudanças em câmera, local
 - versão web/OTA: `1.6.5`, compatível com a base Android `1.6`, sem necessidade de gerar outro APK;
 - a migração `20260814120000_entrega_multiplos_materiais.sql` foi aplicada no projeto vinculado;
 - a função `sync-entrega` foi publicada e confirmada como `ACTIVE`, versão 16.
+
+## Alteração — 2026-09-17 — fretes sumindo de Pendentes e Em rota
+
+- sintoma: venda recém-cadastrada não aparecia para iniciar, e entrega iniciada
+  não aparecia em "Em rota" até fechar e reabrir o app;
+- causas: `syncNow` devolvia a sincronização em andamento, que já tinha lido a
+  fila antes do novo item (o item esperava até 60s); "Pendentes" não recarregava
+  ao fim da sincronização; itens na fila não eram exibidos (a entrega iniciada
+  saía de Pendentes sem entrar em Em rota); o retorno do segundo plano no Android
+  não disparava sincronização; o cache local era tratado como recém-buscado;
+- arquivos: `src/lib/offline/sync.ts`, `src/hooks/use-offline.ts`,
+  `src/components/offline/offline-provider.tsx`,
+  `src/routes/_authenticated/pendentes.tsx`,
+  `src/routes/_authenticated/minhas-entregas.tsx`;
+- sem migration nem deploy de Edge Function;
+- validações: `tsc --noEmit` e ESLint dos arquivos alterados;
+- fluxo offline completo: venda, início e finalização encadeados na fila, com
+  ordem garantida na sincronização, reenvio idempotente do início, desfazer
+  local e revalidação de sessão tolerante a sinal fraco
+  (`src/lib/offline/entregas-locais.ts`, `entrega.$id.finalizar.tsx`,
+  `_authenticated/route.tsx`);
+- validações adicionais: `vite build`;
+- publicado como OTA 1.7.1 (nativeVersion 1.6); pendência: teste em aparelho
+  em modo avião.

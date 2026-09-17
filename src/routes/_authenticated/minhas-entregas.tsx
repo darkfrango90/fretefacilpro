@@ -1,17 +1,21 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, keepPreviousData, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/use-session";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Truck, MapPin, CheckCircle2, Loader2, RefreshCw, Undo2 } from "lucide-react";
+import { Truck, MapPin, CheckCircle2, Loader2, RefreshCw, Undo2, CloudUpload } from "lucide-react";
 import { SwipeToAction } from "@/components/swipe-to-action";
 import { EntregaDetalheDialog } from "@/components/entrega-detalhe-dialog";
 import { toast } from "sonner";
 import { readOfflineCache, writeOfflineCache } from "@/lib/offline/cache";
 import { resumoMateriais } from "@/lib/entrega-itens";
+import { useEntregasNaFila } from "@/hooks/use-offline";
+import { syncNow } from "@/lib/offline/sync";
+import { removePending } from "@/lib/offline/queue";
+import { inicioDaFilaParaLinha } from "@/lib/offline/entregas-locais";
 
 export const Route = createFileRoute("/_authenticated/minhas-entregas")({
   component: MinhasEntregas,
@@ -30,20 +34,8 @@ function MinhasEntregas() {
   const emRotaCacheKey = uid ? `entregas:em-rota:${uid}` : null;
   const entreguesCacheKey = uid ? `entregas:entregues:${uid}` : null;
 
-  useEffect(() => {
-    const atualizarListas = () => {
-      queryClient.invalidateQueries({ queryKey: ["minhas-entregas"] });
-      queryClient.invalidateQueries({ queryKey: ["entrega-detalhe"] });
-      queryClient.invalidateQueries({ queryKey: ["pendentes"] });
-    };
-
-    window.addEventListener("offline-sync-finished", atualizarListas);
-    window.addEventListener("offline-outbox-changed", atualizarListas);
-    return () => {
-      window.removeEventListener("offline-sync-finished", atualizarListas);
-      window.removeEventListener("offline-outbox-changed", atualizarListas);
-    };
-  }, [queryClient]);
+  // A invalidação das listas após cada sincronização fica no OfflineProvider.
+  const naFila = useEntregasNaFila();
 
   const emRotaQ = useQuery({
     queryKey: ["minhas-entregas", "em_rota", uid],
@@ -51,9 +43,12 @@ function MinhasEntregas() {
     staleTime: 15_000,
     refetchOnMount: "always",
     placeholderData: keepPreviousData,
-    retry: false,
+    retry: 2,
     networkMode: "offlineFirst",
     initialData: () => readOfflineCache<any[]>(emRotaCacheKey),
+    // O cache local é só um ponto de partida: trata como desatualizado para
+    // buscar o servidor ao abrir/voltar para o app.
+    initialDataUpdatedAt: 0,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("entregas")
@@ -75,9 +70,10 @@ function MinhasEntregas() {
     staleTime: 30_000,
     refetchOnMount: "always",
     placeholderData: keepPreviousData,
-    retry: false,
+    retry: 2,
     networkMode: "offlineFirst",
     initialData: () => readOfflineCache<any[]>(entreguesCacheKey),
+    initialDataUpdatedAt: 0,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("entregas")
@@ -95,7 +91,40 @@ function MinhasEntregas() {
     },
   });
 
+  // Em rota = servidor + inícios ainda na fila local (feitos offline, podem ser
+  // finalizados offline também). Entregas com finalização na fila continuam
+  // visíveis, marcadas, até o servidor confirmar.
+  const finalizandoIds = new Set(
+    naFila.filter((i) => i.type === "finalizar_entrega").map((i) => i.payload.entrega_id),
+  );
+  const idsEmRota = new Set((emRotaQ.data ?? []).map((r: any) => r.id));
+  const iniciosNaFila = naFila
+    .filter((i) => i.type === "iniciar_entrega" && !idsEmRota.has(i.payload.entrega_id))
+    .map((i) => inicioDaFilaParaLinha(i, naFila, prof?.profile.empresa_id, uid));
+  const emRota =
+    emRotaQ.data || iniciosNaFila.length > 0
+      ? [
+          ...(emRotaQ.data ?? []).map((r: any) =>
+            finalizandoIds.has(r.id) ? { ...r, _naFila: "finalizando" } : r,
+          ),
+          ...iniciosNaFila,
+        ]
+      : undefined;
+
   async function voltarPendente(id: string) {
+    const inicioNaFila = naFila.find(
+      (i) => i.type === "iniciar_entrega" && i.payload.entrega_id === id,
+    );
+    if (inicioNaFila) {
+      // O início ainda não foi para o servidor: basta desfazer neste aparelho.
+      await removePending(inicioNaFila.id);
+      toast.success("Entrega voltou para pendentes");
+      return;
+    }
+    if (!navigator.onLine) {
+      toast.error("Sem internet. Tente voltar para pendentes quando reconectar.");
+      return;
+    }
     const { data, error } = await supabase.functions.invoke("sync-entrega", {
       body: { action: "voltar_pendente", entrega_id: id },
     });
@@ -125,7 +154,7 @@ function MinhasEntregas() {
       <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
         <TabsList className="grid grid-cols-2 w-full">
           <TabsTrigger value="em_rota">
-            Em rota {(emRotaQ.data?.length ?? 0) > 0 && `(${emRotaQ.data!.length})`}
+            Em rota {(emRota?.length ?? 0) > 0 && `(${emRota!.length})`}
           </TabsTrigger>
           <TabsTrigger value="entregue">Já entregues</TabsTrigger>
         </TabsList>
@@ -149,7 +178,7 @@ function MinhasEntregas() {
             </Button>
           </div>
           <ListaCards
-            rows={emRotaQ.data}
+            rows={emRota}
             loading={emRotaQ.isLoading}
             fetching={emRotaQ.isFetching}
             empty="Você não tem entregas em andamento."
@@ -184,7 +213,12 @@ function MinhasEntregas() {
         </TabsContent>
       </Tabs>
 
-      <EntregaDetalheDialog id={detalheId} onClose={() => setDetalheId(null)} mostrarFinalizar empresaId={prof?.profile.empresa_id} />
+      <EntregaDetalheDialog
+        id={detalheId}
+        onClose={() => setDetalheId(null)}
+        mostrarFinalizar
+        empresaId={prof?.profile.empresa_id}
+      />
     </div>
   );
 }
@@ -222,7 +256,11 @@ function ListaCards({
       )}
       {(rows ?? []).map((r: any) => {
         const card = (
-          <Card className="cursor-pointer active:opacity-70" onClick={() => onOpen(r.id)}>
+          <Card
+            className="cursor-pointer active:opacity-70"
+            // Os detalhes vêm do servidor; itens só na fila ainda não estão lá.
+            onClick={() => !r._naFila && onOpen(r.id)}
+          >
             <CardContent className="p-3 space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
@@ -251,7 +289,26 @@ function ListaCards({
                   <MapPin className="h-3 w-3 mt-0.5 shrink-0" /> {r.endereco}
                 </div>
               )}
-              {mostrarFinalizar && (
+              {r._naFila && (
+                <div className="flex items-center gap-1 text-xs text-amber-600">
+                  <CloudUpload className="h-4 w-4 shrink-0" />
+                  {r._naFila === "finalizando"
+                    ? "Finalização aguardando sincronização"
+                    : "Início aguardando sincronização"}
+                  <button
+                    type="button"
+                    className="ml-auto underline disabled:opacity-50"
+                    disabled={!navigator.onLine}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void syncNow({ silent: true });
+                    }}
+                  >
+                    Sincronizar
+                  </button>
+                </div>
+              )}
+              {mostrarFinalizar && r._naFila !== "finalizando" && (
                 <div className="flex gap-2">
                   <Link
                     to="/entrega/$id/finalizar"
@@ -282,7 +339,9 @@ function ListaCards({
             </CardContent>
           </Card>
         );
-        if (!onVoltarPendente) return <div key={r.id}>{card}</div>;
+        if (!onVoltarPendente || r._naFila === "finalizando") {
+          return <div key={r.id}>{card}</div>;
+        }
         return (
           <SwipeToAction
             key={r.id}
